@@ -64,6 +64,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     HarmonyMode mode;
+    const PitchMaterial *modal; /* the material of a modal key (R-725); NULL for a major or minor key */
     CadenceType cadence;
     PlanMeter meter;
     Rational bar_length;
@@ -139,6 +140,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     HarmonyMode mode;
+    const PitchMaterial *modal; /* the material of a modal key (R-725); NULL for a major or minor key */
     CadenceType cadence; /* the cadence constraint on the last chord */
     PhraseMetre metre;
     size_t count;
@@ -202,6 +204,9 @@ typedef struct {
 /* Reads the chords of the harmony lane over span, which must tile it exactly. False if it cannot be read. */
 bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre);
+/* The same reading the numerals in a key's kind. */
+bool harmony_read_lane_for(const Plan *plan, PlanSpan span, const HarmonyKind *kind, PhraseChord *chords, size_t *count,
+                           PhraseMetre *metre);
 
 /*
  * The same lane with each chord read in the key of the key lane under it (the mode given is for a chord under no key),
@@ -232,6 +237,9 @@ bool harmony_find_constraint(const Plan *plan, LaneSpanId id, NodeId owner, Plan
                              PlanConstraint *out);
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out);
+/* The mode of the key under a span and, for a modal key, its material (NULL otherwise). */
+bool harmony_find_kind(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, const ComposerChords *chords, HarmonyMode *mode,
+                       const PitchMaterial **modal);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_key(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out);
 /* The key of the key lane that ends where start is, when the span of the lane after it starts there. */
@@ -345,6 +353,9 @@ bool harmony_read_chord(const Plan *plan, LaneSpanId id, HarmonyMode mode, Ratio
 /* The same on the cells of a metre: the span must start and end on a cell boundary of it. */
 bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
                            PhraseChord *out);
+/* The same two reading the numerals in a key's kind (a modal key's numerals are relative to its material). */
+bool harmony_read_chord_for(const Plan *plan, LaneSpanId id, const HarmonyKind *kind, Rational cell_length, PhraseChord *out);
+bool harmony_read_chord_in_for(const Plan *plan, LaneSpanId id, const HarmonyKind *kind, const PhraseMetre *metre, PhraseChord *out);
 
 /*
  * Reads the chords of the phrase around a marked chord span (see
@@ -434,6 +445,10 @@ void harmony_options_applied(const Plan *plan, const PhraseContext *phrase, Opti
 /* Builds one diatonic chord for the progression. False when the chord is not valid in the mode. */
 bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                         PhraseChord *out);
+
+/* The same in the kind's key: a modal key's chord is stacked from its material, numbered and given its function there. */
+bool harmony_make_chord_in(const HarmonyKind *kind, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                           PhraseChord *out);
 
 /* The leading-tone triad (the chord on the raised seventh degree in minor). */
 bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, PhraseChord *out);

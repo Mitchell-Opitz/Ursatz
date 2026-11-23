@@ -59,10 +59,10 @@ const VocabularyCadence *composer_chords_cadence(const ComposerChords *chords, c
 }
 
 const PitchMaterial *composer_chords_modal(const ComposerChords *chords, const SpelledKey *key) {
-    if (chords == NULL || key == NULL) {
+    if (key == NULL) {
         return NULL;
     }
-    return pitch_material_is_modal_key(&chords->materials, key->material) ? key->material : NULL;
+    return pitch_material_is_modal_key(chords != NULL ? &chords->materials : NULL, key->material) ? key->material : NULL;
 }
 
 /* The leading-tone chord of a minor key stands on the raised seventh degree. */

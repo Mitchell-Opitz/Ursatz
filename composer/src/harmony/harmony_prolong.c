@@ -192,6 +192,7 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
         return false;
     }
     PlanSpan range = {before, request->span.length};
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, ids, HARMONY_MAX_CHORDS);
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
@@ -203,7 +204,7 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
         Rational end;
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || rational_cmp(span.start, position) != 0 ||
             plan_span_end(span, &end) != PLAN_OK ||
-            !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chords[i])) {
+            !harmony_read_chord_for(plan, ids[i], &kind, request->cell_length, &chords[i])) {
             return false;
         }
         cells += chords[i].cells;

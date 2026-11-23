@@ -22,9 +22,10 @@
  * The chord of a numeral in the mode. A numeral that does not parse (an applied chord) stands for the representative
  * chord of the function the plan gives it: I, IV or V.
  */
-static bool chord_of(HarmonyMode mode, bool has_given, HarmonicFunction given, const char *roman,
+static bool chord_of(const SpelledKey *key, bool has_given, HarmonicFunction given, const char *roman,
                      HarmonyChord *out) {
-    if (harmony_roman_parse(mode, roman, out)) {
+    HarmonyKind kind = harmony_kind(NULL, key);
+    if (harmony_roman_parse_in(&kind, roman, out)) {
         return true;
     }
     if (!has_given) {
@@ -48,9 +49,9 @@ static bool chord_of(HarmonyMode mode, bool has_given, HarmonicFunction given, c
 
 static bool seam_chords(const SeamNotes *notes, HarmonyChord chords[2]) {
     return notes->has_chords &&
-           chord_of(harmony_key_mode(&notes->key), notes->before_has_function, notes->before_function, notes->before_roman,
+           chord_of(&notes->key, notes->before_has_function, notes->before_function, notes->before_roman,
                     &chords[0]) &&
-           chord_of(harmony_key_mode(&notes->key), notes->after_has_function, notes->after_function, notes->after_roman, &chords[1]);
+           chord_of(&notes->key, notes->after_has_function, notes->after_function, notes->after_roman, &chords[1]);
 }
 
 /* The progression keeps the phrase model's order (standard-harmony): no predominant after a dominant, no tonic after a predominant. */

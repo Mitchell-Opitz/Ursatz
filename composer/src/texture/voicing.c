@@ -70,7 +70,8 @@ static bool read_chords(const Plan *plan, VoicingContext *out, Rational *cell_le
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     size_t count;
-    if (!harmony_read_lane(plan, out->span, harmony_key_mode(&out->key), chords, &count, &metre) || count == 0 ||
+    HarmonyKind kind = harmony_kind(out->composer_chords, &out->key);
+    if (!harmony_read_lane_for(plan, out->span, &kind, chords, &count, &metre) || count == 0 ||
         count > HARMONY_MAX_CHORDS ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count ||
         !position_is_positive(out->span.length) || !position_is_positive(metre.cell_length)) {
@@ -154,6 +155,7 @@ static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_le
     Rational origin;
     Rational length;
     size_t found;
+    HarmonyKind kind_before = harmony_kind(out->composer_chords, &out->key);
     if (out->span.start.num <= 0 || out->chord_count >= VOICING_MAX_CHORDS) {
         return true;
     }
@@ -168,7 +170,7 @@ static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_le
     before_span = plan_lane_span_span(plan, before);
     if (plan_span_end(before_span, &before_end) != PLAN_OK || rational_cmp(before_end, out->span.start) != 0 ||
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
-        !harmony_read_chord(plan, before, harmony_key_mode(&out->key), cell_length, &chord) ||
+        !harmony_read_chord_for(plan, before, &kind_before, cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
          (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || composer_key_is_minor(&key) != composer_key_is_minor(&out->key))) ||
         !position_is_positive(before_span.length)) {

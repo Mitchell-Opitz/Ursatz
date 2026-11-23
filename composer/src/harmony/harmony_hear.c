@@ -278,8 +278,9 @@ static bool key_under(const Plan *plan, PlanSpan chord_span, LaneSpanId *id, Spe
     return true;
 }
 
-bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
-                            PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
+static bool read_lane(const Plan *plan, PlanSpan span, const HarmonyKind *kind, PhraseChord *chords, size_t *count, PhraseMetre *metre,
+                      HarmonyMode *modes, unsigned *keys) {
+    HarmonyMode mode = kind->mode;
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
         return false;
@@ -293,14 +294,16 @@ bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, P
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         Rational end;
         HarmonyMode chord_mode = mode;
+        HarmonyKind chord_kind = *kind;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
         SpelledKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = harmony_key_mode(&key);
+            chord_kind = (HarmonyKind){chord_mode, NULL, NULL};
         }
         /* Chords must start where the last ended, in whole cells. */
         if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
-            !harmony_read_chord_in(plan, ids[i], chord_mode, metre, &chords[i])) {
+            !harmony_read_chord_in_for(plan, ids[i], &chord_kind, metre, &chords[i])) {
             return false;
         }
         if (modes) {
@@ -317,9 +320,21 @@ bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, P
     return true;
 }
 
+bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+                            PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
+    HarmonyKind kind = {mode, NULL, NULL};
+    return read_lane(plan, span, &kind, chords, count, metre, modes, keys);
+}
+
+bool harmony_read_lane_for(const Plan *plan, PlanSpan span, const HarmonyKind *kind, PhraseChord *chords, size_t *count,
+                           PhraseMetre *metre) {
+    return read_lane(plan, span, kind, chords, count, metre, NULL, NULL);
+}
+
 bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
-    return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
+    HarmonyKind kind = {mode, NULL, NULL};
+    return read_lane(plan, span, &kind, chords, count, metre, NULL, NULL);
 }
 
 bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,

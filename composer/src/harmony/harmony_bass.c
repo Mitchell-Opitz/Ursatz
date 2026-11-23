@@ -76,9 +76,11 @@ bool harmony_bass_context_read(const Plan *plan, LaneSpanId target, const Compos
     context.target = target;
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
-    if (!harmony_find_key(plan, target, context.owner, context.span, &context.key) ||
-        !harmony_read_lane(plan, context.span, harmony_key_mode(&context.key), context.chords, &context.count,
-                           &context.metre)) {
+    if (!harmony_find_key(plan, target, context.owner, context.span, &context.key)) {
+        return false;
+    }
+    HarmonyKind kind = harmony_kind(chords, &context.key);
+    if (!harmony_read_lane_for(plan, context.span, &kind, context.chords, &context.count, &context.metre)) {
         return false;
     }
     /* The harmony is written: no chord span under the bass is still open. */

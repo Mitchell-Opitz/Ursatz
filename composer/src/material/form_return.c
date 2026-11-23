@@ -613,7 +613,8 @@ bool form_return_melody_fits(const Plan *plan, const ComposerChords *tones, Node
         return true;
     }
     SpelledKey key = pieces[0].key;
-    if (!harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &chord_count, &metre)) {
+    HarmonyKind kind = harmony_kind(tones, &key);
+    if (!harmony_read_lane_for(plan, span, &kind, chords, &chord_count, &metre)) {
         return false;
     }
     /* The cell each chord starts on. */

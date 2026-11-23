@@ -223,7 +223,8 @@ bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKe
     context->owner = owner;
     context->span = span;
     context->key = key;
-    if (!harmony_read_lane(plan, span, harmony_key_mode(&key), context->chords, &context->count, &context->metre)) {
+    HarmonyKind kind = harmony_kind(chords, &key);
+    if (!harmony_read_lane_for(plan, span, &kind, context->chords, &context->count, &context->metre)) {
         return false;
     }
     context->length = span.length;
@@ -329,10 +330,11 @@ static bool read_idea_chords(const Plan *plan, MelodyContext *context) {
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
+    HarmonyKind kind = harmony_kind(context->composer_chords, &context->key);
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED ||
-            !harmony_read_chord(plan, ids[i], harmony_key_mode(&context->key), context->metre.cell_length, &context->chords[i]) ||
+            !harmony_read_chord_for(plan, ids[i], &kind, context->metre.cell_length, &context->chords[i]) ||
             !melody_chord_mask(context->composer_chords, &context->key, &context->chords[i], &context->chord_mask[i],
                                &context->chord_seventh[i])) {
             return false;
@@ -635,7 +637,8 @@ static bool read_pickup(const Plan *plan, Rational start, Rational pickup, Melod
     if (found > 0 && plan_lane_span_state(plan, ids[found - 1]) != PLAN_STATE_CONSTRAINED) {
         PhraseChord chord;
         unsigned seventh;
-        if (!harmony_read_chord(plan, ids[found - 1], harmony_key_mode(&context->key), context->metre.cell_length, &chord) ||
+        HarmonyKind kind = harmony_kind(context->composer_chords, &context->key);
+        if (!harmony_read_chord_for(plan, ids[found - 1], &kind, context->metre.cell_length, &chord) ||
             !melody_chord_mask(context->composer_chords, &context->key, &chord, &context->pickup_mask, &seventh)) {
             return false;
         }

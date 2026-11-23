@@ -61,14 +61,9 @@ bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, con
             return false;
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
-    } else {
-        if (!harmony_diatonic_intervals(chords, harmony_key_mode(key), &chord->chord, intervals, count)) {
-            return false;
-        }
-        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = composer_key_is_minor(key) && chord->chord.leading_tone
-                   ? 11
-                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
+    } else if (!composer_chord_intervals(chords, harmony_key_mode(key), composer_chords_modal(chords, key), &chord->chord, &root,
+                                         intervals, count)) {
+        return false;
     }
     if (root < 0 || *count < 3) {
         return false;
@@ -178,7 +173,8 @@ bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *comp
         constraint.params.accompaniment.high ? constraint.params.accompaniment.high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
 
     /* The chords tile the target, all written. */
-    if (!harmony_read_lane(plan, out->span, harmony_key_mode(&out->key), chords, &count, &metre) || count == 0 ||
+    HarmonyKind kind = harmony_kind(out->composer_chords, &out->key);
+    if (!harmony_read_lane_for(plan, out->span, &kind, chords, &count, &metre) || count == 0 ||
         count > HARMONY_MAX_CHORDS ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count) {
         return false;

@@ -137,7 +137,8 @@ bool harmony_check_bass(const Plan *plan, PlanSpan span, SpelledKey key, const H
     BassContext *context = &line->context;
     context->span = span;
     context->key = key;
-    bool ok = harmony_read_lane(plan, span, harmony_key_mode(&key), context->chords, &context->count, &context->metre);
+    HarmonyKind kind = harmony_kind(NULL, &key);
+    bool ok = harmony_read_lane_for(plan, span, &kind, context->chords, &context->count, &context->metre);
 
     /* Each chord has one bass span of its own span, whose notes follow one another to its end. */
     for (size_t i = 0; ok && i < context->count; i++) {

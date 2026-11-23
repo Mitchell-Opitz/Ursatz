@@ -188,7 +188,9 @@ GivenResult plan_give_bass(Plan *plan, NodeId section, size_t bar, const PlanNot
 /* ------------------------------------------------------------- a progression */
 
 /* The payload of a numeral in a mode: a diatonic chord with its function, else an applied chord. False when unreadable. */
-static bool numeral_payload(HarmonyMode mode, const char *numeral, PlanHarmony *out) {
+static bool numeral_payload(const SpelledKey *key, const char *numeral, PlanHarmony *out) {
+    HarmonyKind kind = harmony_kind(NULL, key);
+    HarmonyMode mode = kind.mode;
     HarmonyChord chord;
     HarmonyAppliedChord applied;
     int inversion;
@@ -197,11 +199,11 @@ static bool numeral_payload(HarmonyMode mode, const char *numeral, PlanHarmony *
         return false;
     }
     strcpy(out->roman_numeral, numeral);
-    if (harmony_roman_parse(mode, numeral, &chord)) {
-        out->has_function = harmony_function_of(mode, &chord, &out->function);
+    if (harmony_roman_parse_in(&kind, numeral, &chord)) {
+        out->has_function = harmony_function_in(&kind, &chord, &out->function);
         return true;
     }
-    if (harmony_roman_parse_applied_inverted(mode, numeral, &applied, &inversion)) {
+    if (kind.modal == NULL && harmony_roman_parse_applied_inverted(mode, numeral, &applied, &inversion)) {
         out->function = HARMONIC_FUNCTION_DOMINANT;
         out->has_function = true;
         return true;
@@ -249,7 +251,7 @@ GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const 
         return GIVEN_ERR_PLAN;
     }
     for (size_t i = 0; i < count; i++) {
-        if (!numeral_payload(harmony_key_mode(&key), numerals[i], &payloads[i])) {
+        if (!numeral_payload(&key, numerals[i], &payloads[i])) {
             free(payloads);
             return GIVEN_ERR_BAD_NUMERAL;
         }
@@ -291,7 +293,7 @@ GivenResult plan_give_chords(Plan *plan, NodeId section, const GivenChord *chord
         }
         spans[i].length = chords[i].length;
         result = check_room(plan, &placement, PLAN_LANE_HARMONY, 0, spans[i], &key);
-        if (result == GIVEN_OK && !numeral_payload(harmony_key_mode(&key), chords[i].numeral, &payloads[i])) {
+        if (result == GIVEN_OK && !numeral_payload(&key, chords[i].numeral, &payloads[i])) {
             result = GIVEN_ERR_BAD_NUMERAL;
         }
         for (size_t j = 0; result == GIVEN_OK && j < i; j++) {

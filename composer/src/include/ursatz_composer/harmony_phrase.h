@@ -115,6 +115,19 @@ static inline HarmonyMode harmony_key_mode(const SpelledKey *key) {
 }
 
 /*
+ * The key a chord is written in, as the harmony layer reads it (R-725): the mode of a major or minor key (`modal` NULL), or the
+ * material of a modal key with the cadence kind that material names. harmony_kind reads it from a key and the chords of the run.
+ */
+typedef struct {
+    HarmonyMode mode;
+    const PitchMaterial *modal;
+    const VocabularyCadence *cadence;
+} HarmonyKind;
+
+HarmonyKind harmony_kind_of(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal);
+HarmonyKind harmony_kind(const ComposerChords *chords, const SpelledKey *key);
+
+/*
  * Roman numerals as this operator writes them: upper case for major chords
  * (V, IV, VI), lower case for minor ones (ii, vi, i), a degree sign for
  * diminished ones, then the figures for the inversion: none, 6 and 6/4 for a
@@ -127,6 +140,15 @@ static inline HarmonyMode harmony_key_mode(const SpelledKey *key) {
 bool harmony_roman_format(HarmonyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]);
 /* Reads a numeral this operator writes, never cadential. False for any other text, and for an applied chord. */
 bool harmony_roman_parse(HarmonyMode mode, const char *roman, HarmonyChord *out);
+/*
+ * The same relative to a key's kind. In a modal key the quality is the stacked triad's on the degree (IV in C dorian, v and VII in C
+ * mixolydian, io in C locrian); a numeral of another quality, an alteration, a seventh or an applied chord is refused. In a major or
+ * minor key they are harmony_roman_format and harmony_roman_parse.
+ */
+bool harmony_roman_format_in(const HarmonyKind *kind, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]);
+bool harmony_roman_parse_in(const HarmonyKind *kind, const char *roman, HarmonyChord *out);
+/* The function of a diatonic chord in the kind's key: harmony_function_of, or in a modal key the modal function table. */
+bool harmony_function_in(const HarmonyKind *kind, const HarmonyChord *chord, HarmonicFunction *out);
 /* Formats and reads an applied chord. False for an invalid chord or other text. */
 bool harmony_roman_format_applied(HarmonyMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]);

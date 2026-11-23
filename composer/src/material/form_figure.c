@@ -141,8 +141,12 @@ FigureReading *form_figure_read_section(const Plan *plan, const ComposerChords *
     reading->composer_chords = chords;
     PlanSpan span = plan_node_span(plan, section);
     PhraseMetre *metre = &reading->metre;
-    if (!section_key(plan, span, &reading->key) ||
-        !harmony_read_lane(plan, span, harmony_key_mode(&reading->key), reading->chords, &reading->chord_count, metre) ||
+    if (!section_key(plan, span, &reading->key)) {
+        form_figure_reading_free(reading);
+        return NULL;
+    }
+    HarmonyKind kind = harmony_kind(chords, &reading->key);
+    if (!harmony_read_lane_for(plan, span, &kind, reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
         metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
         metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX) {

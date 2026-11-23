@@ -26,7 +26,10 @@ typedef enum { MODAL_FUNCTION_TONIC = 0, MODAL_FUNCTION_PREDOMINANT, MODAL_FUNCT
 bool pitch_material_triad_on(const PitchMaterial *material, int degree, int *root_semitones, int intervals[3],
                              StandardTonalityTriadQuality *quality);
 
-/* True for a material that is not the major or the natural minor of `materials`, has 7 steps and names a cadence. False for NULL. */
+/*
+ * True for a material that is not the major or the natural minor of `materials`, has 7 steps and names a cadence. With NULL
+ * `materials` the major and the natural minor are told apart by the cadence alone (neither names one). False for a NULL material.
+ */
 bool pitch_material_is_modal_key(const CommonPracticeMaterials *materials, const PitchMaterial *material);
 
 /* True when `degree` is one of the material's avoided chord degrees (chords_to_avoid). False for NULL. */

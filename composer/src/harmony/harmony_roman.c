@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include <theory/harmony/harmony_functions.h>
 #include <theory/tonality/roman_numeral_grammar.h>
 #include <theory/tonality/triad_in_key_rules.h>
 
@@ -42,6 +43,93 @@ static StandardTonalityNumeralText numeral_of(HarmonyMode mode, const HarmonyCho
         numeral.quality = minor_third ? STANDARD_TONALITY_NUMERAL_MINOR : STANDARD_TONALITY_NUMERAL_MAJOR;
     }
     return numeral;
+}
+
+HarmonyKind harmony_kind_of(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal) {
+    HarmonyKind kind = {mode, modal, modal != NULL ? composer_chords_cadence(chords, modal) : NULL};
+    return kind;
+}
+
+HarmonyKind harmony_kind(const ComposerChords *chords, const SpelledKey *key) {
+    return harmony_kind_of(chords, harmony_key_mode(key), composer_chords_modal(chords, key));
+}
+
+/* The numeral of a chord in a modal key: the stacked triad's quality, or false for a chord the key does not hold. */
+static bool numeral_of_modal(const PitchMaterial *modal, const HarmonyChord *chord, StandardTonalityNumeralText *out) {
+    StandardTonalityTriadQuality triad;
+    if (chord->seventh || chord->leading_tone || chord->half_diminished || !pitch_material_triad_on(modal, chord->degree, NULL, NULL, &triad)) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->degree = chord->degree;
+    out->inversion = chord->inversion;
+    switch (triad) {
+    case STANDARD_TONALITY_TRIAD_MAJOR:
+        out->quality = STANDARD_TONALITY_NUMERAL_MAJOR;
+        return true;
+    case STANDARD_TONALITY_TRIAD_MINOR:
+        out->quality = STANDARD_TONALITY_NUMERAL_MINOR;
+        return true;
+    case STANDARD_TONALITY_TRIAD_DIMINISHED:
+        out->quality = STANDARD_TONALITY_NUMERAL_DIMINISHED;
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool format_numeral(const StandardTonalityNumeralText *numeral, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    if (!standard_tonality_numeral_format(numeral, text, sizeof(text))) {
+        return false;
+    }
+    memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
+    memcpy(out, text, strlen(text));
+    return true;
+}
+
+bool harmony_roman_format_in(const HarmonyKind *kind, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    if (kind == NULL || kind->modal == NULL) {
+        return harmony_roman_format(kind != NULL ? kind->mode : HARMONY_MODE_MAJOR, chord, out);
+    }
+    StandardTonalityNumeralText numeral;
+    return chord && out && harmony_chord_valid(chord) && numeral_of_modal(kind->modal, chord, &numeral) && format_numeral(&numeral, out);
+}
+
+bool harmony_roman_parse_in(const HarmonyKind *kind, const char *roman, HarmonyChord *out) {
+    if (kind == NULL || kind->modal == NULL) {
+        return harmony_roman_parse(kind != NULL ? kind->mode : HARMONY_MODE_MAJOR, roman, out);
+    }
+    StandardTonalityNumeralText numeral;
+    StandardTonalityNumeralText expected;
+    if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 || numeral.has_target ||
+        standard_tonality_numeral_quality_is_seventh(numeral.quality)) {
+        return false;
+    }
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    chord.degree = numeral.degree;
+    chord.inversion = numeral.inversion;
+    /* Only the numerals of this mode: the same chord is written the same way. */
+    if (!harmony_chord_valid(&chord) || !numeral_of_modal(kind->modal, &chord, &expected) || expected.quality != numeral.quality) {
+        return false;
+    }
+    *out = chord;
+    return true;
+}
+
+bool harmony_function_in(const HarmonyKind *kind, const HarmonyChord *chord, HarmonicFunction *out) {
+    if (kind == NULL || kind->modal == NULL) {
+        return harmony_function_of(kind != NULL ? kind->mode : HARMONY_MODE_MAJOR, chord, out);
+    }
+    ModalFunction function;
+    if (chord == NULL || out == NULL || chord->seventh || kind->cadence == NULL || !modal_function_of(kind->modal, kind->cadence, chord->degree, &function)) {
+        return false;
+    }
+    *out = function == MODAL_FUNCTION_TONIC ? HARMONIC_FUNCTION_TONIC
+           : function == MODAL_FUNCTION_DOMINANT ? HARMONIC_FUNCTION_DOMINANT
+                                                 : HARMONIC_FUNCTION_PREDOMINANT;
+    return true;
 }
 
 bool harmony_roman_format(HarmonyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {

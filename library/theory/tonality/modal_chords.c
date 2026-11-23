@@ -47,10 +47,10 @@ bool pitch_material_triad_on(const PitchMaterial *material, int degree, int *roo
 }
 
 bool pitch_material_is_modal_key(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
-    if (materials == NULL || material == NULL || material->step_count != MODAL_STEPS || material->cadence == NULL) {
+    if (material == NULL || material->step_count != MODAL_STEPS || material->cadence == NULL) {
         return false;
     }
-    return material != materials->major && material != materials->natural_minor;
+    return materials == NULL || (material != materials->major && material != materials->natural_minor);
 }
 
 bool pitch_material_avoids(const PitchMaterial *material, int degree) {

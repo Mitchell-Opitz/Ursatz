@@ -102,8 +102,9 @@ void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     request->has_motive = false;
     memset(request->motive_fixed, 0, sizeof(request->motive_fixed));
-    /* A shape that frees the harmony from the motive's chords (a formal function with free motive harmony, R-711) holds none. */
-    if (request->cells > HARMONY_GIVEN_CELLS || (request->has_shape && request->shape.free_motive)) {
+    /* A shape that frees the harmony from the motive's chords (a formal function with free motive harmony, R-711) holds none; nor does
+       a modal key, whose chords are the phrase model's (R-725): a motive writes its harmony as the degrees of a major or minor key. */
+    if (request->modal != NULL || request->cells > HARMONY_GIVEN_CELLS || (request->has_shape && request->shape.free_motive)) {
         return;
     }
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, request->span, ids, HARMONY_MAX_CHORDS);

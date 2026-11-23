@@ -32,11 +32,11 @@ static const PredominantRun AFTER_IV[] = {{1, {2}}};
 /* The root-position ii in a minor key is a diminished chord that standard-harmony prefers in first inversion. */
 static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 
-static bool make_from(HarmonyMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
+static bool make_from(const HarmonyKind *kind, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
-    if (!harmony_chord_valid(&chord) || !harmony_function_of(mode, &chord, &function) ||
-        !harmony_roman_format(mode, &chord, out->roman)) {
+    if (!harmony_chord_valid(&chord) || !harmony_function_in(kind, &chord, &function) ||
+        !harmony_roman_format_in(kind, &chord, out->roman)) {
         return false;
     }
     out->function = function;
@@ -46,28 +46,35 @@ static bool make_from(HarmonyMode mode, HarmonyChord chord, size_t cells, Phrase
     return true;
 }
 
-bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
-                        PhraseChord *out) {
+bool harmony_make_chord_in(const HarmonyKind *kind, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                           PhraseChord *out) {
     HarmonyChord chord;
     memset(&chord, 0, sizeof(chord));
     chord.degree = degree;
     chord.inversion = inversion;
     chord.seventh = seventh;
     chord.cadential = cadential;
-    return make_from(mode, chord, cells, out);
+    return make_from(kind, chord, cells, out);
+}
+
+bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                        PhraseChord *out) {
+    HarmonyKind kind = {mode, NULL, NULL};
+    return harmony_make_chord_in(&kind, degree, inversion, seventh, cadential, cells, out);
 }
 
 bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, PhraseChord *out) {
     HarmonyChord chord;
+    HarmonyKind kind = {mode, NULL, NULL};
     memset(&chord, 0, sizeof(chord));
     chord.degree = 7;
     chord.inversion = inversion;
     chord.leading_tone = mode == HARMONY_MODE_MINOR;
-    return make_from(mode, chord, cells, out);
+    return make_from(&kind, chord, cells, out);
 }
 
-static bool make_chord(HarmonyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
-    return harmony_make_chord(mode, spec.degree, 0, spec.seventh, false, cells, out);
+static bool make_chord(const HarmonyKind *kind, ChordSpec spec, size_t cells, PhraseChord *out) {
+    return harmony_make_chord_in(kind, spec.degree, 0, spec.seventh, false, cells, out);
 }
 
 void harmony_progression_destroy(void *payload) {
@@ -85,7 +92,7 @@ void harmony_progression_destroy(void *payload) {
  */
 static bool open_on_cadential_six_four(const PhraseRequest *request, PhraseChord *chords, size_t *count, size_t dominant) {
     PhraseChord six_four;
-    if (request->cadence == CADENCE_TYPE_HALF || chords[dominant].cells < 2 || *count >= MAX_DEALT ||
+    if (request->modal != NULL || request->cadence == CADENCE_TYPE_HALF || chords[dominant].cells < 2 || *count >= MAX_DEALT ||
         !harmony_make_chord(request->mode, 1, 2, false, true, 1, &six_four)) {
         return false;
     }
@@ -148,9 +155,10 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
 
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     ChordSpec opening = {pivot > 0 ? pivot : 1, false};
     PhraseChord probe;
-    bool pivot_predominant = pivot > 0 && make_chord(request->mode, opening, 1, &probe) &&
+    bool pivot_predominant = pivot > 0 && make_chord(&kind, opening, 1, &probe) &&
                              probe.has_function && probe.function == HARMONIC_FUNCTION_PREDOMINANT;
     const PredominantRun *runs = request->mode == HARMONY_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
     size_t run_count = request->mode == HARMONY_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
@@ -240,12 +248,12 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
     for (size_t i = 0; i < before_count; i++) {
-        if (!make_chord(request->mode, before[i], cells[i], &chords[i])) {
+        if (!make_chord(&kind, before[i], cells[i], &chords[i])) {
             free(chords);
             return false;
         }
     }
-    if (!make_chord(request->mode, last, last_cells, &chords[before_count])) {
+    if (!make_chord(&kind, last, last_cells, &chords[before_count])) {
         free(chords);
         return false;
     }

@@ -63,6 +63,7 @@ static size_t read_chain(const Plan *plan, const PhraseRequest *request, Rationa
     PlanSpan window = {from, request->bar_length};
     LaneSpanId ids[HARMONY_JOIN_CHORDS * 2 + 4];
     size_t count = 0;
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     Rational position = from;
     if (before) {
         Rational back = {-request->bar_length.num * (long)(HARMONY_JOIN_CHORDS + 2), request->bar_length.den};
@@ -92,7 +93,7 @@ static size_t read_chain(const Plan *plan, const PhraseRequest *request, Rationa
             Rational end;
             PhraseChord chord;
             if (!given(plan, ids[i - 1]) || plan_span_end(span, &end) != PLAN_OK || rational_cmp(end, position) != 0 ||
-                !harmony_read_chord(plan, ids[i - 1], request->mode, request->cell_length, &chord)) {
+                !harmony_read_chord_for(plan, ids[i - 1], &kind, request->cell_length, &chord)) {
                 break;
             }
             out[count++] = chord;
@@ -126,7 +127,7 @@ static size_t read_chain(const Plan *plan, const PhraseRequest *request, Rationa
             continue;
         }
         if (!given(plan, ids[i]) || rational_cmp(span.start, position) != 0 || plan_span_end(span, &end) != PLAN_OK ||
-            !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chord)) {
+            !harmony_read_chord_for(plan, ids[i], &kind, request->cell_length, &chord)) {
             break;
         }
         out[count++] = chord;

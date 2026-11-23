@@ -163,6 +163,17 @@ bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan s
     return true;
 }
 
+bool harmony_find_kind(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, const ComposerChords *chords, HarmonyMode *mode,
+                       const PitchMaterial **modal) {
+    SpelledKey key;
+    if (!harmony_find_key(plan, id, owner, span, &key)) {
+        return false;
+    }
+    *mode = harmony_key_mode(&key);
+    *modal = composer_chords_modal(chords, &key);
+    return true;
+}
+
 /* a minus b, which must not be later than a. */
 static bool time_since(Rational a, Rational b, Rational *out) {
     return rational_sub(a, b, out) == RATIONAL_OK && out->num >= 0;
@@ -441,6 +452,7 @@ static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation,
         return false;
     }
     request.mode = harmony_key_mode(&request.key);
+    request.modal = composer_chords_modal(chords, &request.key);
     if (request.has_shape && request.shape.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
         /* A pivot opens a phrase model on a key change; a prolongation does not open one. */
         request.pivot = true;
