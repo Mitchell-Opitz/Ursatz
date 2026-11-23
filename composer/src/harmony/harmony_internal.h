@@ -423,6 +423,7 @@ typedef struct {
     PhraseChord chords[HARMONY_MAX_CHORDS]; /* the whole phrase after the edit */
     size_t count;
     const ComposerChords *composer_chords; /* R-728; NULL: the fallback tables */
+    const PitchMaterial *modal;            /* the material of a modal key (R-725); NULL for a major or minor key */
 } EmbellishCandidate;
 
 /* The options a family offers for the marked chord. */

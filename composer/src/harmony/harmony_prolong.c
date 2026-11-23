@@ -108,17 +108,23 @@ static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
            (shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT) == (figure->ends == ANCHOR_DOMINANT);
 }
 
-static bool make_figure_chord(HarmonyMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
+static bool make_figure_chord(const HarmonyKind *kind, const FigureChord *spec, size_t cells, PhraseChord *out) {
     if (spec->leading_tone) {
-        return harmony_make_leading_tone(mode, spec->inversion, cells, out);
+        return harmony_make_leading_tone(kind->mode, spec->inversion, cells, out);
     }
-    return harmony_make_chord(mode, spec->degree, spec->inversion, spec->seventh, false, cells, out);
+    return harmony_make_chord_in(kind, spec->degree, spec->inversion, spec->seventh, false, cells, out);
 }
 
 /* One deal of the request's cells to the figure's chords, or false when this deal does not keep to the shape. */
 static bool deal_figure(const PhraseRequest *request, const Figure *figure, FillRng *rng, PhraseProgression *out) {
     if (figure->count > request->cells) {
         return false;
+    }
+    /* A modal key has no V, V6, V65, V43 or viio6 (R-725): only the figures on its tonic and IV are written. */
+    for (size_t i = 0; request->modal != NULL && i < figure->count; i++) {
+        if ((figure->chords[i].degree != 1 && figure->chords[i].degree != 4) || figure->chords[i].seventh) {
+            return false;
+        }
     }
     size_t cells[MAX_FIGURE_CHORDS];
     size_t cap = request->shape.max_cells_per_chord > 0 ? (size_t)request->shape.max_cells_per_chord : 0;
@@ -153,8 +159,9 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
     if (!chords) {
         return false;
     }
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     for (size_t i = 0; i < figure->count; i++) {
-        if (!make_figure_chord(request->mode, &figure->chords[i], cells[i], &chords[i])) {
+        if (!make_figure_chord(&kind, &figure->chords[i], cells[i], &chords[i])) {
             free(chords);
             return false;
         }
@@ -372,6 +379,7 @@ bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOper
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
                           !motive_prolongation, NULL, NULL, false, &progression->request.metre, NULL, NULL};
     phrase.composer_chords = progression->request.composer_chords;
+    phrase.modal = progression->request.modal;
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;

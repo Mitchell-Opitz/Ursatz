@@ -119,8 +119,104 @@ bool harmony_root_progression_holds(const HarmonyChord *chords, size_t count) {
     return changes < 2 || strong * 3 >= changes * 2;
 }
 
+/* Whether the last chords are the cadence kind's approach (then, unless the phrase ends on it, its arrival). */
+static bool modal_ending_holds(const HeardPhrase *phrase, const VocabularyCadence *cadence) {
+    bool half = phrase->requested == CADENCE_TYPE_HALF;
+    size_t length = cadence->approach_count + (half ? 0 : 1);
+    if ((!half && phrase->requested != CADENCE_TYPE_PERFECT_AUTHENTIC && phrase->requested != CADENCE_TYPE_IMPERFECT_AUTHENTIC) ||
+        phrase->count < length) {
+        return false;
+    }
+    const PhraseChord *last = &phrase->chords[phrase->count - length];
+    for (size_t i = 0; i < length; i++) {
+        int expected = i < cadence->approach_count ? cadence->approach_degrees[i] : cadence->arrival_degree;
+        if (last[i].applied || last[i].chord.degree != expected || last[i].chord.seventh || last[i].chord.inversion != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The judge of a phrase in a modal key (R-725). The recognizer hears major and minor, so a modal phrase is judged by the modal
+ * function table (tonic, then a dominant: the cadence kind's approach chords) and the ending is the cadence kind's approach then
+ * its arrival (PAC, IAC), or the last approach chord (HC). An avoided chord is refused, and a chord that is not in root position
+ * needs a reason the modal keys do not have; the soft rules are the backward motion and the root progression.
+ */
+static bool judge_modal(const HeardPhrase *phrase, PhraseVerdict *verdict) {
+    HarmonyKind kind = harmony_kind_of(phrase->composer_chords, phrase->mode, phrase->modal);
+    HarmonyChord model[HARMONY_MAX_CHORDS];
+    HarmonicFunction functions[HARMONY_MAX_CHORDS];
+    bool has_function[HARMONY_MAX_CHORDS];
+    size_t count = phrase->count;
+    const char *hard = NULL;
+    if (kind.cadence == NULL || count == 0 || count > HARMONY_MAX_CHORDS) {
+        verdict->hard = "no cadence kind for the mode";
+        return true;
+    }
+    for (size_t i = 0; !hard && i < count; i++) {
+        const PhraseChord *chord = &phrase->chords[i];
+        int root;
+        int intervals[4];
+        size_t interval_count;
+        bool exempt = phrase->open_ended || (phrase->exempt && phrase->exempt[i]);
+        if (chord->applied ||
+            !composer_chord_intervals(phrase->composer_chords, phrase->mode, phrase->modal, &chord->chord, &root, intervals, &interval_count)) {
+            hard = "chord not readable";
+        } else if (!exempt && pitch_material_avoids(phrase->modal, chord->chord.degree)) {
+            hard = "chord the mode avoids";
+        } else if (!exempt && chord->chord.inversion != 0) {
+            hard = "chord with no reason to be there";
+        }
+        model[i] = chord->chord;
+        has_function[i] = harmony_function_in(&kind, &chord->chord, &functions[i]);
+    }
+    if (!hard && !phrase->no_opening_tonic) {
+        bool seen_tonic = false;
+        bool dominant_after = false;
+        for (size_t i = 0; i < count; i++) {
+            if (has_function[i] && functions[i] == HARMONIC_FUNCTION_TONIC) {
+                seen_tonic = true;
+            } else if (has_function[i] && functions[i] == HARMONIC_FUNCTION_DOMINANT && seen_tonic) {
+                dominant_after = true;
+            }
+        }
+        if (!dominant_after) {
+            hard = "phrase model broken";
+        }
+    }
+    if (!hard && !phrase->open_ended && !modal_ending_holds(phrase, kind.cadence)) {
+        hard = "not the mode's cadence";
+    }
+    unsigned soft_total = 1;
+    unsigned soft_broken = 0;
+    for (size_t i = 0; !hard && i + 1 < count; i++) {
+        if (has_function[i] && has_function[i + 1] &&
+            ((functions[i] == HARMONIC_FUNCTION_DOMINANT && functions[i + 1] == HARMONIC_FUNCTION_PREDOMINANT) ||
+             (functions[i] == HARMONIC_FUNCTION_PREDOMINANT && functions[i + 1] == HARMONIC_FUNCTION_TONIC))) {
+            soft_broken++;
+            break;
+        }
+    }
+    if (!hard && !phrase->plain_shaping) {
+        soft_total++;
+        if (!harmony_root_progression_holds(model, count)) {
+            soft_broken++;
+            verdict->shaping_broken |= SHAPING_ROOT_PROGRESSION;
+        }
+    }
+    verdict->hard = hard;
+    verdict->heard = hard ? CADENCE_TYPE_UNKNOWN : phrase->requested;
+    verdict->soft_total = soft_total;
+    verdict->soft_held = soft_total > soft_broken ? soft_total - soft_broken : 0;
+    return true;
+}
+
 bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     memset(verdict, 0, sizeof(*verdict));
+    if (phrase->modal != NULL) {
+        return judge_modal(phrase, verdict);
+    }
     SegmentSet *set = harmony_segments_create(phrase);
     if (!set) {
         return false;
@@ -356,6 +452,7 @@ bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOpera
                               progression->request.cells_per_bar, progression->request.cell_length, false, NULL, false,
                               false, NULL, NULL, false, short_phrase ? &joined : &progression->request.metre, NULL, NULL};
         phrase.composer_chords = progression->request.composer_chords;
+        phrase.modal = progression->request.modal;
         /* A phrase joined to Given chords begins in the middle of what they make: no opening tonic is asked. */
         phrase.no_opening_tonic = short_phrase || (progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
@@ -398,6 +495,7 @@ bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOpera
         HeardPhrase phrase = {edit->chords, edit->count, edit->mode, edit->cadence, edit->cells_per_bar,
                               edit->cell_length, false, NULL, false, false, NULL, NULL, false, &edit->metre, NULL, NULL};
         phrase.composer_chords = edit->composer_chords;
+        phrase.modal = edit->modal;
         return verdict_to_check(&phrase, out);
     }
     if (strcmp(operator_->generator.name, HARMONY_SCHEMA_OPERATOR_NAME) == 0) {

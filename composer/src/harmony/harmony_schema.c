@@ -219,7 +219,7 @@ static bool schema_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
     return target.kind == FILL_TARGET_LANE_SPAN &&
            harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) &&
-           read.metre.cells_per_bar == 2;
+           composer_chords_modal(composer_context_chords(context), &read.key) == NULL && read.metre.cells_per_bar == 2;
 }
 
 static unsigned role_of(SchemaFunction function) {
@@ -256,7 +256,8 @@ static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, v
     const HarmonySchemaParams *params = &params_value;
     SkeletonContext read;
     if (target.kind != FILL_TARGET_LANE_SPAN ||
-        !harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read)) {
+        !harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) ||
+        composer_chords_modal(composer_context_chords(context), &read.key) != NULL) {
         return false;
     }
     SkeletonCandidate *skeleton = malloc(sizeof(*skeleton));

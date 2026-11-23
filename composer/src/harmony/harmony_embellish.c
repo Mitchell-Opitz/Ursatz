@@ -121,6 +121,7 @@ static bool propose_edits(const Plan *plan, const PhraseContext *phrase, const H
                              scratch->cells_per_bar, scratch->cell_length, false, NULL, false, false, NULL, NULL, false,
                              &scratch->metre, NULL, NULL};
         heard.composer_chords = phrase->composer_chords;
+        heard.modal = phrase->modal;
         PhraseVerdict verdict;
         if (!harmony_judge(&heard, &verdict)) {
             ok = false;

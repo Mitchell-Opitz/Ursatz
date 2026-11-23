@@ -114,6 +114,11 @@ bool harmony_context_read(const Plan *plan, LaneSpanId target, const ComposerCho
         return false;
     }
     context.cadence = cadence.params.cadence;
+    /* The applied chords, dominant options and predominant forms of the embellishment families are written for major and minor keys:
+       a modal key has none of them (R-725). */
+    if (context.modal != NULL) {
+        return false;
+    }
     for (size_t i = 0; i < context.count; i++) {
         LaneSpanId id = same_owner[low + i];
         PlanState state = plan_lane_span_state(plan, id);
