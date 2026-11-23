@@ -41,6 +41,62 @@
         },
         "conclusive": {
           "type": "boolean"
+        },
+        "material": {
+          "type": "string",
+          "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.material\\.[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "approach": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "pattern": "^(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)o?$"
+          }
+        },
+        "arrival": {
+          "type": "string",
+          "pattern": "^(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)o?$"
+        }
+      },
+      "dependentRequired": {
+        "material": [
+          "approach",
+          "arrival"
+        ],
+        "approach": [
+          "material",
+          "arrival"
+        ],
+        "arrival": [
+          "material",
+          "approach"
+        ]
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "center",
+          "numerals"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "center": {
+            "type": "string",
+            "pattern": "^[A-G][#b]?$"
+          },
+          "numerals": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)o?$"
+            }
+          }
         }
       }
     }
