@@ -19,6 +19,22 @@ Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md)
   `standard_tonality_triad_quality_semitones` and
   `standard_tonality_seventh_quality_semitones` give the root-relative
   semitones of each triad and seventh quality.
+- **Chord types from the snapshot** (R-728, `common_practice_materials.h`):
+  `common_practice_materials_resolve` also resolves the nine quality rows'
+  chord types, `omt.chord-type.major-triad`, `minor-triad`,
+  `diminished-triad`, `augmented-triad`, `major-seventh`,
+  `dominant-seventh`, `minor-seventh`, `half-diminished-seventh` and
+  `diminished-seventh`, into `triad_types` and `seventh_types` (a missing
+  one refuses the resolve, naming it). `common_practice_triad_semitones`
+  and `common_practice_seventh_semitones` give a quality's members from
+  them; with NULL materials (a call that holds no snapshot) they fall back
+  to the quality rows above, which the test `standard_tonality_quality_semitones`
+  pins to the entries. The chord identification
+  (`CommonPracticeRankedChord.intervals`), the harmony segment inputs
+  (`HarmonySegmentInput.materials`), the applied-chord and numeral readers
+  and the chain's cadence claims read the types this way;
+  `chord_vocabulary.c` and `chord_vocabulary_seventh.c` keep the fallback
+  and add `_intervals_with` variants.
 - **Seventh chord structure** (`seventh_rules.h`): four notes stacked in
   thirds, all on lines or all on spaces; root, third, fifth, seventh;
   five qualities set by the triad and the seventh above the root

@@ -115,6 +115,10 @@ One `composer_api_theme` request, from the reply's side:
 7. The plan is rendered for MIDI and MusicXML when the request asks: the render becomes a work of one movement whose lines are all assigned to one piano part (R-599), and the library's movement export writes the file ([export.md](export.md)).
 8. The reply is a `ComposerResponse`: the theme document in `json`, the plan, the MIDI bytes and the MusicXML text; the caller frees it with `composer_response_destroy` ([api.md](api.md#memory)).
 
+## The chord context (R-728)
+
+A chord's tones are read from the knowledge snapshot's chord types, not from tables of the Composer's own. `ComposerChords` (`harmony_chords.h`) holds the snapshot and the common-practice materials resolved from it (`composer_chords_init`). `compose_run` builds one per run from `ComposeConfig.knowledge` and `api_progression` one per call from its `ComposerContext`. Each operator is registered with it as the last argument (`harmony_phrase_register`, `harmony_bass_register`, `melody_fill_register`, `accompaniment_register`, `voicing_register`, `form_return_register` and the rest), and `composer_register_operator` keeps it, with the operator's params, as the context the registry frees. The readers an operator calls (the phrase request, the bass, skeleton, melody, accompaniment and voicing contexts, the heard phrase) carry it as `composer_chords`; NULL means the library's fallback tables, which the tests pin to the entries. `harmony_diatonic_intervals`, `melody_chord_mask`, `harmony_chord_bass_pc` and `accomp_chord_tones` are the readers of a chord's semitones and tones. A `Motive` carries no snapshot, so `motive_analyze` reads the fallback tables.
+
 ## Finding things
 
 Every doc is listed in [docs/README.md](README.md).
