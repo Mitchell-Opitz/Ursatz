@@ -460,6 +460,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     }
     /* A motive with no key has no scale: its key reads as C major (motive_key). */
     motive_set_key(motive, &key, source);
+    motive->dominant_seventh = document->materials.seventh_types[STANDARD_TONALITY_SEVENTH_MAJOR_MINOR];
     if (motive->form == MOTIVE_SKETCH_FORM_RHYTHM) {
         /* A rhythm has no pitches (the library's rhythm sketch); motive_pitch sounds them on degree 1 of the key. */
         for (size_t i = 0; i < motive->note_count; i++) {

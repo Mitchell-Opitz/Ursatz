@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
+#include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
 #include "theory/vocabulary/non_chord_tone.h"
 
@@ -84,6 +85,9 @@ typedef struct {
     bool has_scale;
     int tonic_pc; /* 0 to 11 */
     const PitchMaterial *material; /* the scale: its steps; read only when has_scale, then not NULL; borrowed from the snapshot */
+    /* The snapshot's dominant seventh (omt.chord-type.dominant-seventh), whose members an altered chord sounds (R-728; borrowed
+       from the snapshot, like material). NULL: the fallback table of standard_tonality_seventh_quality_semitones. */
+    const ChordType *dominant_seventh;
     Rational bar;
     Rational beat;
     Rational pickup;

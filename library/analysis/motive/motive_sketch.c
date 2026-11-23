@@ -280,7 +280,13 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     if (chord->alteration != 0) {
         /* an altered chord is a dominant seventh on its root, or its first three tones */
         int offsets[4];
-        standard_tonality_seventh_quality_semitones(STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, offsets);
+        bool from_entry = sketch->dominant_seventh != NULL && sketch->dominant_seventh->member_count == 4;
+        for (size_t i = 0; from_entry && i < 4; i++) {
+            offsets[i] = sketch->dominant_seventh->members[i].semitones;
+        }
+        if (!from_entry) {
+            standard_tonality_seventh_quality_semitones(STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, offsets);
+        }
         for (size_t i = 0; i < count; i++) {
             pcs[i] = (sketch->tonic_pc + root + offsets[i] + 120) % 12;
         }

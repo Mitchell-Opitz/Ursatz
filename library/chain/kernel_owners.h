@@ -27,6 +27,7 @@ typedef struct {
     bool has_key;
     int tonic_pitch_class; /* 0..11 */
     const PitchMaterial *material; /* the home key's material, from the snapshot; read only when has_key */
+    const ChordType *dominant_seventh; /* the snapshot's dominant seventh the sketches' altered chords read (R-728); NULL: the fallback */
 } ChainRelationContext;
 
 /*

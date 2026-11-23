@@ -518,6 +518,7 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
     chain->relation_context.tonic_pitch_class = common_practice_key_index_tonic(home);
     chain->relation_context.material =
         common_practice_material(&chain->materials, common_practice_key_index_mode(home));
+    chain->relation_context.dominant_seventh = chain->materials.seventh_types[STANDARD_TONALITY_SEVENTH_MAJOR_MINOR];
     const StandardFormInput *input = &chain->motive_input.input;
     if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &chain->motive_phrases) !=
         STANDARD_FORM_ANALYSIS_OK) {
