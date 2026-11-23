@@ -54,11 +54,11 @@ static const Shape SHAPES[4] = {
      STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED}};
 
 /* The shape's intervals above its root: three for a triad, four for a seventh. */
-static void shape_intervals(const Shape *shape, int out[4]) {
+static void shape_intervals(const Shape *shape, const CommonPracticeMaterials *materials, int out[4]) {
     if (shape->seventh) {
-        standard_tonality_seventh_quality_semitones(shape->seventh_quality, out);
+        common_practice_seventh_semitones(materials, shape->seventh_quality, out);
     } else {
-        standard_tonality_triad_quality_semitones(shape->triad, out);
+        common_practice_triad_semitones(materials, shape->triad, out);
     }
 }
 
@@ -144,7 +144,7 @@ static size_t next_distinct(const StandardTonalityChordInput *inputs, size_t cou
 /* The applied reading of `shape` on target degree `target` of a key of `mode`, the chord's root `root`, its bass
    `bass_pitch_class` (-1 reads as root position). */
 static bool fill_applied_reading(StandardTonalityRomanKeyMode mode, const Shape *shape, int target, int root,
-                                 int bass_pitch_class, StandardTonalityRomanReading *out) {
+                                 int bass_pitch_class, const CommonPracticeMaterials *materials, StandardTonalityRomanReading *out) {
     StandardTonalityRomanReading reading;
     memset(&reading, 0, sizeof(reading));
     bool built = shape->seventh ? standard_tonality_roman_numeral_seventh_chord(shape->numeral_degree,
@@ -156,7 +156,7 @@ static bool fill_applied_reading(StandardTonalityRomanKeyMode mode, const Shape 
         return false;
     }
     int intervals[4];
-    shape_intervals(shape, intervals);
+    shape_intervals(shape, materials, intervals);
     reading.inversion = member_in_bass(bass_pitch_class, root, intervals, shape->interval_count);
     reading.applied = true;
     reading.romantext_spelling = mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
@@ -177,7 +177,7 @@ bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *inpu
             continue;
         }
         int intervals[4];
-        shape_intervals(shape, intervals);
+        shape_intervals(shape, input->materials, intervals);
         bool same = true;
         for (size_t i = 0; i < shape->interval_count; i++) {
             same = same && input->intervals[i] == intervals[i];
@@ -189,7 +189,7 @@ bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *inpu
         for (int t = 0; t < 5; t++) {
             if (pitch_class_of_midi(input->tonic_pitch_class + scale_semitone(input, targets[t])) == target_root) {
                 return fill_applied_reading(input->mode, shape, targets[t], input->root_pitch_class,
-                                            input->bass_pitch_class, out);
+                                            input->bass_pitch_class, input->materials, out);
             }
         }
         return false;
@@ -276,7 +276,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
                 continue; /* the root does not sound */
             }
             int intervals[4];
-            shape_intervals(shape, intervals);
+            shape_intervals(shape, input->materials, intervals);
             double score = score_chord(input->weights, total, root, intervals, shape->interval_count,
                                        input->sounding_bass_pitch_class, config);
             if (score > diatonic_score && (!found || score > best_score)) {
@@ -295,7 +295,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
     int root = pitch_class_of_midi(target_root + best_shape->root_offset);
     StandardTonalityRomanReading reading;
     if (!fill_applied_reading(input->mode, best_shape, best_target, root, input->sounding_bass_pitch_class,
-                              &reading)) {
+                              input->materials, &reading)) {
         return false;
     }
 

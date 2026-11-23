@@ -41,12 +41,13 @@ static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     return alteration == 0 ? degree : 0;
 }
 
-static void claim_intervals(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
+static void claim_intervals(const StandardTonalityRomanClaim *claim, const CommonPracticeMaterials *materials, int out[4],
+                            size_t *count) {
     memset(out, 0, 4 * sizeof(int));
     if (claim->seventh) {
-        *count = standard_tonality_seventh_quality_semitones((StandardTonalitySeventhQuality)claim->quality, out) ? 4 : 0;
+        *count = common_practice_seventh_semitones(materials, (StandardTonalitySeventhQuality)claim->quality, out) ? 4 : 0;
     } else {
-        *count = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)claim->quality, out) ? 3 : 0;
+        *count = common_practice_triad_semitones(materials, (StandardTonalityTriadQuality)claim->quality, out) ? 3 : 0;
     }
 }
 
@@ -83,6 +84,7 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
         input->segment = segment;
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
+        input->materials = chords[s].materials; /* the intervals follow the chain's chord types (R-728) */
         input->has_beat_length = true;
         input->beat_length = built.beat_length;
         if (!romans[s].has_numeral) {
@@ -93,7 +95,7 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
         const StandardTonalityRomanClaim *claim = &romans[s].claim;
         int intervals[4];
         size_t interval_count = 0;
-        claim_intervals(claim, intervals, &interval_count);
+        claim_intervals(claim, chords[s].materials, intervals, &interval_count);
         memset(input->intervals, 0, sizeof(input->intervals));
         for (size_t k = 0; k < interval_count; k++) {
             input->intervals[k] = intervals[k];
