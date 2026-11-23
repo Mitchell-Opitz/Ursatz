@@ -73,7 +73,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--limit <n>` | how many records or results at most | `history` |
 | `--list-ops` | print every operation, with its parameters and the forms it applies to | `variants` |
 | `--list-schemas` | list the schema and sequence names and exit | `progression` |
-| `--material <word>` | major or minor (style, where the style names one) | `random-motive`, `counterpoint`, `grow`, `plan`, `listen` |
+| `--material <word>` | major, minor or a church mode (style, where the style names one) | `random-motive`, `counterpoint`, `grow`, `plan`, `listen` |
 | `--measures <first>-<last>` | the measures to show, <first>-<last>, inclusive: as written in the score for analyze --view reading, bars from 1 for show | `analyze`, `show` |
 | `--meter <n/m>` | the meter, for example 4/4 | `progression`, `motive`, `develop`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `plan`, `listen`, `analyze` |
 | `--midi <file>` | write the result as a MIDI file | `progression`, `motive`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `render` |
