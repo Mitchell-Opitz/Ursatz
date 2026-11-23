@@ -101,7 +101,7 @@
     },
     "material": {
       "type": "string",
-      "description": "A material: a K1 id, name, key word or alias (omt.material.major, \"major\", \"minor\"), or \"style\" for the style's. The Composer writes keys in major and natural minor. With a key that is a tonic alone it gives the mode of the key. The old member \"mode\" is read as before; give material or mode, not both."
+      "description": "A material: a K1 id, name, key word or alias (omt.material.major, \"major\", \"minor\"), or \"style\" for the style's. The Composer writes keys in major, natural minor and the church modes (\"dorian\", \"lydian\", \"mixolydian\", \"phrygian\", \"locrian\"; see modes.md). With a key that is a tonic alone it gives the mode of the key. The old member \"mode\" is read as before; give material or mode, not both."
     },
     "mode": {
       "type": "string",

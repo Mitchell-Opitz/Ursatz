@@ -49,10 +49,11 @@
  * 4.4 adds write_in_c to the MIDI motive, and meter beat units and defaults to the vocabulary (R-693).
  * 4.5 adds the functions group of the development preferences (R-710 to R-712) and the theme response's contrasts (R-710).
  * 4.6 adds the critique entry and the critic group of the preferences (R-721, R-722).
+ * 4.7 accepts the church modes as the material of a key (R-725): a request names "dorian", "lydian", "mixolydian", "phrygian" or "locrian".
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 6
+#define COMPOSER_API_VERSION_MINOR 7
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

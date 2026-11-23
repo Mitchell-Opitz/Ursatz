@@ -64,10 +64,20 @@ bool composer_material_is_minor(const PitchMaterial *material);
 bool composer_material_valid(const PitchMaterial *material);
 
 /*
- * Whether the Composer composes in the material: the major or the natural minor of the materials, and no other (the harmonic and
- * the melodic minor are forms of the minor key, the modes and the rest are not keys it writes). The one check every key text passes.
+ * Whether the Composer composes in the material: the major, the natural minor or one of the church modes (a modal key,
+ * pitch_material_is_modal_key), and no other (the harmonic and the melodic minor are forms of the minor key, the synthetic scales are
+ * references). The one check every key text passes.
  */
 bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material);
+
+/* Whether the material is a modal key (a church mode) of the materials; false for the major, the natural minor and NULL. */
+bool composer_material_is_modal(const CommonPracticeMaterials *materials, const PitchMaterial *material);
+
+/*
+ * Whether a key of the material raises its seventh degree to a leading tone where a chord holds it: the natural minor only
+ * (pitch_material_is_natural_minor). The modes keep their own seventh, whatever the third they have.
+ */
+bool composer_material_raises_seventh(const PitchMaterial *material);
 
 /*
  * Whether the key reads as a minor key: its material has a minor third (common_practice_key_mode_of). False for a key with no

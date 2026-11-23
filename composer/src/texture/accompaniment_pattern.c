@@ -182,12 +182,20 @@ static bool choose_voicing(const int pcs[3], int low, int high, const int *previ
     return true;
 }
 
-/* The three pitch classes a chord is voiced in: its root, third and fifth, or, with a seventh, the seventh for the fifth. */
+/*
+ * The three pitch classes a chord is voiced in: its root, third and fifth, or, with a seventh, the seventh for the fifth. The
+ * diminished tonic of a locrian key is voiced as its root, third and the root again (an octave up): its diminished fifth is not
+ * sounded (R-725).
+ */
 static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
     const int *pcs = context->chord_pcs[chord];
     out[0] = pcs[0];
     out[1] = pcs[1];
     out[2] = context->chord_pc_count[chord] > 3 ? pcs[3] : pcs[2];
+    bool tonic = pcs[0] == spelled_key_tonic_pitch_class(&context->key);
+    if (tonic && context->chord_pc_count[chord] == 3 && (pcs[2] - pcs[0] + 12) % 12 == 6) {
+        out[2] = pcs[0];
+    }
 }
 
 /* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */

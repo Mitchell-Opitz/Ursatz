@@ -6,6 +6,7 @@
 
 #include <model/pitch/midi_pitch.h>
 #include <model/pitch/pitch_arithmetic.h>
+#include <theory/tonality/modal_chords.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
@@ -51,7 +52,16 @@ bool composer_material_valid(const PitchMaterial *material) {
 }
 
 bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
-    return materials != NULL && material != NULL && (material == materials->major || material == materials->natural_minor);
+    return materials != NULL && material != NULL &&
+           (material == materials->major || material == materials->natural_minor || pitch_material_is_modal_key(materials, material));
+}
+
+bool composer_material_is_modal(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
+    return pitch_material_is_modal_key(materials, material);
+}
+
+bool composer_material_raises_seventh(const PitchMaterial *material) {
+    return pitch_material_is_natural_minor(material);
 }
 
 bool composer_key_is_minor(const SpelledKey *key) {

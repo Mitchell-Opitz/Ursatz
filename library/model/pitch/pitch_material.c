@@ -47,6 +47,12 @@ int pitch_material_third(const PitchMaterial *material) {
     return pitch_material_step(material, THIRD_DEGREE);
 }
 
+#define NATURAL_MINOR_BRIGHTNESS_RANK 3
+
+bool pitch_material_is_natural_minor(const PitchMaterial *material) {
+    return pitch_material_is_diatonic(material) && material->has_brightness && material->brightness_rank == NATURAL_MINOR_BRIGHTNESS_RANK;
+}
+
 bool pitch_material_is_diatonic(const PitchMaterial *material) {
     return material != NULL && material->family != NULL && strcmp(material->family, "diatonic") == 0 &&
            material->step_count == DIATONIC_STEPS;

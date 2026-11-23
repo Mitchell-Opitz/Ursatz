@@ -1013,7 +1013,7 @@ static bool read_key(MotiveReader *reader, const cJSON *item, MotiveDocument *do
         }
         picked = knowledge_snapshot_material_named(document->knowledge, material->valuestring);
         if (!picked || !composer_material_supported(&document->materials, picked)) {
-            return reader_bad(reader, "key.material", "expected a material the Composer writes keys in (major or minor)");
+            return reader_bad(reader, "key.material", "expected a material the Composer writes keys in (major, minor or a church mode)");
         }
     } else {
         const cJSON *mode = reader_member(reader, item, "key", "mode", true);

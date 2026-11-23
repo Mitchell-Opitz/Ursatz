@@ -60,4 +60,7 @@ int pitch_material_third(const PitchMaterial *material);
 /* True for a material of family "diatonic" with 7 steps. */
 bool pitch_material_is_diatonic(const PitchMaterial *material);
 
+/* True for the natural minor: a diatonic material of brightness rank 3 (the aeolian). False for NULL and for the other modes. */
+bool pitch_material_is_natural_minor(const PitchMaterial *material);
+
 #endif
