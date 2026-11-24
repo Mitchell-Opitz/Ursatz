@@ -68,7 +68,7 @@ static MotiveRelationResult replace_with_chord_tone(const MotiveSketch *source, 
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
     const MotiveSketchChord *chord = mch_chord_at(sketch, first.onset);
-    int pcs[4];
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
     size_t count = chord ? motive_sketch_chord_tones(sketch, chord, pcs) : 0;
     int pitch = -1;
     for (int d = 0; d <= 12 && pitch < 0 && count > 0; d++) {

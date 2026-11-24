@@ -44,3 +44,4 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
+composer/src/motive/motive_text.c motive_harmony_parse  # the plain form of motive_harmony_parse_in (P69 B8): every application passes its snapshot; its tests call it

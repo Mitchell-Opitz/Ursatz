@@ -32,8 +32,8 @@ static MotiveSketch rich(void) {
     sketch.beat = q(1, 4);
     sketch.pickup = q(0, 1);
     sketch.length = q(1, 1);
-    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
-    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 0, true};
+    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false, NULL};
+    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 0, true, NULL};
     sketch.chord_count = 2;
     strcpy(sketch.features[0].label, "a");
     sketch.features[0].first = 0;

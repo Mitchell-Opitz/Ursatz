@@ -482,8 +482,8 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         motive->chord_count = options->harmony_count;
     } else if (document->has_harmony_text) {
         MotiveError parsed;
-        MotiveResult read = motive_harmony_parse(document->harmony_text, &meter, motive->chords, &motive->chord_count,
-                                                 &parsed);
+        MotiveResult read = motive_harmony_parse_in(document->knowledge, document->harmony_text, &meter, motive->chords,
+                                                    &motive->chord_count, &parsed);
         if (read != MOTIVE_OK) {
             motive_set_error(error, "harmony", "%s: %s", parsed.location, parsed.message);
             return read;
@@ -521,6 +521,10 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
             chord->inversion < 0 || chord->inversion > 3 || (chord->inversion == 3 && !chord->seventh)) {
             motive_set_error(error, location,
                              "a chord is degree 1 to 7, altered by -1 to 1, in inversion 0 to 2 (3 only on a seventh)");
+            return MOTIVE_ERR_VALUE;
+        }
+        if (chord->color != NULL && (chord->seventh || chord->inversion != 0)) {
+            motive_set_error(error, location, "a color chord is a triad in root position with a color type's members");
             return MOTIVE_ERR_VALUE;
         }
         if (chord->onset.den == 0 || chord->onset.num < 0 || rational_cmp(chord->onset, motive->length) >= 0) {
@@ -743,7 +747,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
         const MotiveSketchChord *x = &a->chords[i];
         const MotiveSketchChord *y = &b->chords[i];
         if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
-            x->inversion != y->inversion || x->seventh != y->seventh) {
+            x->inversion != y->inversion || x->seventh != y->seventh || x->color != y->color) {
             return false;
         }
     }

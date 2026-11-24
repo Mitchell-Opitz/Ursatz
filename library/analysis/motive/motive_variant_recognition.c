@@ -98,7 +98,7 @@ static Share pair_share(const MotiveSketch *a, const MotiveSketch *b, PairMatch 
 
 static bool same_chord(const MotiveSketchChord *a, const MotiveSketchChord *b) {
     return a->degree == b->degree && a->alteration == b->alteration &&
-           a->inversion == b->inversion && a->seventh == b->seventh;
+           a->inversion == b->inversion && a->seventh == b->seventh && a->color == b->color;
 }
 
 static Share harmony_share(const MotiveSketch *a, const MotiveSketch *b) {

@@ -302,6 +302,17 @@ bool motive_in_key(const Motive *source, const SpelledKey *key, Motive *out);
  */
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveSketchChord *out, size_t *count,
                                   MotiveError *error);
+
+/*
+ * As motive_harmony_parse, and a chord may take a color suffix after its numeral (R-727): "IVadd9@2", "I69", "Vq4". The suffix names the
+ * snapshot's type for a major triad (add9, add6, 69, 9, maj9, quartal three or four); the chord sounds its own third and fifth and the
+ * type's other members. A suffix with no snapshot (knowledge NULL, or the plain form) is refused. A colored chord is in root position.
+ */
+MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const char *text, const PlanMeter *meter, MotiveSketchChord *out,
+                                     size_t *count, MotiveError *error);
+/* The type a color suffix names on a major triad (R-727), in the snapshot; false for a suffix that names none or a NULL snapshot. */
+bool motive_color_type(const KnowledgeSnapshot *knowledge, const char *suffix, const ChordType **type);
+
 /* The most characters of a chord's numeral with its NUL ("bVII65", "#IV43"). */
 #define MOTIVE_CHORD_NUMERAL_MAX 16
 

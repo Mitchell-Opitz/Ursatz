@@ -36,7 +36,7 @@ static const char *DEFAULT_MOTIF =
     "\"long_nct_beats\":{\"downbeat\":1,\"middle\":1,\"other\":1},"
     "\"long_nct_lengths\":{\"beat\":1,\"dotted_beat\":1,\"two_beats\":1},\"syncopation_one_in\":0,"
     "\"syncopation_types\":{\"off_beat\":1,\"tie_beat\":1,\"tie_bar\":1,\"anticipation\":1},"
-    "\"syncopation_levels\":{\"eighth\":1,\"sixteenth\":1},\"skips_per_motif\":11,\"color_note\":4}";
+    "\"syncopation_levels\":{\"eighth\":1,\"sixteenth\":1},\"skips_per_motif\":11,\"color_note\":4,\"color_chords\":\"0/1\"}";
 
 static const char *DEFAULT_DEVELOPMENT =
     "{\"fidelity_minimum\":{"
@@ -533,7 +533,7 @@ static void key_and_rule_tables(void) {
     size_t at = 0;
     for (size_t i = 0; i < key_count; i++) {
         if (strcmp(keys[i].key, "motif.plan") == 0) {
-            assert(keys[i].type == COMPOSER_KEY_PLAN && keys[i].hard && i > 0 && strcmp(keys[i - 1].key, "motif.color_note") == 0);
+            assert(keys[i].type == COMPOSER_KEY_PLAN && keys[i].hard && i > 0 && strcmp(keys[i - 1].key, "motif.color_chords") == 0);
             continue;
         }
         assert(at < leaf_count && strcmp(keys[i].key, leaves[at]) == 0);

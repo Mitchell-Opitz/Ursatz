@@ -50,7 +50,7 @@ static bool insert_chord(MotiveSketch *sketch, size_t at, MotiveSketchChord chor
  */
 static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
     const MotiveSketchChord *c = &sketch->chords[chord];
-    int pcs[4];
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
     size_t count = motive_sketch_chord_tones(sketch, c, pcs);
     if (old_inversion < 0 || (size_t)old_inversion >= count || (size_t)c->inversion >= count) {
         return;
@@ -155,7 +155,7 @@ MotiveRelationResult motive_relation_apply_harmony_insert(const MotiveSketch *in
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     MotiveSketch before = *out;
-    MotiveSketchChord added = {at, (int)degree, 0, 0, false};
+    MotiveSketchChord added = {at, (int)degree, 0, 0, false, NULL};
     if (!insert_chord(out, (size_t)chord + 1, added)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
@@ -189,7 +189,7 @@ MotiveRelationResult motive_relation_apply_harmony_substitute(const MotiveSketch
         if (!split_point(out, (size_t)chord, &at)) {
             return MOTIVE_RELATION_NOT_APPLICABLE;
         }
-        MotiveSketchChord second = {at, (int)then, 0, 0, false};
+        MotiveSketchChord second = {at, (int)then, 0, 0, false, NULL};
         if (!insert_chord(out, (size_t)chord + 1, second)) {
             return MOTIVE_RELATION_NOT_APPLICABLE;
         }
@@ -240,7 +240,7 @@ MotiveRelationResult motive_relation_apply_passing_harmony(const MotiveSketch *i
         between = (from - 1 + 6) % 7 + 1;
     }
     MotiveSketch before = *out;
-    MotiveSketchChord added = {at, between, 0, 0, false};
+    MotiveSketchChord added = {at, between, 0, 0, false, NULL};
     if (!insert_chord(out, (size_t)chord + 1, added)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
@@ -270,7 +270,7 @@ MotiveRelationResult motive_relation_apply_counter_line(const MotiveSketch *in, 
         if (end - i >= 2 && chord) {
             /* Toward the nearest tone of the next chord (of its own, in the last). */
             const MotiveSketchChord *next = chord + 1 < out->chords + out->chord_count ? chord + 1 : chord;
-            int pcs[4];
+            int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
             size_t count = motive_sketch_chord_tones(out, next, pcs);
             int pitch = out->notes[i].pitch;
             int target = -1;

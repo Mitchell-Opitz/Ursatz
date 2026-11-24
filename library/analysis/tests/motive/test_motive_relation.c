@@ -360,8 +360,8 @@ static void test_fragment(void) {
     sketch.features[1].first = 3;
     sketch.features[1].last = 4;
     sketch.chord_count = 2;
-    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
-    sketch.chords[1] = (MotiveSketchChord){q(3, 8), 4, 0, 0, false};
+    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false, NULL};
+    sketch.chords[1] = (MotiveSketchChord){q(3, 8), 4, 0, 0, false, NULL};
     MotiveSketch out;
 
     assert(apply(&sketch, step(MOTIVE_RELATION_FRAGMENT, 1, 3, 0), &out) == MOTIVE_RELATION_OK);
@@ -603,8 +603,8 @@ static void test_rhythm_shift(void) {
 static void test_add_upbeat(void) {
     MotiveSketch sketch = cged();
     sketch.chord_count = 2;
-    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
-    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 0, false};
+    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false, NULL};
+    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 0, false, NULL};
     MotiveSketch out;
 
     /* Two eighths stepping up into the C: A and B. */
@@ -863,7 +863,7 @@ static MotiveSketch triad_line(void) {
 static void set_chords(MotiveSketch *sketch, const int *degrees, const Rational *onsets, size_t count) {
     sketch->chord_count = count;
     for (size_t i = 0; i < count; i++) {
-        sketch->chords[i] = (MotiveSketchChord){onsets[i], degrees[i], 0, 0, false};
+        sketch->chords[i] = (MotiveSketchChord){onsets[i], degrees[i], 0, 0, false, NULL};
     }
 }
 
@@ -953,7 +953,7 @@ static void test_harmony_insert(void) {
     MotiveSketch full = triad_line();
     full.chord_count = MOTIVE_SKETCH_MAX_CHORDS;
     for (size_t c = 0; c < MOTIVE_SKETCH_MAX_CHORDS; c++) {
-        full.chords[c] = (MotiveSketchChord){q(c, 16), 1, 0, 0, false};
+        full.chords[c] = (MotiveSketchChord){q(c, 16), 1, 0, 0, false, NULL};
     }
     assert(apply(&full, step(MOTIVE_RELATION_HARMONY_INSERT, 7, 4, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
 }

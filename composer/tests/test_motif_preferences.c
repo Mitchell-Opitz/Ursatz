@@ -1266,12 +1266,12 @@ static void check_plan(const Motive *motive, HarmonyMode mode, int beats, const 
 
 /* A chord plan given as written: the motives hold exactly its chords, in both modes, in 4/4 and 3/4. */
 static void given_plans(void) {
-    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
-    const MotiveRandomPlanChord ii_iii[] = {{2, 0, 0}, {3, 0, 0}};
-    const MotiveRandomPlanChord vi_IV[] = {{6, 0, 0}, {4, 0, 0}};
-    const MotiveRandomPlanChord vi[] = {{6, 0, 0}};
-    const MotiveRandomPlanChord I_vi_ii[] = {{1, 0, 0}, {6, 0, 0}, {2, 0, 0}};
-    const MotiveRandomPlanChord placed[] = {{1, 0, 0}, {6, 1, 3}, {2, 2, 1}, {5, 2, 3}};
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0, ""}, {5, 0, 0, ""}};
+    const MotiveRandomPlanChord ii_iii[] = {{2, 0, 0, ""}, {3, 0, 0, ""}};
+    const MotiveRandomPlanChord vi_IV[] = {{6, 0, 0, ""}, {4, 0, 0, ""}};
+    const MotiveRandomPlanChord vi[] = {{6, 0, 0, ""}};
+    const MotiveRandomPlanChord I_vi_ii[] = {{1, 0, 0, ""}, {6, 0, 0, ""}, {2, 0, 0, ""}};
+    const MotiveRandomPlanChord placed[] = {{1, 0, 0, ""}, {6, 1, 3, ""}, {2, 2, 1, ""}, {5, 2, 3, ""}};
     const struct {
         const char *name;
         const MotiveRandomPlanChord *chords;
@@ -1316,10 +1316,10 @@ static bool refused(int beats, const MotiveRandomPreferences *preferences) {
 
 /* A plan that cannot fit is refused with `plan`, before anything is drawn; one that fits without reading a setting is not. */
 static void plans_that_do_not_fit(void) {
-    const MotiveRandomPlanChord three[] = {{1, 0, 0}, {6, 0, 0}, {2, 0, 0}};
+    const MotiveRandomPlanChord three[] = {{1, 0, 0, ""}, {6, 0, 0, ""}, {2, 0, 0, ""}};
     MotiveRandomPreferences preferences = plan_of(3, three);
     assert(refused(3, &preferences)); /* three chords need a a' b, which a 3/4 motive has no half-bar cells for */
-    const MotiveRandomPlanChord late[] = {{2, 0, 0}, {5, 2, 1}};
+    const MotiveRandomPlanChord late[] = {{2, 0, 0, ""}, {5, 2, 1, ""}};
     preferences = plan_of(2, late);
     preferences.bars[0] = 1;
     preferences.bars[1] = 0;
@@ -1332,7 +1332,7 @@ static void plans_that_do_not_fit(void) {
         made += motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK; /* 3/4 has no one-bar motive: bars are not read */
     }
     assert(smoke_run || (made >= 12));
-    const MotiveRandomPlanChord beat_four[] = {{2, 0, 0}, {5, 1, 4}};
+    const MotiveRandomPlanChord beat_four[] = {{2, 0, 0, ""}, {5, 1, 4, ""}};
     preferences = plan_of(2, beat_four);
     assert(refused(3, &preferences));
     MotiveRandomPreferences four_chords = plan_of(0, NULL);
@@ -1342,19 +1342,19 @@ static void plans_that_do_not_fit(void) {
     }
     assert(refused(4, &four_chords));
     for (int degree = 0; degree <= 8; degree += 8) {
-        const MotiveRandomPlanChord bad[] = {{2, 0, 0}, {degree, 0, 0}};
+        const MotiveRandomPlanChord bad[] = {{2, 0, 0, ""}, {degree, 0, 0, ""}};
         preferences = plan_of(2, bad);
         assert(refused(4, &preferences));
     }
-    const MotiveRandomPlanChord falling[] = {{1, 0, 0}, {6, 2, 1}, {2, 1, 3}};
+    const MotiveRandomPlanChord falling[] = {{1, 0, 0, ""}, {6, 2, 1, ""}, {2, 1, 3, ""}};
     preferences = plan_of(3, falling);
     assert(refused(4, &preferences));
-    const MotiveRandomPlanChord half[] = {{1, 0, 0}, {6, 1, 3}, {2, 0, 0}};
+    const MotiveRandomPlanChord half[] = {{1, 0, 0, ""}, {6, 1, 3, ""}, {2, 0, 0, ""}};
     preferences = plan_of(3, half);
     assert(refused(4, &preferences)); /* some of the chords placed, not all */
-    const MotiveRandomPlanChord ii_vi[] = {{2, 0, 0}, {6, 0, 0}};
-    const MotiveRandomPlanChord ii_IV[] = {{2, 0, 0}, {4, 0, 0}};
-    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
+    const MotiveRandomPlanChord ii_vi[] = {{2, 0, 0, ""}, {6, 0, 0, ""}};
+    const MotiveRandomPlanChord ii_IV[] = {{2, 0, 0, ""}, {4, 0, 0, ""}};
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0, ""}, {5, 0, 0, ""}};
     preferences = plan_of(2, ii_vi);
     preferences.endings[0] = 0;
     preferences.endings[2] = 1;
@@ -1409,8 +1409,8 @@ static void each_setting_still_gives_motives(void) {
     }
     MotiveRandomPreferences long_nct = base;
     long_nct.long_nct_one_in = 1;
-    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
-    const MotiveRandomPlanChord placed[] = {{1, 0, 0}, {6, 1, 3}, {2, 2, 1}, {5, 2, 3}};
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0, ""}, {5, 0, 0, ""}};
+    const MotiveRandomPlanChord placed[] = {{1, 0, 0, ""}, {6, 1, 3, ""}, {2, 2, 1, ""}, {5, 2, 3, ""}};
     MotiveRandomPreferences plan_two = plan_of(2, ii_V);
     MotiveRandomPreferences plan_placed = plan_of(4, placed);
     const struct {

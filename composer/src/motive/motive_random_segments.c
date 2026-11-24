@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <theory/tonality/roman_numeral_grammar.h>
 #include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/motive_develop.h>
 
@@ -113,6 +114,7 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     }
     out->skips_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
     out->color_note = 4;
+    out->color_chords.den = 1; /* no motif chord takes a color type */
 }
 
 /*
@@ -145,6 +147,7 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
         MotiveSketchChord *chord = &motive->chords[k];
         memset(chord, 0, sizeof(*chord));
         chord->degree = layout->chord_degree[k];
+        chord->color = layout->chord_color[k];
         /* The chord stays on the beat (the segment's cell start) when an anticipation sounds before it. */
         if (rational_make(layout->chord_onset[k], den, &chord->onset) != RATIONAL_OK) {
             return false;
@@ -187,7 +190,7 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
         return false;
     }
     for (size_t k = 0; k < layout->chord_count; k++) {
-        if (analysis.base_harmony.chords[k].degree != layout->chord_degree[k]) {
+        if (analysis.base_harmony.chords[k].degree != layout->chord_degree[k] || analysis.base_harmony.chords[k].color != layout->chord_color[k]) {
             return false;
         }
     }
@@ -300,6 +303,105 @@ bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences
 }
 
 /*
+ * Color chords (R-727). A motif's color chord is a major triad of the key with a tertian color type's added members (add9, add6, six-nine,
+ * the ninths); the quartal types replace the triad and are not drawn here. The type is the one a major triad takes with its suffix, as
+ * motive_harmony_parse_in reads it; `*mask` gets the scale steps above the root its added members sit on. False when the chord is not a
+ * major triad of the key, the type is quartal, or a member is outside the key's scale.
+ */
+static bool color_fits(const SpelledKey *key, int degree, const ChordType *type, unsigned *mask) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    int root = pitch_material_step(material, degree);
+    if (material == NULL || type == NULL || root < 0 || type->construction == CHORD_CONSTRUCTION_QUARTAL || type->member_count == 0) {
+        return false;
+    }
+    int steps[7];
+    for (int j = 0; j < 7; j++) {
+        int step = pitch_material_step(material, (degree - 1 + j) % 7 + 1);
+        if (step < 0) {
+            return false;
+        }
+        steps[j] = ((step - root) % 12 + 12) % 12;
+    }
+    if (steps[2] != 4 || steps[4] != 7) {
+        return false;
+    }
+    unsigned added = 0;
+    for (size_t i = 0; i < type->member_count; i++) {
+        int semitones = ((type->members[i].semitones % 12) + 12) % 12;
+        int found = -1;
+        for (int j = 0; j < 7 && found < 0; j++) {
+            found = steps[j] == semitones ? j : -1;
+        }
+        if (found < 0) {
+            return false;
+        }
+        if (type->members[i].role != CHORD_MEMBER_ROOT && type->members[i].role != CHORD_MEMBER_THIRD && type->members[i].role != CHORD_MEMBER_FIFTH) {
+            added |= 1u << found;
+        }
+    }
+    *mask = added;
+    return true;
+}
+
+/* The suffix of a plan chord as its type; false for a suffix that names none (or no knowledge) or one that does not fit the chord. */
+static bool plan_chord_color(const MotiveRandomOptions *options, const SpelledKey *key, int degree, const char *suffix, const ChordType **type,
+                             unsigned *mask) {
+    return suffix[0] != '\0' && motive_color_type(options->knowledge, suffix, type) && color_fits(key, degree, *type, mask);
+}
+
+bool motive_random_segments_plan_colors_fit(const MotiveRandomOptions *options, const SpelledKey *key) {
+    const MotiveRandomPreferences *preferences = options->preferences;
+    for (size_t k = 0; preferences != NULL && k < preferences->plan_count; k++) {
+        const ChordType *type;
+        unsigned mask;
+        if (preferences->plan[k].color[0] != '\0' && !plan_chord_color(options, key, preferences->plan[k].degree, preferences->plan[k].color, &type, &mask)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The color of each chord of the plan (setup.chord_color): a given suffix, else (motif.color_chords above 0) one draw per chord and, when it
+ * is under the share, a type drawn uniformly from those of the options' color types that fit the chord. No number is drawn when the share
+ * is 0, so the default draws are unchanged.
+ */
+static void draw_chord_colors(const MotiveRandomOptions *options, const MotiveRandomPreferences *preferences, const SpelledKey *key, FillRng *rng,
+                              Setup *setup) {
+    size_t count = setup->placed ? preferences->plan_count : setup->plan.count;
+    const Rational *share = &preferences->color_chords;
+    bool drawn = share->den > 0 && share->num > 0 && options->knowledge != NULL && options->color != NULL;
+    for (size_t k = 0; k < count && k < CHORD_MAX; k++) {
+        int degree = preferences->plan_count > 0 ? preferences->plan[k].degree : setup->plan.degrees[k];
+        if (preferences->plan_count > 0 && preferences->plan[k].color[0] != '\0') {
+            plan_chord_color(options, key, degree, preferences->plan[k].color, &setup->chord_color[k], &setup->chord_color_mask[k]);
+            continue;
+        }
+        if (!drawn || (long long)fill_rng_below(rng, (uint64_t)share->den) >= share->num) {
+            continue;
+        }
+        const ChordType *fitting[COMPOSER_COLOR_TYPES_MAX];
+        unsigned masks[COMPOSER_COLOR_TYPES_MAX];
+        size_t fit_count = 0;
+        for (size_t t = 0; t < options->color->type_count && fit_count < COMPOSER_COLOR_TYPES_MAX; t++) {
+            const ChordType *given = knowledge_snapshot_chord_type(options->knowledge, options->color->types[t]);
+            const char *suffix = given != NULL ? standard_tonality_color_suffix(given) : NULL;
+            const ChordType *canonical;
+            unsigned mask;
+            if (suffix != NULL && motive_color_type(options->knowledge, suffix, &canonical) && color_fits(key, degree, canonical, &mask)) {
+                fitting[fit_count] = canonical;
+                masks[fit_count++] = mask;
+            }
+        }
+        if (fit_count > 0) {
+            size_t pick = fill_rng_below(rng, fit_count);
+            setup->chord_color[k] = fitting[pick];
+            setup->chord_color_mask[k] = masks[pick];
+        }
+    }
+}
+
+/*
  * Whether a note on a beat of the motif sounds one of the characteristic steps of the key's mode; with `strong_only`, a note on the first
  * beat of a bar or the third of four (R-732).
  */
@@ -337,6 +439,7 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
     for (size_t s = 0; modal != NULL && preferences->plan_count == 0 && s < setup.plan.count; s++) {
         setup.plan.degrees[s] = composer_modal_plan_degree(options->knowledge, modal, setup.plan.degrees[s]);
     }
+    draw_chord_colors(options, preferences, key, rng, &setup);
     if (setup.grid.ending == ENDING_OPEN) {
         /* An open ending is on degree 2, 5 or 7 of the key: the last chord needs a tone there (not so for IV and vi). */
         bool tone = false;

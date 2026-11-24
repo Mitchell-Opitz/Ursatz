@@ -67,7 +67,7 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
         MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
         size_t count = 0;
         MotiveError motive_error;
-        if (motive_harmony_parse(text, meter, parsed, &count, &motive_error) != MOTIVE_OK) {
+        if (motive_harmony_parse_in(tones != NULL ? tones->knowledge : NULL, text, meter, parsed, &count, &motive_error) != MOTIVE_OK) {
             return fail(error, path, "chords bar %ld: '%s' at %s: %s", bar, text,
                             motive_error.location, motive_error.message);
         }
@@ -133,7 +133,10 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
                 harmony.degree = chord->degree;
                 harmony.inversion = chord->inversion;
                 harmony.seventh = chord->seventh;
-                if (!harmony_roman_format(harmony_key_mode(key), &harmony, numerals[at])) {
+                harmony.color = chord->color;
+                HarmonyKind plain = harmony_kind(tones, key);
+                if (!(chord->color != NULL ? harmony_roman_format_in(&plain, &harmony, numerals[at])
+                                           : harmony_roman_format(harmony_key_mode(key), &harmony, numerals[at]))) {
                     return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);
                 }
             }

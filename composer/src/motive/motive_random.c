@@ -200,7 +200,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
 
     /* A given chord plan that can never fit is refused before anything is drawn. */
     if (options->strategy == MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->preferences && options->preferences->plan_count > 0 &&
-        !motive_random_segments_plan_fits(options->preferences, &options->meter)) {
+        (!motive_random_segments_plan_fits(options->preferences, &options->meter) || !motive_random_segments_plan_colors_fit(options, &key))) {
         return MOTIVE_RANDOM_ERR_PLAN;
     }
 

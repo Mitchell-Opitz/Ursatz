@@ -35,8 +35,8 @@ static inline const MotiveSketchChord *mch_chord_at(const MotiveSketch *sketch, 
 /* Whether two chords hold the same pitch classes in the sketch's scale. */
 static inline bool mch_same_tones(const MotiveSketch *sketch, const MotiveSketchChord *a,
                                   const MotiveSketchChord *b) {
-    int x[4];
-    int y[4];
+    int x[MOTIVE_SKETCH_CHORD_TONES_MAX];
+    int y[MOTIVE_SKETCH_CHORD_TONES_MAX];
     size_t nx = motive_sketch_chord_tones(sketch, a, x);
     size_t ny = motive_sketch_chord_tones(sketch, b, y);
     if (nx != ny) {

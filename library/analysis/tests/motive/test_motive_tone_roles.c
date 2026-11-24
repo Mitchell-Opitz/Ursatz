@@ -38,16 +38,16 @@ static MotiveSketch line(const int *pitches, size_t count) {
 }
 
 static void add_chord(MotiveSketch *sketch, unsigned long long num, unsigned long long den, int degree) {
-    MotiveSketchChord chord = {q(num, den), degree, 0, 0, false};
+    MotiveSketchChord chord = {q(num, den), degree, 0, 0, false, NULL};
     sketch->chords[sketch->chord_count++] = chord;
 }
 
 /* The same sketch as a tone line: each note with the pitch-class mask of the chord in force at its onset. */
 static void to_tone_line(const MotiveSketch *sketch, ToneLineNote *notes) {
-    const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false};
+    const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false, NULL};
     for (size_t i = 0; i < sketch->note_count; i++) {
         const MotiveSketchChord *chord = mch_chord_at(sketch, sketch->notes[i].onset);
-        int pcs[4];
+        int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
         size_t n = motive_sketch_chord_tones(sketch, chord ? chord : &tonic, pcs);
         notes[i].midi = sketch->notes[i].pitch;
         notes[i].onset = sketch->notes[i].onset;

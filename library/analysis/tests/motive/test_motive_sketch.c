@@ -78,8 +78,8 @@ static void test_refused_sketches(void) {
 static void test_chords_and_features(void) {
     MotiveSketch sketch = four_quarters();
     sketch.chord_count = 2;
-    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
-    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 1, true};
+    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false, NULL};
+    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 1, true, NULL};
     assert(motive_sketch_validate(&sketch));
 
     MotiveSketch bad = sketch;
@@ -126,7 +126,7 @@ static void test_equality(void) {
 
     b = four_quarters();
     b.chord_count = 1;
-    b.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
+    b.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false, NULL};
     assert(!motive_sketch_equal(&a, &b));
     a = b;
     assert(motive_sketch_equal(&a, &b));
@@ -267,32 +267,32 @@ static void test_contour_normalize(void) {
 
 static void test_chord_tones(void) {
     MotiveSketch sketch = four_quarters();
-    int pcs[4];
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
 
-    MotiveSketchChord tonic = {q(0, 1), 1, 0, 0, false};
+    MotiveSketchChord tonic = {q(0, 1), 1, 0, 0, false, NULL};
     assert(motive_sketch_chord_tones(&sketch, &tonic, pcs) == 3);
     assert(pcs[0] == 0 && pcs[1] == 4 && pcs[2] == 7);
 
-    MotiveSketchChord supertonic = {q(0, 1), 2, 0, 0, false};
+    MotiveSketchChord supertonic = {q(0, 1), 2, 0, 0, false, NULL};
     assert(motive_sketch_chord_tones(&sketch, &supertonic, pcs) == 3);
     assert(pcs[0] == 2 && pcs[1] == 5 && pcs[2] == 9);
 
-    MotiveSketchChord dominant_seventh = {q(0, 1), 5, 0, 0, true};
+    MotiveSketchChord dominant_seventh = {q(0, 1), 5, 0, 0, true, NULL};
     assert(motive_sketch_chord_tones(&sketch, &dominant_seventh, pcs) == 4);
     assert(pcs[0] == 7 && pcs[1] == 11 && pcs[2] == 2 && pcs[3] == 5);
 
     /* An altered chord is major on the altered root. */
-    MotiveSketchChord flat_six = {q(0, 1), 6, -1, 0, false};
+    MotiveSketchChord flat_six = {q(0, 1), 6, -1, 0, false, NULL};
     assert(motive_sketch_chord_tones(&sketch, &flat_six, pcs) == 3);
     assert(pcs[0] == 8 && pcs[1] == 0 && pcs[2] == 3);
 
     /* In minor the dominant has a raised third. */
     sketch.tonic_pc = 9;
     sketch.material = test_materials()->natural_minor;
-    MotiveSketchChord minor_dominant = {q(0, 1), 5, 0, 0, false};
+    MotiveSketchChord minor_dominant = {q(0, 1), 5, 0, 0, false, NULL};
     assert(motive_sketch_chord_tones(&sketch, &minor_dominant, pcs) == 3);
     assert(pcs[0] == 4 && pcs[1] == 8 && pcs[2] == 11);
-    MotiveSketchChord minor_tonic = {q(0, 1), 1, 0, 0, false};
+    MotiveSketchChord minor_tonic = {q(0, 1), 1, 0, 0, false, NULL};
     assert(motive_sketch_chord_tones(&sketch, &minor_tonic, pcs) == 3);
     assert(pcs[0] == 9 && pcs[1] == 0 && pcs[2] == 4);
 

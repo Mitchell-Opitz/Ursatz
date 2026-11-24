@@ -192,11 +192,12 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Spe
 }
 
 /* The positions near the note before where a non-chord tone of a kind (1 to 4 of the decorations list) makes its figure. */
-static size_t find_figures(const SpelledKey *key, const Melody *melody, size_t i, long before, long shift, size_t kind, long *options) {
+static size_t find_figures(const SpelledKey *key, const Melody *melody, size_t i, long before, long shift, unsigned color_mask, size_t kind,
+                           long *options) {
     size_t option_count = 0;
     for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
         int pitch = motive_position_pitch(key, p, 0);
-        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+        if (!motive_random_is_chord_step(p - shift) && !motive_random_is_color_step(color_mask, p - shift) && motive_random_in_range(pitch) &&
             motive_random_forms(MOTIVE_RANDOM_DECORATIONS[kind - 1], melody->pitches[i - 1], pitch, melody->pitches[i + 1])) {
             options[option_count++] = p;
         }
@@ -319,12 +320,12 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const S
         long before = place->position[i - 1];
         size_t kind = motive_random_pick_weighted(rng, preferences->decorations, DECORATION_KINDS + 1);
         long options[2 * OFF_FRAME_REACH + 1];
-        size_t option_count = kind > 0 ? find_figures(key, melody, i, before, shift, kind, options) : 0;
+        size_t option_count = kind > 0 ? find_figures(key, melody, i, before, shift, layout->color_mask[i], kind, options) : 0;
         if (option_count == 0 && preferences->avoid_repeats && kind > 0) {
             /* the other kinds, in list order after the one drawn, before a chord tone */
             for (size_t step = 1; step < DECORATION_KINDS && option_count == 0; step++) {
                 size_t other = 1 + (kind - 1 + step) % DECORATION_KINDS;
-                if (preferences->decorations[other] > 0 && (option_count = find_figures(key, melody, i, before, shift, other, options)) > 0) {
+                if (preferences->decorations[other] > 0 && (option_count = find_figures(key, melody, i, before, shift, layout->color_mask[i], other, options)) > 0) {
                     kind = other;
                 }
             }
@@ -338,7 +339,8 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const S
             for (long p = before - 4; p <= before + 4; p++) {
                 int alteration = motive_random_chord_alteration(key, degree, p);
                 int pitch = motive_position_pitch(key, p, alteration);
-                if (motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+                if ((motive_random_is_chord_step(p - shift) || motive_random_is_color_step(layout->color_mask[i], p - shift)) &&
+                    motive_random_in_range(pitch) &&
                     !(preferences->avoid_repeats && (pitch == melody->pitches[i - 1] || pitch == melody->pitches[i + 1]))) {
                     options[option_count++] = p;
                 }
@@ -379,8 +381,8 @@ static bool place_step_accent(const SpelledKey *key, const Layout *layout, FillR
     size_t option_count = 0;
     for (long p = target - 1; p <= target + 1; p += 2) {
         int pitch = motive_position_pitch(key, p, 0);
-        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
-            motive_random_forms(type, melody->pitches[i - 1], pitch, target_pitch)) {
+        if (!motive_random_is_chord_step(p - shift) && !motive_random_is_color_step(layout->color_mask[i], p - shift) &&
+            motive_random_in_range(pitch) && motive_random_forms(type, melody->pitches[i - 1], pitch, target_pitch)) {
             options[option_count++] = p;
         }
     }
@@ -402,7 +404,7 @@ static bool place_suspension(const SpelledKey *key, const Layout *layout, size_t
     long resolution = held - 1;
     int resolution_alteration = motive_random_chord_alteration(key, degree, resolution);
     int resolution_pitch = motive_position_pitch(key, resolution, resolution_alteration);
-    if (motive_random_is_chord_step(held - motive_random_chord_shift(degree)) || !motive_random_is_chord_step(resolution - motive_random_chord_shift(degree)) ||
+    if (motive_random_is_chord_step(held - motive_random_chord_shift(degree)) || motive_random_is_color_step(layout->color_mask[i], held - motive_random_chord_shift(degree)) || !motive_random_is_chord_step(resolution - motive_random_chord_shift(degree)) ||
         !motive_random_in_range(resolution_pitch) ||
         !motive_random_forms(NON_CHORD_TONE_SUSPENSION, melody->pitches[i - 1], melody->pitches[i - 1], resolution_pitch)) {
         return false;
@@ -459,7 +461,8 @@ static void add_long_nct(const MotiveRandomPreferences *preferences, const Spell
     int degree = layout->degree[i];
     long shift = motive_random_chord_shift(degree);
     long step = motive_random_step_of(n - shift);
-    if (motive_random_is_chord_step(n - shift) || !motive_random_is_chord_step(r - shift) || *count == LONG_NCT_CANDIDATES) {
+    if (motive_random_is_chord_step(n - shift) || motive_random_is_color_step(layout->color_mask[i], n - shift) ||
+        !motive_random_is_chord_step(r - shift) || *count == LONG_NCT_CANDIDATES) {
         return;
     }
     size_t interval = step == 1 ? 0 : step == 3 ? 1 : step == 5 ? 2 : 3;

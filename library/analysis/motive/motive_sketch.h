@@ -28,6 +28,8 @@
 #define MOTIVE_SKETCH_MAX_CHORDS 8
 #define MOTIVE_SKETCH_MAX_FEATURES 8
 #define MOTIVE_SKETCH_LABEL_SIZE 9
+/* The most pitch classes a chord has: a color type's members (five at most, R-727); a triad has 3, a seventh chord 4. */
+#define MOTIVE_SKETCH_CHORD_TONES_MAX 5
 #define MOTIVE_SKETCH_PITCH_UNKNOWN (-1)
 
 typedef struct {
@@ -36,13 +38,15 @@ typedef struct {
     Rational duration;
 } MotiveSketchNote;
 
-/* degree 1 to 7, alteration -1/0/1, inversion 0 to 3. */
+/* degree 1 to 7, alteration -1/0/1, inversion 0 to 3. color (R-727) is a snapshot-owned chord type whose added members (a ninth, a sixth) the
+   chord sounds beside its own third and fifth, or whose quartal members it sounds instead; NULL for a plain chord. */
 typedef struct {
     Rational onset;
     int degree;
     int alteration;
     int inversion;
     bool seventh;
+    const ChordType *color;
 } MotiveSketchChord;
 
 /* label 1 to 8 characters; first and last are 0-based note indices, inclusive. */
@@ -245,10 +249,11 @@ int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step);
 /*
  * The pitch classes of a chord, root first, then third, fifth and, with a seventh, the seventh: the sketch's
  * scale stacked in thirds from the root. An altered chord is a major triad (a dominant seventh) on the altered
- * root; in minor, degree 5 has its third raised. Returns how many (3 or 4), 0 without a scale. The inversion
- * does not reorder them.
+ * root; in minor, degree 5 has its third raised. A color chord (R-727) has its type's members on the root: the third and the fifth
+ * of a tertian type are the chord's own, the other members are the type's semitones above the root; a quartal type's members are all
+ * the type's. Returns how many (3, 4 or up to 5 with a color), 0 without a scale. The inversion does not reorder them.
  */
-size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]);
+size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX]);
 
 /*
  * The chord a sketch implies: the triad of I, V, IV, vi, ii, iii or vii (degrees 1, 5, 4, 6, 2, 3, 7, in that order) that holds the most of
