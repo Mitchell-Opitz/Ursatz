@@ -604,6 +604,7 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->functions = &state->preferences.functions;
         setup->critic = &state->preferences.critic;
         setup->mixture = &state->preferences.harmony.mixture;
+        setup->color = &state->preferences.harmony.color;
         setup->motif = &state->preferences.motif;
     }
 

@@ -71,6 +71,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->candidates.pool = 4;
     critic_settings_default(&out->critic);
     composer_mixture_default(&out->harmony.mixture);
+    composer_color_default(&out->harmony.color);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -1025,6 +1026,11 @@ static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-o
 static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
                                                    "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
 static const char *const WORDS_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter", "two steps darker", "two steps brighter", NULL};
+static const char *const WORDS_COLOR_TYPES[] = {"persichetti.chord-type.add9",          "persichetti.chord-type.minor-add9",
+                                                "persichetti.chord-type.add6",          "persichetti.chord-type.minor-add6",
+                                                "persichetti.chord-type.six-nine",      "persichetti.chord-type.dominant-ninth",
+                                                "persichetti.chord-type.major-ninth",   "persichetti.chord-type.minor-ninth",
+                                                "persichetti.chord-type.quartal-three", "persichetti.chord-type.quartal-four", NULL};
 static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
                                             "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
 
@@ -1177,7 +1183,9 @@ static const ComposerPreferenceKey KEYS[] = {
     {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
-    {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM}};
+    {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM},
+    {"harmony.color.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
+    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {

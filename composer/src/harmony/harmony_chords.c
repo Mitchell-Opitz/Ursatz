@@ -21,6 +21,21 @@ void composer_mixture_default(ComposerMixture *out) {
     }
 }
 
+void composer_color_default(ComposerColor *out) {
+    static const char *const IDS[] = {"persichetti.chord-type.add9",         "persichetti.chord-type.minor-add9",
+                                      "persichetti.chord-type.add6",         "persichetti.chord-type.minor-add6",
+                                      "persichetti.chord-type.six-nine",     "persichetti.chord-type.dominant-ninth",
+                                      "persichetti.chord-type.major-ninth",  "persichetti.chord-type.minor-ninth",
+                                      "persichetti.chord-type.quartal-three", "persichetti.chord-type.quartal-four"};
+    memset(out, 0, sizeof(*out));
+    out->share.num = 0;
+    out->share.den = 1;
+    out->type_count = sizeof(IDS) / sizeof(IDS[0]);
+    for (size_t i = 0; i < out->type_count; i++) {
+        snprintf(out->types[i], COMPOSER_COLOR_ID_MAX, "%s", IDS[i]);
+    }
+}
+
 bool composer_chords_init(ComposerChords *chords, const KnowledgeSnapshot *knowledge, char *message, size_t message_size) {
     if (chords == NULL || knowledge == NULL) {
         if (message != NULL && message_size > 0) {
@@ -32,6 +47,7 @@ bool composer_chords_init(ComposerChords *chords, const KnowledgeSnapshot *knowl
     memset(&built, 0, sizeof(built));
     built.knowledge = knowledge;
     composer_mixture_default(&built.mixture);
+    composer_color_default(&built.color);
     if (!common_practice_materials_resolve(knowledge, &built.materials, message, message_size)) {
         return false;
     }
@@ -240,5 +256,31 @@ bool composer_chord_tones(const ComposerChords *chords, const SpelledKey *key, c
         intervals[i] = basic[i];
     }
     *count = basic_count;
+    return true;
+}
+
+bool composer_color_fits(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal, const HarmonyChord *chord,
+                         const ChordType *type) {
+    int root;
+    int intervals[4];
+    size_t count;
+    const PitchMaterial *material = composer_chords_key_material(chords, mode, modal);
+    if (chord == NULL || type == NULL || material == NULL || type->member_count == 0 || chord->seventh || chord->borrowed_from != NULL ||
+        chord->color != NULL || chord->leading_tone || !composer_chord_intervals(chords, mode, modal, chord, &root, intervals, &count) || count != 3) {
+        return false;
+    }
+    bool quartal = type->construction == CHORD_CONSTRUCTION_QUARTAL;
+    for (size_t i = 0; i < type->member_count; i++) {
+        int semitones = type->members[i].semitones;
+        if (!quartal && type->members[i].role == CHORD_MEMBER_THIRD && semitones != intervals[1]) {
+            return false;
+        }
+        if (!quartal && type->members[i].role == CHORD_MEMBER_FIFTH && semitones != intervals[2]) {
+            return false;
+        }
+        if (!pitch_material_contains(material, root + semitones)) {
+            return false;
+        }
+    }
     return true;
 }

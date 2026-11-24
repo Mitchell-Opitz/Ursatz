@@ -35,10 +35,27 @@ typedef struct {
 /* share 0/1, from "parallel", "one step darker", "one step brighter". */
 void composer_mixture_default(ComposerMixture *out);
 
+/*
+ * The color settings (R-727): the chance each chord of a phrase gets a color type, and the K2 ids the type is drawn from (the ten
+ * persichetti types by default). share 0 (the default) draws nothing.
+ */
+#define COMPOSER_COLOR_TYPES_MAX 12
+#define COMPOSER_COLOR_ID_MAX 48
+
+typedef struct {
+    Rational share; /* 0/1 to 1/1 */
+    size_t type_count;
+    char types[COMPOSER_COLOR_TYPES_MAX][COMPOSER_COLOR_ID_MAX];
+} ComposerColor;
+
+/* share 0/1, types the ten persichetti chord types. */
+void composer_color_default(ComposerColor *out);
+
 typedef struct {
     const KnowledgeSnapshot *knowledge;
     CommonPracticeMaterials materials;
     ComposerMixture mixture; /* the run's mixture settings: the defaults unless the run sets them */
+    ComposerColor color;     /* the run's color settings: the defaults unless the run sets them */
 } ComposerChords;
 
 /* Resolves the materials from `knowledge`. False for a NULL argument or a snapshot without them, with `message` naming the id. */
@@ -94,6 +111,14 @@ const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords,
  */
 bool composer_chord_intervals(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal, const HarmonyChord *chord,
                               int *root_semitones, int intervals[4], size_t *count);
+
+/*
+ * Whether a chord type fits a basic triad in the key (R-727): its third and fifth are the chord's (a quartal type needs none) and
+ * every member's pitch class is in the key's material on the chord's root. False for a seventh chord, a borrowed or applied chord, a
+ * chord with a color already and a type without members.
+ */
+bool composer_color_fits(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal, const HarmonyChord *chord,
+                         const ChordType *type);
 
 #define COMPOSER_CHORD_TONES_MAX 5
 

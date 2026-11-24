@@ -38,10 +38,12 @@ typedef struct {
 /*
  * The harmony group (P69): the settings of the phrase model's chords. mixture (R-729) is how often a predominant chord is borrowed
  * from another mode: share 0 to 1 as "n/d" (default 0/1, nothing drawn) and from, the relation words (1 to 6) whose materials it is
- * borrowed from, in order (default "parallel", "one step darker", "one step brighter").
+ * borrowed from, in order (default "parallel", "one step darker", "one step brighter"). color (R-727) is how often a chord of the phrase gets
+ * a color type: share 0 to 1 as "n/d" (default 0/1) and types, the K2 ids (1 to 12) the type is drawn from (default the ten persichetti types).
  */
 typedef struct {
     ComposerMixture mixture;
+    ComposerColor color;
 } HarmonyPreferences;
 
 typedef struct {

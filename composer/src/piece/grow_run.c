@@ -70,6 +70,7 @@ GrowResult grow_run(Plan *plan, const GrowConfig *config, GrowOutcome *outcome) 
     compose.context = config->context;
     compose.melody = config->melody;
     compose.mixture = config->mixture;
+    compose.color = config->color;
     compose.style = config->style;
     compose.style_weight = config->style_weight;
     compose.basic = config->basic;

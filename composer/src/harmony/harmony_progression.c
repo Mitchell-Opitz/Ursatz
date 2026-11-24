@@ -153,6 +153,49 @@ static void borrow_predominants(const HarmonyKind *kind, FillRng *rng, ChordSpec
     }
 }
 
+/*
+ * Color (R-727): with share above 0, each chord of the dealt phrase draws once, and under the share takes one color type drawn
+ * uniformly from those of `types` that fit it (composer_color_fits). The chord is still the basic triad to every check; its numeral
+ * gains the suffix of the type. A chord no type fits, a 6/4 and an applied chord stay as they are. With share 0 nothing is drawn.
+ */
+static void color_phrase(const HarmonyKind *kind, FillRng *rng, PhraseChord *chords, size_t count) {
+    const ComposerColor *color = kind->chords != NULL ? &kind->chords->color : NULL;
+    if (color == NULL || color->share.num <= 0 || color->share.den <= 0 || kind->chords->knowledge == NULL) {
+        return;
+    }
+    const ChordType *types[COMPOSER_COLOR_TYPES_MAX];
+    size_t type_count = 0;
+    for (size_t i = 0; i < color->type_count; i++) {
+        const ChordType *type = knowledge_snapshot_chord_type(kind->chords->knowledge, color->types[i]);
+        if (type != NULL) {
+            types[type_count++] = type;
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        if ((long long)fill_rng_below(rng, (uint64_t)color->share.den) >= color->share.num || chords[i].applied || chords[i].chord.cadential ||
+            chords[i].chord.color != NULL) {
+            continue;
+        }
+        const ChordType *fitting[COMPOSER_COLOR_TYPES_MAX];
+        size_t fit_count = 0;
+        for (size_t t = 0; t < type_count; t++) {
+            if (composer_color_fits(kind->chords, kind->mode, kind->modal, &chords[i].chord, types[t])) {
+                fitting[fit_count++] = types[t];
+            }
+        }
+        if (fit_count == 0) {
+            continue;
+        }
+        HarmonyChord colored = chords[i].chord;
+        char roman[PLAN_ROMAN_NUMERAL_MAX];
+        colored.color = fitting[fill_rng_below(rng, fit_count)];
+        if (harmony_roman_format_in(kind, &colored, roman)) {
+            chords[i].chord = colored;
+            memcpy(chords[i].roman, roman, PLAN_ROMAN_NUMERAL_MAX);
+        }
+    }
+}
+
 void harmony_progression_destroy(void *payload) {
     PhraseProgression *progression = payload;
     if (progression) {
@@ -381,6 +424,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         }
     }
     size_t count = before_count + 1;
+    color_phrase(&kind, rng, chords, count);
     /* Chords that do not stand on the given bass or carry the given melody are dealt again, after the dominant is
        tried on the cadential six-four. No random number is drawn for it, so a deal that fits is unchanged. */
     if (request->has_given && !harmony_given_fits(request, chords, count, NULL) &&
