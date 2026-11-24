@@ -320,14 +320,14 @@ static bool color_fits(const SpelledKey *key, int degree, const ChordType *type,
         if (step < 0) {
             return false;
         }
-        steps[j] = ((step - root) % 12 + 12) % 12;
+        steps[j] = util_pitch_class(step - root);
     }
     if (steps[2] != 4 || steps[4] != 7) {
         return false;
     }
     unsigned added = 0;
     for (size_t i = 0; i < type->member_count; i++) {
-        int semitones = ((type->members[i].semitones % 12) + 12) % 12;
+        int semitones = util_pitch_class(type->members[i].semitones);
         int found = -1;
         for (int j = 0; j < 7 && found < 0; j++) {
             found = steps[j] == semitones ? j : -1;
