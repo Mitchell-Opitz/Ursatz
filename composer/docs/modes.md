@@ -65,6 +65,19 @@ A motif's drawn chords in a modal key are the tonic and the mode's primary chord
 
 Measured at P69 B5 over twenty sentences and twenty periods of each mode from seed 500 (`composed`, then the characteristic step on a strong beat): dorian 14 (12 of 14) and 16 (13 of 16), mixolydian 13 (12 of 13) and 15 (14 of 15), lydian 17 (16 of 17) and 17 (16 of 17), phrygian 16 (16 of 16) and 15 (13 of 15), locrian 19 (19 of 19) and 17 (17 of 17); no chord outside the mode's collection, at most 0.015 of the melody notes outside it, and every chord and every cadence holds the step. With both settings at 0 a sentence in mixolydian puts it on a strong beat in 8 of 15 themes instead of 14 of 15.
 
+## Modal mixture
+
+A chord taken from another mode on the key's tonic is a borrowed chord (R-729, OMT V ch. 1): the triad on a degree of that mode, written with the numeral of its root and quality against the key's own steps (`iv` and `bVI` in C major, from the natural minor; `IV` in C minor, from dorian). `HarmonyChord.borrowed_from` is the material, the plan's harmony payload keeps it as `borrowed_from` (a material id, only when set; format 6) and the theme response's chord rows show it. Every consumer reads the chord's tones from `composer_chord_tones`, which gives the borrowed triad. The recognizer and the judge read the key's own chord on that degree (mixture is judged by function, as the predominant that stands in its place).
+
+A numeral the key's own chords do not read (an alteration, or another quality than the key's triad there) names a borrowed chord when a mode holds it: the nearest in brightness, darker before brighter at a tie (`composer_chords_borrow_source`). A seventh, an applied chord, an augmented triad and the tonic are refused; a key read without the run's chords borrows nothing. The theme request's `chords` read an altered numeral as a major triad (the chord text has no case: `"I bVI bVII I"`), the piece request's `harmony` progression any case (`"i IV i"` in C minor); both need the snapshot, which every request has.
+
+`harmony.mixture` (R-729, off by default) lets the phrase model borrow:
+
+- `share` (a ratio `n/d`, 0/1 to 1/1, default 0/1): the chance each predominant chord of the phrase model's run is borrowed. 0 draws nothing, so no output moves.
+- `from` (1 to 6 relation words, default `parallel`, `one step darker`, `one step brighter`): a borrowed chord is the same degree's triad of the first of these modes whose triad differs from the key's, is major, minor or diminished and is not avoided there; a later predominant of the run borrows from the mode the run already uses when it can. The tonic and the cadence's approach chords are never borrowed.
+
+The settings reach only the chords the phrase model deals: a theme whose motives have chords of their own keeps them, so `share` moves a theme with motives given no harmony and the harmony around given chords. In a modal key the same applies, with the mode's own predominant chords.
+
 ## What a modal key does not write
 
 - Applied chords, dominant options, predominant forms and the prolongation figures with V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws the figures on the tonic, IV and the root-position dominant (the approach chord of the mode's cadence).

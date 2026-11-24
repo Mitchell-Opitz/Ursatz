@@ -45,6 +45,8 @@ A cadence is a kind name (`perfect-authentic`, `medial-caesura`, kept as written
 
 ## The plan
 
+A harmony span's payload is the numeral, its function and, for a borrowed chord (R-729), `borrowed_from`: the material the chord is taken from (`PlanHarmony.borrowed_from`, a snapshot-owned `PitchMaterial`, NULL for none). The file writes its id only when set and reads it by id, refusing an unknown one at `.../payload/borrowed_from`; the format stays 6.
+
 The Composer writes the plan; the Analyzer's reading becomes one later in P62 (B14). The plan holds no program of its own: a caller stamps what it writes (`plan_to_json(plan, &producer, &error)`) and a reader that needs a program's rules passes hooks (`plan_from_json(knowledge, text, hooks, &plan, &error)`; NULL hooks support every material and migrate nothing). `plan_clone` renumbers the live nodes and lane spans from 1, as writing and reading a plan does; `plan_copy_into` replaces a plan's contents with a clone (what a retry of a failed composing round restores). Spans and nodes are edited through the public functions of the headers; only the group's files include `plan_internal.h`.
 
 ## Deferred
