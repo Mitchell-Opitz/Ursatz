@@ -763,19 +763,39 @@ static UrsatzStatus check_overlay_regions(PieceSpec *request, const char *base, 
  */
 static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, UrsatzError *error) {
     PieceRequest *piece = &request->request;
+    const FormSpecSize *size = request->form->request_sections ? NULL : form_spec_size(request->form, piece->bars, piece->count);
+    const PieceSection *items = request->form->request_sections ? piece->sections : piece->overlays;
+    size_t count = request->form->request_sections ? piece->section_count : piece->overlay_count;
     PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
     memset(regions, 0, sizeof(regions));
     size_t refused;
     char why[256];
-    (void)piece_resolve_regions(piece, request->knowledge, regions, &refused, why, sizeof why);
-    for (size_t i = 0; i < piece->section_count; i++) {
-        const Plan *theme = piece->sections[i].theme_plan;
-        if (piece->sections[i].fill != PIECE_FILL_THEME || theme == NULL) {
+    bool regional = false;
+    if (request->form->request_sections) {
+        (void)piece_resolve_regions(piece, request->knowledge, regions, &refused, why, sizeof why);
+    } else if (size) {
+        (void)piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused, why, sizeof why);
+    }
+    for (size_t i = 0; i < count; i++) {
+        const Plan *theme = items[i].theme_plan;
+        if (items[i].fill != PIECE_FILL_THEME || theme == NULL) {
             continue;
+        }
+        size_t at = i;
+        if (!request->form->request_sections) {
+            at = size ? size->section_count : 0;
+            for (size_t j = 0; size && j < size->section_count; j++) {
+                if (strcmp(size->sections[j].name, items[i].description.name) == 0) {
+                    at = j;
+                }
+            }
+            if (at == size->section_count) {
+                continue;
+            }
         }
         PlanSpan everything = {{0, 1}, {1000000, 1}};
         LaneSpanId ids[2];
-        SpelledKey section_key = regions[i].has_region && regions[i].key.material ? regions[i].key : piece->key;
+        SpelledKey section_key = regions[at].has_region && regions[at].key.material ? regions[at].key : piece->key;
         if (plan_lane_find(theme, PLAN_LANE_REGION, 0, everything, ids, 2) < 1) {
             continue;
         }
@@ -783,11 +803,11 @@ static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, Ursa
         if (theme_key->material != section_key.material) {
             char theme_name[48];
             char section_name[48];
-            char at[200];
+            char path[200];
             util_key_name(spelled_key_tonic_pitch_class(theme_key), theme_key->material, theme_name, sizeof(theme_name));
             util_key_name(spelled_key_tonic_pitch_class(&section_key), section_key.material, section_name, sizeof(section_name));
-            snprintf(at, sizeof at, "%.150s/sections/%zu/fill", base, i);
-            return api_fail(error, URSATZ_ERR_REQUEST, at, "the theme is in %s, the section in %s", theme_name, section_name);
+            snprintf(path, sizeof path, "%.150s/sections/%zu/fill", base, i);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "the theme is in %s, the section in %s", theme_name, section_name);
         }
     }
     return URSATZ_OK;
@@ -979,6 +999,9 @@ UrsatzStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot 
     }
     if (!given_sections) {
         status = check_overlay_regions(request, base, error);
+        if (status == URSATZ_OK) {
+            status = check_theme_fills(request, base, error);
+        }
         return status == URSATZ_OK ? check_harmony(request, base, error) : status;
     }
     /* The request checks before the default ending joins it: a request without a body is a bad one. */
