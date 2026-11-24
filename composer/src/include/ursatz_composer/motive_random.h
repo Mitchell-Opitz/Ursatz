@@ -65,8 +65,10 @@ typedef enum {
  *   pickup_one_in     a pickup (half a beat or a beat) in one motive of this many; 0 never draws one
  *   shapes_one_bar    a a' (repeat), a b (contrast), for a one-bar motive
  *   shapes_two_bars   a a', a b, a a' b (repeat_contrast), for a two-bar motive (the third only with an even meter)
- *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given
- *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given
+ *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given;
+ *                     in a modal key V is the mode's approach chord and IV its predominant (composer_modal_plan_degree)
+ *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given;
+ *                     in a modal key V and IV read as for plans_two
  *   features          the distinctive feature of segment a: dotted figure, leap, repeated note
  *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
  *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)

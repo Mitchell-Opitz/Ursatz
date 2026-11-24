@@ -32,6 +32,14 @@ bool composer_chords_init(ComposerChords *chords, const KnowledgeSnapshot *knowl
  */
 const VocabularyCadence *composer_chords_cadence(const ComposerChords *chords, const PitchMaterial *material);
 
+/*
+ * The degree a common-practice plan degree stands for in a modal key (R-725, R-732): 5 (the dominant) is the cadence kind's last
+ * approach degree, 4 (the predominant) the mode's primary degree that is neither the tonic nor an approach degree; every other
+ * degree, and every degree of a major or minor key (`modal` NULL), a missing cadence kind or a NULL snapshot, stays as it is. Each
+ * non-tonic primary chord of a church mode holds its characteristic step (Persichetti ch. 2), so a plan read this way sounds it.
+ */
+int composer_modal_plan_degree(const KnowledgeSnapshot *knowledge, const PitchMaterial *modal, int degree);
+
 /* The material of a modal key (pitch_material_is_modal_key against the chords' materials), else NULL: a major or minor key, a NULL key. */
 const PitchMaterial *composer_chords_modal(const ComposerChords *chords, const SpelledKey *key);
 

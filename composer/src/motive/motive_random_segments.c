@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/motive_develop.h>
 
 #include "motive/motive_random_internal.h"
@@ -331,6 +332,11 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
     }
     *found = false;
     motive_random_draw_setup(preferences, &options->meter, rng, &setup);
+    /* A drawn plan in a modal key: its V and IV are the mode's approach and predominant chords, which hold its color note (R-732). */
+    const PitchMaterial *modal = key != NULL && pitch_material_is_modal_key(NULL, key->material) ? key->material : NULL;
+    for (size_t s = 0; modal != NULL && preferences->plan_count == 0 && s < setup.plan.count; s++) {
+        setup.plan.degrees[s] = composer_modal_plan_degree(options->knowledge, modal, setup.plan.degrees[s]);
+    }
     if (setup.grid.ending == ENDING_OPEN) {
         /* An open ending is on degree 2, 5 or 7 of the key: the last chord needs a tone there (not so for IV and vi). */
         bool tone = false;

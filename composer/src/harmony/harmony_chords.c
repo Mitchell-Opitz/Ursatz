@@ -58,6 +58,31 @@ const VocabularyCadence *composer_chords_cadence(const ComposerChords *chords, c
     return entry != NULL && entry->subtype == VOCABULARY_CADENCE_KIND ? &entry->cadence : NULL;
 }
 
+int composer_modal_plan_degree(const KnowledgeSnapshot *knowledge, const PitchMaterial *modal, int degree) {
+    if (knowledge == NULL || modal == NULL || modal->cadence == NULL || (degree != 4 && degree != 5)) {
+        return degree;
+    }
+    const VocabularyEntry *entry = knowledge_snapshot_vocabulary(knowledge, modal->cadence);
+    if (entry == NULL || entry->subtype != VOCABULARY_CADENCE_KIND || entry->cadence.approach_count == 0) {
+        return degree;
+    }
+    const VocabularyCadence *cadence = &entry->cadence;
+    if (degree == 5) {
+        return cadence->approach_degrees[cadence->approach_count - 1];
+    }
+    for (size_t i = 0; i < modal->primary_count; i++) {
+        int primary = modal->primary_degrees[i];
+        bool approach = false;
+        for (size_t a = 0; a < cadence->approach_count; a++) {
+            approach = approach || cadence->approach_degrees[a] == primary;
+        }
+        if (primary != 1 && !approach) {
+            return primary;
+        }
+    }
+    return degree;
+}
+
 const PitchMaterial *composer_chords_modal(const ComposerChords *chords, const SpelledKey *key) {
     if (key == NULL) {
         return NULL;
