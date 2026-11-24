@@ -34,7 +34,7 @@ takes the bytes of a MIDI file instead of `input`, and `write_in_c` (API 4.4): w
 | `meter` | `"4/4"`: the meter, for input that has none (a note list); an input that declares another meter is `URSATZ_ERR_UNSATISFIABLE` |
 | `key` | `"D minor"`: replaces a key the input states |
 | `pickup` | the beats before the first barline, counted in beats of the motive's meter: a number or a string (`1`, `"1/2"`); default 0 |
-| `harmony` | the motive's own chords as Roman numerals with onsets in beats after `@` (`"I V6@2 I@3"`); `""` clears the harmony the input has |
+| `harmony` | the motive's own chords as Roman numerals with onsets in beats after `@` (`"I V6@2 I@3"`; a chord may take a color suffix, `IVadd9@2`, see [modes](../modes.md#color-chords)); `""` clears the harmony the input has |
 | `features` | up to 8 labelled runs of notes by 0-based index: `["a:0-2", "b:3-4"]`; a label is used once |
 | `role` | `"melodic"` (default) or `"accompaniment"` |
 | `tones` | tone labels by 1-based note: `["3=passing", "2=chord"]`; the roles are `chord`, `passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone` and `pedal`; needs a motive with a key and pitches |

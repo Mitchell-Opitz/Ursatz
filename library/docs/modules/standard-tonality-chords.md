@@ -51,6 +51,12 @@ Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md)
   chord fully diminished. The raised leading tone in the chords on do
   and me would give qualities outside the five, so they stay as in
   natural minor.
+- **Color suffixes** (`roman_numeral_grammar.h`, P69, R-727): a numeral may
+  carry `add9`, `add6`, `69`, `9`, `maj9`, `q3` or `q4` after its quality
+  and before its figures (`Iadd9`, `IV69`, `V9`, `Vq3`).
+  `standard_tonality_numeral_color_type` names the K2 chord type the suffix
+  and the quality select; `standard_tonality_color_suffix` is the way back.
+  A colored numeral is a triad, so a seventh figure on it is refused.
 - **Chords of a modal key** (`modal_chords.h`, P69, R-725): a seven-step
   material that is neither the major nor the natural minor and names a
   cadence kind (the five church modes) stacks its triad on a degree from

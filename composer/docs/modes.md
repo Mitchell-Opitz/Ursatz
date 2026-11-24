@@ -78,6 +78,18 @@ A numeral the key's own chords do not read (an alteration, or another quality th
 
 The settings reach only the chords the phrase model deals: a theme whose motives have chords of their own keeps them, so `share` moves a theme with motives given no harmony and the harmony around given chords. In a modal key the same applies, with the mode's own predominant chords.
 
+## Color chords
+
+A chord can carry a color type, a K2 chord type of the snapshot (R-727, Persichetti chapter 3): the triad with an added ninth or sixth, the six-nine chord, the ninths, and the quartal chords. The numeral gets the type's suffix after its quality and before the figures: `Iadd9`, `IV69`, `V9`, `Imaj9`, `ii9`, `Vq3`. The suffix and the numeral's quality name the entry (`add9` on a major triad is `persichetti.chord-type.add9`, on a minor one `minor-add9`; `9` is `dominant-ninth` or `minor-ninth`; `69` `six-nine`; `maj9` `major-ninth`; `q3` and `q4` the quartal types); a suffix that names no type for that quality is refused. A colored chord sounds its type's members on its root (`Iadd9` in C major is C E G D), but every check reads the basic chord: the judge, the cadence hearing, the bass and the recognizer see `Iadd9` as I. The accompaniment voices a colored chord by its third, its added tone or seventh and its ninth above the bass, the fifth left out (OMT VI chapter 3), and a quartal chord by its three upper members.
+
+A type fits a chord when its third and fifth are the chord's (a quartal type needs none) and every member's pitch class is in the key's material on that root (`composer_color_fits`). Three settings, all off by default, so no output moves:
+
+- `harmony.color.share` (a ratio `n/d`, default 0/1): after the phrase model writes a phrase, each chord draws once and, under the share, takes one fitting type drawn uniformly from `harmony.color.types`. A 6/4 and an applied chord stay as they are.
+- `harmony.color.types` (1 to 12 K2 ids, default the ten persichetti types): the types a drawn chord may take.
+- `motif.color_chords` (a ratio `n/d`, default 0/1): each chord of a random motif's plan draws once and, under the share, takes a fitting type of `harmony.color.types`.
+
+A random motif's plan takes the suffix too (`"IVadd9@2"` in `motif.plan`; `add9`, `add6`, `69`, `9` and `maj9`). A motif's color chord is a major triad of the key with a tertian type, so the quartal types and the chords on the minor and diminished degrees are refused (the plan is refused with `plan`); the added members are chord tones, which no non-chord tone of the motif takes. A motive's harmony text reads the suffixes as well (`I Vadd9@2`; [motives](api/motives.md)), and so do the given chords of the theme and piece requests. The settings reach only the chords the phrase model deals and the plan chords the motif draws: a given chord keeps its own color.
+
 ## Mode shifts in pieces
 
 A region of a piece is in any material the Composer writes, on one tonic or another (R-611, R-730): the Persona 5 move, A in C locrian and B in C natural minor, `two steps brighter` of A. `region_material_written` is `composer_material_supported`; the harmonic minor and the synthetic scales are refused with "the Composer writes major, minor and modal keys". A theme given to a section is read in that section's key, so its material must be the section's: `return_key_shift` and the theme fill compare the materials exactly, and a request that gives a C natural minor theme to a C locrian region is refused at the section's `fill` with "the theme is in C natural minor, the section in C locrian". A section that returns another is in the key of the section it returns.
