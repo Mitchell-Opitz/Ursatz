@@ -133,8 +133,12 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
                 harmony.degree = chord->degree;
                 harmony.inversion = chord->inversion;
                 harmony.seventh = chord->seventh;
-                harmony.color = chord->color;
                 HarmonyKind plain = harmony_kind(tones, key);
+                if (chord->color != NULL && (tones == NULL || chord->inversion != 0 || chord->seventh ||
+                                             !composer_color_fits(tones, harmony_key_mode(key), plain.modal, &harmony, chord->color))) {
+                    return fail(error, path, "chords bar %ld: that color chord does not fit the key (a color type goes on a triad of the key whose third and fifth are its own)", bar);
+                }
+                harmony.color = chord->color;
                 if (!(chord->color != NULL ? harmony_roman_format_in(&plain, &harmony, numerals[at])
                                            : harmony_roman_format(harmony_key_mode(key), &harmony, numerals[at]))) {
                     return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);

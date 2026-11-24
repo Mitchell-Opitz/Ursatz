@@ -310,12 +310,42 @@ static void test_motif_share(void) {
     }
 }
 
+/* A given chord of a theme request takes a suffix when its type fits the key's chord there: Iadd9 does, IIadd9 (a minor triad) does not. */
+static void test_given_chords(void) {
+    const char *texts[2] = {"Iadd9", "IIadd9"};
+    for (int k = 0; k < 2; k++) {
+        cJSON *request = fixture_json("theme/one-motive.json");
+        cJSON_ReplaceItemInObject(request, "key", cJSON_CreateString("C"));
+        cJSON_DeleteItemFromObject(request, "mode");
+        cJSON_AddStringToObject(request, "material", "major");
+        cJSON *chords = cJSON_AddArrayToObject(request, "chords");
+        cJSON *chord = cJSON_CreateObject();
+        cJSON_AddNumberToObject(chord, "bar", 0);
+        cJSON_AddStringToObject(chord, "text", texts[k]);
+        cJSON_AddItemToArray(chords, chord);
+        cJSON_AddNumberToObject(request, "seed", 1);
+        char *text = cJSON_PrintUnformatted(request);
+        cJSON_Delete(request);
+        ComposerResponse response;
+        memset(&response, 0, sizeof(response));
+        UrsatzStatus status = composer_api_theme(test_context(), text, NULL, &response);
+        free(text);
+        if (k == 0) {
+            assert(status == URSATZ_OK);
+        } else {
+            assert(status == URSATZ_ERR_REQUEST && strcmp(response.error.path, "/chords/0") == 0 && strstr(response.error.message, "does not fit the key"));
+        }
+        composer_response_destroy(&response);
+    }
+}
+
 int main(void) {
     test_numerals();
     test_theme_share();
     test_defaults_unchanged();
     test_motif_plan();
     test_motif_share();
+    test_given_chords();
     printf("test_color_chords: ok\n");
     return 0;
 }
