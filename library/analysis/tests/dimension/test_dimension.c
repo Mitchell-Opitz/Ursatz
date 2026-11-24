@@ -3,9 +3,10 @@
 #include <string.h>
 
 #include "analysis/dimension/dimension.h"
+#include "ursatz_test_knowledge.h"
 
 /*
- * The dimension measures and the contrast vector (R-709): C4 D4 E4 quarters in a 3-beat span of 3/4 have register 62 and density 1;
+ * The dimension measures and the contrast vector (R-709, R-730): the scales of the modes measure their brightness rank; C4 D4 E4 quarters in a 3-beat span of 3/4 have register 62 and density 1;
  * the dotted rhythm q. e h against q. e q differs by 1/2 in rhythm (the duration ratios 1/3 and 4 against 1/3 and 2) and the notes C D E
  * against C D C by 1/2 in contour (up up against up down); a span against itself is 0 in every aspect; the refusals.
  */
@@ -34,7 +35,49 @@ static void test_measures(void) {
     assert(dimension_measure(DIMENSION_DENSITY, &compound, &value) == DIMENSION_OK && is(value, 3, 2));
     assert(strcmp(dimension_name(DIMENSION_REGISTER), "register") == 0);
     assert(strcmp(dimension_name(DIMENSION_DENSITY), "density") == 0);
+    assert(strcmp(dimension_name(DIMENSION_BRIGHTNESS), "brightness") == 0);
     assert(dimension_name(DIMENSION_COUNT) == NULL && dimension_name((Dimension)-1) == NULL);
+}
+
+/* The notes of a scale on C, one quarter each, and its brightness (R-730) against the center C. */
+static void scale_brightness(const char *word, const int *pitches, size_t count, long long expected) {
+    DimensionNote notes[8];
+    for (size_t i = 0; i < count; i++) {
+        notes[i] = note((long long)i, 4, 1, 4, pitches[i]);
+    }
+    DimensionSpan span = {notes, count, q((long long)count, 4), q(1, 4), true, 0, knowledge_snapshot_material_named(test_knowledge(), word)};
+    Rational value = q(0, 1);
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &span, &value) == DIMENSION_OK && is(value, expected, 1));
+}
+
+static void test_brightness(void) {
+    static const int LOCRIAN[] = {60, 61, 63, 65, 66, 68, 70};
+    static const int LYDIAN[] = {60, 62, 64, 66, 67, 69, 71};
+    static const int DORIAN[] = {60, 62, 63, 65, 67, 69, 70};
+    static const int MAJOR[] = {60, 62, 64, 65, 67, 69, 71};
+    static const int NATURAL_MINOR[] = {60, 62, 63, 65, 67, 68, 70};
+    scale_brightness("locrian", LOCRIAN, 7, 1);
+    scale_brightness("lydian", LYDIAN, 7, 7);
+    scale_brightness("dorian", DORIAN, 7, 4);
+    scale_brightness("major", MAJOR, 7, 6);
+    scale_brightness("minor", NATURAL_MINOR, 7, 3);
+    /* A span holding only C, Eb and G: the third lowered, the fifth raised, the rest not sounding, so the material answers for them. */
+    const DimensionNote triad[3] = {note(0, 1, 1, 4, 60), note(1, 4, 1, 4, 63), note(1, 2, 1, 4, 67)};
+    DimensionSpan span = {triad, 3, q(3, 4), q(1, 4), true, 0, knowledge_snapshot_material_named(test_knowledge(), "dorian")};
+    Rational value = q(0, 1);
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &span, &value) == DIMENSION_OK && is(value, 4, 1)); /* 1 + 1 + 0 + 0 + 1 + 1 + 0 */
+    span.material = knowledge_snapshot_material_named(test_knowledge(), "phrygian");
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &span, &value) == DIMENSION_OK && is(value, 2, 1)); /* 1 + 0 + 0 + 0 + 1 + 0 + 0 */
+    span.material = NULL;
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &span, &value) == DIMENSION_OK && is(value, 4, 1)); /* 1 + 1/2 + 0 + 1/2 + 1 + 1/2 + 1/2 */
+    /* A degree sounding in both forms is the share of its duration in the raised one. */
+    const DimensionNote both[2] = {note(0, 1, 1, 4, 64), note(1, 4, 3, 4, 63)};
+    DimensionSpan third = {both, 2, q(1, 1), q(1, 4), true, 0, NULL};
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &third, &value) == DIMENSION_OK && is(value, 15, 4)); /* 1 + 1/2 + 1/4 + 1/2 + 1/2 + 1/2 + 1/2 */
+    /* A span with no center is refused. */
+    span.has_center = false;
+    assert(dimension_measure(DIMENSION_BRIGHTNESS, &span, &value) == DIMENSION_ERR_INVALID_INPUT);
+    assert(strcmp(dimension_name(DIMENSION_BRIGHTNESS), "brightness") == 0);
 }
 
 static void test_contrast(void) {
@@ -95,6 +138,7 @@ static void test_refusals(void) {
 
 int main(void) {
     test_measures();
+    test_brightness();
     test_contrast();
     test_refusals();
     printf("test_dimension: ok\n");

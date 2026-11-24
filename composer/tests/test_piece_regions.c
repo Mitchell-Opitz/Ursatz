@@ -86,10 +86,15 @@ static void test_regions(void) {
     set_key(&sections[0].description.key_end, "G", "nosuch");
     assert(piece_resolve_regions(&request, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_BAD_REQUEST);
     assert(refused == 0 && strcmp(message, "section 'a': no material is named 'nosuch'") == 0);
-    /* The snapshot holds dorian; a piece in a major key changes mode only between major and minor (R-611, R-725). */
+    /* A church mode is a region on any tonic (R-611, R-730): D dorian composes in a piece in a major key. */
     set_key(&sections[0].description.key_end, "D", "dorian");
+    assert(piece_resolve_regions(&request, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_OK);
+    assert(regions[0].has_region && regions[0].changes_key && spelled_key_tonic_pitch_class(&regions[0].key) == 2 &&
+           regions[0].key.material == test_material("dorian"));
+    /* A material the Composer does not write is refused with the words of the Composer's other refusals. */
+    set_key(&sections[0].description.key_end, "D", "harmonic minor");
     assert(piece_resolve_regions(&request, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_BAD_REQUEST);
-    assert(refused == 0 && strstr(message, "a section changes mode only between major and minor") != NULL && strstr(message, "dorian") != NULL);
+    assert(refused == 0 && strstr(message, "the Composer writes major, minor and modal keys") != NULL && strstr(message, "harmonic minor") != NULL);
     /* NULL arguments. */
     assert(piece_resolve_regions(NULL, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_NULL);
     assert(piece_resolve_regions(&request, NULL, regions, &refused, message, sizeof(message)) == PIECE_ERR_NULL);

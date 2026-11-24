@@ -25,6 +25,10 @@
  */
 
 #define THEME_SEED 1
+#define BRIGHTNESS_A_NUM 1
+#define BRIGHTNESS_A_DEN 1
+#define BRIGHTNESS_B_NUM 4
+#define BRIGHTNESS_B_DEN 1
 #define PIECE_SEED 1 /* the first seed of 1 to 16 that composes each request below; recorded */
 
 static char *printed(cJSON *json) {
@@ -81,6 +85,27 @@ static cJSON *region_relation(const char *relation, const char *anchor) {
     cJSON *region = cJSON_CreateObject();
     assert(cJSON_AddStringToObject(region, "relation", relation) && cJSON_AddStringToObject(region, "anchor", anchor));
     return region;
+}
+
+/* The same for a material that is not major or minor: the request names it as its `material`, in place of the old `mode`. */
+static cJSON *theme_plan_material(const char *into, const char *material) {
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
+    cJSON *request = cJSON_Parse(text);
+    free(text);
+    assert(request);
+    cJSON_ReplaceItemInObjectCaseSensitive(request, "into", cJSON_CreateString(into));
+    cJSON_ReplaceItemInObjectCaseSensitive(request, "key", cJSON_CreateString("C"));
+    cJSON_DeleteItemFromObjectCaseSensitive(request, "mode");
+    assert(cJSON_AddStringToObject(request, "material", material) && cJSON_AddNumberToObject(request, "seed", THEME_SEED));
+    char *body = printed(request);
+    cJSON_Delete(request);
+    ComposerResponse response;
+    assert(composer_api_theme(test_context(), body, NULL, &response) == URSATZ_OK);
+    free(body);
+    cJSON *plan = cJSON_Parse(response.plan_json);
+    composer_response_destroy(&response);
+    assert(plan);
+    return plan;
 }
 
 static cJSON *overlay(const char *name, cJSON *region, cJSON *fill) {
@@ -241,6 +266,83 @@ static void test_ternary_regions(void) {
     cJSON_Delete(major_copy);
 }
 
+/* The brightness of the section row `id` of the response, as a ratio (num, den); false when it is null. */
+static bool row_brightness(const cJSON *response, const char *id, long *num, long *den) {
+    const cJSON *row = NULL;
+    const cJSON *rows = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(response, "versions"), "piece"), "sections");
+    cJSON_ArrayForEach(row, rows) {
+        if (strcmp(cJSON_GetObjectItemCaseSensitive(row, "id")->valuestring, id) == 0) {
+            const cJSON *brightness = cJSON_GetObjectItemCaseSensitive(row, "brightness");
+            if (!cJSON_IsObject(brightness)) {
+                return false;
+            }
+            *num = (long)cJSON_GetObjectItemCaseSensitive(brightness, "numerator")->valuedouble;
+            *den = (long)cJSON_GetObjectItemCaseSensitive(brightness, "denominator")->valuedouble;
+            return true;
+        }
+    }
+    assert(false && "no such section row");
+    return false;
+}
+
+/* The R-611 move (Persona 5): A in C locrian, B two steps brighter (C natural minor), A return in C locrian (R-730, R-611). */
+static void test_ternary_modes(void) {
+    cJSON *locrian = theme_plan_material("period", "locrian");
+    cJSON *minor = theme_plan_material("sentence", "minor");
+    cJSON *locrian_copy = cJSON_Duplicate(locrian, true);
+    cJSON *minor_copy = cJSON_Duplicate(minor, true);
+    cJSON *sections = cJSON_CreateArray();
+    assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "locrian"), theme_fill(locrian))));
+    assert(cJSON_AddItemToArray(sections, overlay("B", region_relation("two steps brighter", "A"), theme_fill(minor))));
+    ComposerResponse response;
+    /* The piece is in C locrian, so A return is too (the home key). */
+    cJSON *piece = sized_request("ternary", sections);
+    assert(cJSON_ReplaceItemInObjectCaseSensitive(piece, "material", cJSON_CreateString("locrian")));
+    UrsatzStatus status = run(wrap(piece, PIECE_SEED), &response);
+    if (status != URSATZ_OK) {
+        fprintf(stderr, "ternary in modes: %s\n", response.error.message);
+    }
+    assert(status == URSATZ_OK);
+    cJSON *plan = cJSON_Parse(response.plan_json);
+    cJSON *document = cJSON_Parse(response.json);
+    composer_response_destroy(&response);
+    assert(plan && document);
+
+    assert(strcmp(key_text(key_span(plan, 0), "tonic"), "C") == 0 && strstr(key_text(key_span(plan, 0), "material"), "locrian"));
+    const cJSON *b_key = key_span(plan, 1);
+    assert(strcmp(key_text(b_key, "tonic"), "C") == 0 && strstr(key_text(b_key, "material"), "natural-minor") != NULL);
+    assert(strcmp(key_text(b_key, "relation"), "omt.relation.two-steps-brighter") == 0 && strcmp(key_text(b_key, "anchor"), "A") == 0);
+    assert(strcmp(key_text(key_span(plan, 2), "tonic"), "C") == 0 && strstr(key_text(key_span(plan, 2), "material"), "locrian"));
+
+    /* A's melody is the locrian theme's and B's the minor theme's, both on C. */
+    const cJSON *a = section_named(plan, "A");
+    const cJSON *b = section_named(plan, "B");
+    assert(a && b);
+    double a_start = time_of(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(a, "span"), "start"));
+    double b_start = time_of(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(b, "span"), "start"));
+    int theme[512];
+    int got[512];
+    size_t theme_count = melody_pitches(locrian_copy, 0, 8, 0, theme, 512);
+    size_t got_count = melody_pitches(plan, a_start, a_start + 8, 0, got, 512);
+    assert(theme_count > 0 && got_count == theme_count && memcmp(theme, got, theme_count * sizeof(int)) == 0);
+    theme_count = melody_pitches(minor_copy, 0, 8, 0, theme, 512);
+    got_count = melody_pitches(plan, b_start, b_start + 8, 0, got, 512);
+    assert(theme_count > 0 && got_count == theme_count && memcmp(theme, got, theme_count * sizeof(int)) == 0);
+
+    /* B measures at least 3/2 brighter than A (R-730); the two values are what this seed gives. */
+    long a_num;
+    long a_den;
+    long b_num;
+    long b_den;
+    assert(row_brightness(document, "A", &a_num, &a_den) && row_brightness(document, "B", &b_num, &b_den));
+    assert(a_num == BRIGHTNESS_A_NUM && a_den == BRIGHTNESS_A_DEN && b_num == BRIGHTNESS_B_NUM && b_den == BRIGHTNESS_B_DEN);
+    assert(2 * (b_num * a_den - a_num * b_den) >= 3 * a_den * b_den); /* b >= a + 3/2 */
+    cJSON_Delete(document);
+    cJSON_Delete(plan);
+    cJSON_Delete(locrian_copy);
+    cJSON_Delete(minor_copy);
+}
+
 /* `previous` names the section before: B in the mediant of A, which is the section before it. */
 static void test_previous_anchor(void) {
     cJSON *minor = theme_plan("period", "minor");
@@ -313,14 +415,14 @@ static void test_game_loop_region(void) {
 /* --- refusals ------------------------------------------------------------------------------------------------------ */
 
 static void test_refusals(void) {
-    /* A in C locrian: named at A, the piece being in C major; A in C minor and B two steps brighter: C mixolydian, named at B. */
+    /* A theme in C natural minor given to a section in C locrian (R-610): refused at the fill, naming both keys. */
     cJSON *sections = cJSON_CreateArray();
-    assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "locrian"), NULL)));
-    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/0/region", "a section changes mode only between major and minor");
+    assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "locrian"), theme_fill(theme_plan("period", "minor")))));
+    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/0/fill", "the theme is in C natural minor, the section in C locrian");
+    /* A material the Composer does not write, harmonic minor, is refused at the region. */
     sections = cJSON_CreateArray();
-    assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "minor"), NULL)));
-    assert(cJSON_AddItemToArray(sections, overlay("B", region_relation("two steps brighter", "A"), NULL)));
-    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/1/region", "C mixolydian");
+    assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "harmonic minor"), NULL)));
+    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/0/region", "the Composer writes major, minor and modal keys");
     /* the names and the anchors */
     sections = cJSON_CreateArray();
     assert(cJSON_AddItemToArray(sections, overlay("Z", NULL, NULL)));
@@ -344,6 +446,7 @@ static void test_refusals(void) {
 
 int main(void) {
     test_ternary_regions();
+    test_ternary_modes();
     test_previous_anchor();
     test_own_motive();
     test_game_loop_region();
