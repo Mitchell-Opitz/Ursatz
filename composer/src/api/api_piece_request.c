@@ -777,6 +777,8 @@ static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzEr
     if (plan_meter_bar_length(&piece->meter, &bar) != PLAN_OK) {
         return URSATZ_OK;
     }
+    ComposerChords tones;
+    const ComposerChords *chords = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
     for (size_t i = 0; i < count; i++) {
         const SectionHarmony *harmony = &items[i].description.harmony;
         if (harmony->kind == SECTION_HARMONY_NONE) {
@@ -802,7 +804,7 @@ static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzEr
             }
             key = regional && regions[found].has_region ? regions[found].key : piece->key;
         }
-        if (!piece_check_harmony(&piece->meter, &key, length, harmony, why, sizeof why)) {
+        if (!piece_check_harmony_in(chords, &piece->meter, &key, length, harmony, why, sizeof why)) {
             snprintf(path, sizeof path, "%.150s/sections/%zu/harmony", base, i);
             return api_fail(error, URSATZ_ERR_REQUEST, path, "section '%s': %s", items[i].description.id, why);
         }

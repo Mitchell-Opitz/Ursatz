@@ -206,6 +206,7 @@ static cJSON *chords_json(const Plan *plan, NodeId theme_node, const PlanMeter *
             !cJSON_AddNumberToObject(item, "beat", (double)((int)(rest_num * meter->beat_unit / (long)rest_den) + 1)) ||
             !cJSON_AddStringToObject(item, "chord", harmony->roman_numeral) ||
             !cJSON_AddStringToObject(item, "function", util_function_name(harmony->has_function, harmony->function)) ||
+            (harmony->borrowed_from && !cJSON_AddStringToObject(item, "borrowed_from", harmony->borrowed_from->id)) ||
             !cJSON_AddStringToObject(item, "bass", bass) || !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);

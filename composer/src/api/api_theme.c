@@ -320,7 +320,9 @@ static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *th
     if (status != URSATZ_OK) {
         return status;
     }
-    return request_read_chords(cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
+    ComposerChords tones;
+    const ComposerChords *chords = composer_chords_init(&tones, setup->knowledge, NULL, 0) ? &tones : NULL;
+    return request_read_chords(chords, cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
                                (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS, &material->chord_count,
                                error);
 }

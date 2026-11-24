@@ -156,6 +156,8 @@ typedef struct {
      */
     const GivenChord *chords;
     size_t chord_count;
+    /* The snapshot the given chords' numerals are read with: a borrowed numeral (bVI in C major) needs it (R-729); NULL reads the key's own chords only. */
+    const KnowledgeSnapshot *knowledge;
     /*
      * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
      * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a

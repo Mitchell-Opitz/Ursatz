@@ -799,7 +799,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         }
         /* The section's harmony (R-610): Given from its start; the harmony stage fills what is left of the section. */
         if (result == PIECE_OK && !from_loop && copy.sections[i].description.harmony.kind != SECTION_HARMONY_NONE) {
-            result = piece_give_harmony(plan, id, &copy.sections[i].description.harmony, &request->meter, &regions[i].key, NULL, 0);
+            ComposerChords tones;
+            const ComposerChords *chords = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
+            result = piece_give_harmony_in(plan, chords, id, &copy.sections[i].description.harmony, &request->meter, &regions[i].key, NULL, 0);
         }
         if (result == PIECE_OK && !loop_plan && is_held(form, &copy, i, cells)) {
             SectionDescription held = *plan_node_section(plan, id);

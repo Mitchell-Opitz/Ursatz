@@ -876,8 +876,10 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;
     }
+    ComposerChords tones;
+    const ComposerChords *given_tones = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
     if (result == GROW_OK && request->chord_count > 0 &&
-        plan_give_chords(plan, theme_id, request->chords, request->chord_count) != GIVEN_OK) {
+        plan_give_chords_in(plan, given_tones, theme_id, request->chords, request->chord_count) != GIVEN_OK) {
         result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/chords", "the given chords do not fit the theme");
     }
     if (result == GROW_OK) {

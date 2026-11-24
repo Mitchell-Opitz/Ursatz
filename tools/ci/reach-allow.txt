@@ -42,3 +42,6 @@ composer/src/harmony/harmony_context.c harmony_read_chord  # the mode form of ha
 composer/src/harmony/harmony_context.c harmony_read_chord_in  # the mode form of harmony_read_chord_in_for (P69 B3); its tests call it
 composer/src/harmony/harmony_hear.c harmony_read_lane_keys  # the mode form of the multi-key lane read (P69 B3): the applications read one key through harmony_read_lane_for; its tests call it
 composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of harmony_find_kind (P69 B3); its tests call it
+composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
+composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
+composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it

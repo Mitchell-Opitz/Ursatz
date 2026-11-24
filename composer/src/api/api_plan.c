@@ -574,7 +574,9 @@ static UrsatzStatus place_given(PlanBuild *state, Plan *plan, UrsatzError *error
                 }
                 numerals[count++] = token;
             }
-            placed = plan_give_progression(plan, section, given->bar - 1, (const char *const *)numerals, count, given->cells);
+            ComposerChords tones;
+            const ComposerChords *chords = state->knowledge != NULL && composer_chords_init(&tones, state->knowledge, NULL, 0) ? &tones : NULL;
+            placed = plan_give_progression_in(plan, chords, section, given->bar - 1, (const char *const *)numerals, count, given->cells);
         } else {
             Motive *line = malloc(sizeof(*line));
             if (!line) {
