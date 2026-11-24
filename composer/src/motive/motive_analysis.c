@@ -155,7 +155,7 @@ typedef struct {
 static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, const ChordSpec *spec, Scored *out) {
     HarmonyMode mode = harmony_mode_of_material(motive->material);
     /* A modal key's chords are stacked from its material (R-725): its seventh chords and leading-tone chord are not candidates. */
-    HarmonyKind kind = {mode, pitch_material_is_modal_key(NULL, motive->material) ? motive->material : NULL, NULL};
+    HarmonyKind kind = {mode, pitch_material_is_modal_key(NULL, motive->material) ? motive->material : NULL, NULL, NULL};
     PhraseChord chord;
     if (spec->leading_tone) {
         if (mode != HARMONY_MODE_MINOR || kind.modal != NULL || !harmony_make_leading_tone(mode, 0, 1, &chord)) {

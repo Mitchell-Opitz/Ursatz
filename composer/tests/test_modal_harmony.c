@@ -89,16 +89,17 @@ static void test_numerals(void) {
     assert(harmony_roman_format_in(&kind, &chord, roman) && strcmp(roman, "IV") == 0);
     assert(harmony_roman_parse_in(&kind, "i", &chord) && chord.degree == 1);
     assert(harmony_roman_parse_in(&kind, "ii", &chord) && chord.degree == 2);
-    assert(!harmony_roman_parse_in(&kind, "V", &chord)); /* the stacked v is minor */
-    assert(!harmony_roman_parse_in(&kind, "iv", &chord));
+    /* Another quality than the stacked triad's is a borrowed chord (B6): V from the major, iv from the natural minor. */
+    assert(harmony_roman_parse_in(&kind, "V", &chord) && chord.degree == 5 && chord.borrowed_from == test_material("major"));
+    assert(harmony_roman_parse_in(&kind, "iv", &chord) && chord.degree == 4 && chord.borrowed_from == test_material("minor"));
     assert(harmony_roman_parse_in(&kind, "vio", &chord) && pitch_material_avoids(kind.modal, chord.degree)); /* readable, never written */
-    assert(!harmony_roman_parse_in(&kind, "bII", &chord));
+    assert(harmony_roman_parse_in(&kind, "bII", &chord) && chord.degree == 2 && chord.borrowed_from == test_material("phrygian"));
     assert(!harmony_roman_parse_in(&kind, "V7", &chord));
     assert(!harmony_roman_parse_in(&kind, "V/V", &chord));
     kind = harmony_kind(chords, &mixolydian);
     assert(harmony_roman_parse_in(&kind, "v", &chord) && chord.degree == 5);
     assert(harmony_roman_parse_in(&kind, "VII", &chord) && chord.degree == 7 && !chord.leading_tone);
-    assert(!harmony_roman_parse_in(&kind, "vii", &chord) && !harmony_roman_parse_in(&kind, "viio", &chord));
+    assert(!harmony_roman_parse_in(&kind, "viio", &chord));
     kind = harmony_kind(chords, &locrian);
     assert(harmony_roman_parse_in(&kind, "io", &chord) && chord.degree == 1);
     assert(harmony_roman_format_in(&kind, &chord, roman) && strcmp(roman, "io") == 0);
@@ -106,7 +107,8 @@ static void test_numerals(void) {
     /* A major key reads as before. */
     SpelledKey major = test_key(0, "major");
     kind = harmony_kind(chords, &major);
-    assert(kind.modal == NULL && harmony_roman_parse_in(&kind, "V", &chord) && !harmony_roman_parse_in(&kind, "v", &chord));
+    assert(kind.modal == NULL && harmony_roman_parse_in(&kind, "V", &chord) && chord.borrowed_from == NULL);
+    assert(harmony_roman_parse_in(&kind, "v", &chord) && chord.borrowed_from == test_material("minor")); /* borrowed (B6) */
 }
 
 static void test_functions(void) {

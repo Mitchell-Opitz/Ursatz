@@ -11,5 +11,6 @@ bool harmony_chord_valid(const HarmonyChord *chord) {
            chord->inversion <= 3 && (chord->inversion < 3 || chord->seventh) &&
            (!chord->leading_tone || chord->degree == 7) &&
            (!chord->cadential || (chord->degree == 1 && chord->inversion == 2 && !chord->seventh)) &&
-           (!chord->half_diminished || (chord->degree == 7 && chord->seventh));
+           (!chord->half_diminished || (chord->degree == 7 && chord->seventh)) &&
+           (chord->borrowed_from == NULL || (!chord->seventh && !chord->leading_tone && !chord->cadential));
 }

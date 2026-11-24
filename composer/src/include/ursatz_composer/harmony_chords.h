@@ -43,12 +43,35 @@ int composer_modal_plan_degree(const KnowledgeSnapshot *knowledge, const PitchMa
 /* The material of a modal key (pitch_material_is_modal_key against the chords' materials), else NULL: a major or minor key, a NULL key. */
 const PitchMaterial *composer_chords_modal(const ComposerChords *chords, const SpelledKey *key);
 
+/* The material of a major or minor key of `mode` (the common-practice major or natural minor), NULL without chords. */
+const PitchMaterial *composer_chords_key_material(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal);
+
+#define COMPOSER_MIXTURE_MAX 8
+
+/*
+ * The materials a chord may be borrowed from in a key of `key_material` (R-729), nearest first, into out[COMPOSER_MIXTURE_MAX]: the
+ * materials of the relation words `from` (resolved on a tonal region of the material: "parallel", "one step darker", ...) in order,
+ * NULL for the defaults (parallel, one step darker, one step brighter), then every other diatonic material of the snapshot in
+ * brightness order from the key's (darker before brighter at a tie). The key's own material is never listed and none twice. A word that
+ * resolves to nothing for this material is skipped. Returns the count (0 without a snapshot or a material with no brightness).
+ */
+size_t composer_chords_mixture_materials(const ComposerChords *chords, const PitchMaterial *key_material, const char *const *from,
+                                         size_t from_count, const PitchMaterial **out);
+
+/*
+ * The material a borrowed numeral is taken from: the first of composer_chords_mixture_materials (default order) whose triad on `degree`
+ * has the root `root_semitones` above the tonic and the quality `quality` (major, minor or diminished). NULL for none.
+ */
+const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords, const PitchMaterial *key_material, int degree,
+                                                   int root_semitones, StandardTonalityTriadQuality quality);
+
 /*
  * The one Composer owner of a chord's pitch classes (R-725): the semitones of the root above the tonic and the chord's intervals above
  * its root. A major or minor key (`modal` NULL) reads the mode tables as before: harmony_diatonic_intervals, the leading-tone root on
  * the raised seventh, harmony_applied_scale_semitone for the rest. A modal key (`modal` its material) stacks the triad on the degree
  * from the material (pitch_material_triad_on), with no raised degree and no leading tone; a seventh chord or a leading-tone chord
- * is not written there. False for a chord the key does not hold. `intervals` is filled to `count` (3 or 4).
+ * is not written there. False for a chord the key does not hold. `intervals` is filled to `count` (3 or 4). A borrowed chord
+ * (`chord->borrowed_from` set) is the triad on its degree of that material, in any key.
  */
 bool composer_chord_intervals(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal, const HarmonyChord *chord,
                               int *root_semitones, int intervals[4], size_t *count);

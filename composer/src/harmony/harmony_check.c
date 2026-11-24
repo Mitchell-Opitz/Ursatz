@@ -127,7 +127,7 @@ bool harmony_modal_ending_holds(const HeardPhrase *phrase, const VocabularyCaden
         phrase->count < length) {
         return false;
     }
-    HarmonyKind kind = {phrase->mode, phrase->modal, cadence};
+    HarmonyKind kind = {phrase->mode, phrase->modal, cadence, NULL};
     bool tritone = harmony_modal_tritone_approach(&kind);
     const PhraseChord *last = &phrase->chords[phrase->count - length];
     for (size_t i = 0; i < length; i++) {

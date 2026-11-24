@@ -65,13 +65,13 @@ bool harmony_make_chord_in(const HarmonyKind *kind, int degree, int inversion, b
 
 bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                         PhraseChord *out) {
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     return harmony_make_chord_in(&kind, degree, inversion, seventh, cadential, cells, out);
 }
 
 bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, PhraseChord *out) {
     HarmonyChord chord;
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     memset(&chord, 0, sizeof(chord));
     chord.degree = 7;
     chord.inversion = inversion;

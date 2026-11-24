@@ -221,7 +221,7 @@ static bool build_plan(const Options *options, Built *built) {
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
     PlanSpan region = built->span;
     HarmonyKind tonic_kind = harmony_kind(NULL, &options->key);
-    HarmonyChord tonic_chord = {1, 0, false, false, false, false};
+    HarmonyChord tonic_chord = {1, 0, false, false, false, false, NULL};
     char tonic_text[PLAN_ROMAN_NUMERAL_MAX];
     if (!harmony_roman_format_in(&tonic_kind, &tonic_chord, tonic_text)) {
         snprintf(tonic_text, sizeof(tonic_text), "%s", composer_key_is_minor(&options->key) ? "i" : "I");

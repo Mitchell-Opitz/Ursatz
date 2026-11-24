@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "model/pitch/pitch_material.h"
+
 /*
  * A chord as standard-harmony-v1 reads it: plain data, not a Roman numeral and
  * not pitches. The caller says which chord is meant; this module never finds
@@ -34,6 +36,9 @@
  * chordal seventh lowered, which composers nearly always do). Left unaltered in a major
  * key it is half diminished (B D F A). `half_diminished` marks that rarer one; it is
  * meaningful only for the seventh chord on degree 7.
+ *
+ * A borrowed chord (R-729) is the triad on `degree` of another material on the key's tonic: `borrowed_from` is that material (NULL for
+ * a diatonic chord), snapshot-owned. It is a plain triad: no seventh, leading tone, half-diminished mark or cadential flag.
  */
 
 typedef enum {
@@ -49,6 +54,7 @@ typedef struct {
     bool seventh;
     bool cadential;
     bool half_diminished;
+    const PitchMaterial *borrowed_from;
 } HarmonyChord;
 
 /* True for the two modes above; false for any other value. */

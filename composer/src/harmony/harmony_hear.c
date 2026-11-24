@@ -299,7 +299,7 @@ static bool read_lane(const Plan *plan, PlanSpan span, const HarmonyKind *kind, 
         SpelledKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = harmony_key_mode(&key);
-            chord_kind = (HarmonyKind){chord_mode, NULL, NULL};
+            chord_kind = (HarmonyKind){chord_mode, NULL, NULL, NULL};
         }
         /* Chords must start where the last ended, in whole cells. */
         if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
@@ -322,7 +322,7 @@ static bool read_lane(const Plan *plan, PlanSpan span, const HarmonyKind *kind, 
 
 bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                             PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     return read_lane(plan, span, &kind, chords, count, metre, modes, keys);
 }
 
@@ -333,7 +333,7 @@ bool harmony_read_lane_for(const Plan *plan, PlanSpan span, const HarmonyKind *k
 
 bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     return read_lane(plan, span, &kind, chords, count, metre, NULL, NULL);
 }
 

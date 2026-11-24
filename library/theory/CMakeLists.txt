@@ -187,6 +187,7 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/rule_entry.h
         theory/knowledge/vocabulary_entry.h
         theory/knowledge/voicing_entry.h
+        theory/tonality/brightness.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_materials.h

@@ -122,6 +122,7 @@ typedef struct {
     HarmonyMode mode;
     const PitchMaterial *modal;
     const VocabularyCadence *cadence;
+    const ComposerChords *chords; /* the run's chords: a numeral that borrows needs the snapshot's materials; NULL reads none */
 } HarmonyKind;
 
 /*

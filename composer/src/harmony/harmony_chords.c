@@ -3,6 +3,8 @@
 #include <stdlib.h>
 
 #include <theory/harmony/harmony_applied.h>
+#include <theory/tonality/brightness.h>
+#include <theory/tonality/region_relation.h>
 
 #include "harmony/harmony_internal.h"
 
@@ -90,6 +92,70 @@ const PitchMaterial *composer_chords_modal(const ComposerChords *chords, const S
     return pitch_material_is_modal_key(chords != NULL ? &chords->materials : NULL, key->material) ? key->material : NULL;
 }
 
+const PitchMaterial *composer_chords_key_material(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal) {
+    if (modal != NULL) {
+        return modal;
+    }
+    return chords != NULL ? (mode == HARMONY_MODE_MINOR ? chords->materials.natural_minor : chords->materials.major) : NULL;
+}
+
+static const char *const DEFAULT_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter"};
+
+static size_t mixture_add(const PitchMaterial *key_material, const PitchMaterial *material, const PitchMaterial **out, size_t count) {
+    if (material == NULL || material == key_material || !pitch_material_is_diatonic(material)) {
+        return count;
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (out[i] == material) {
+            return count;
+        }
+    }
+    if (count < COMPOSER_MIXTURE_MAX) {
+        out[count++] = material;
+    }
+    return count;
+}
+
+size_t composer_chords_mixture_materials(const ComposerChords *chords, const PitchMaterial *key_material, const char *const *from,
+                                         size_t from_count, const PitchMaterial **out) {
+    if (chords == NULL || chords->knowledge == NULL || key_material == NULL || out == NULL || !key_material->has_brightness) {
+        return 0;
+    }
+    if (from == NULL) {
+        from = DEFAULT_MIXTURE_FROM;
+        from_count = sizeof(DEFAULT_MIXTURE_FROM) / sizeof(DEFAULT_MIXTURE_FROM[0]);
+    }
+    size_t count = 0;
+    Region anchor = region_tonal(0, key_material);
+    for (size_t i = 0; i < from_count; i++) {
+        Region reached;
+        char why[160];
+        if (region_resolve_named(chords->knowledge, from[i], &anchor, &reached, why, sizeof(why)) == REGION_RELATION_OK) {
+            count = mixture_add(key_material, reached.material, out, count);
+        }
+    }
+    for (int distance = 1; distance <= 6; distance++) {
+        for (int sign = -1; sign <= 1; sign += 2) {
+            count = mixture_add(key_material, brightness_shift(chords->knowledge, key_material, sign * distance, NULL, 0), out, count);
+        }
+    }
+    return count;
+}
+
+const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords, const PitchMaterial *key_material, int degree,
+                                                   int root_semitones, StandardTonalityTriadQuality quality) {
+    const PitchMaterial *candidates[COMPOSER_MIXTURE_MAX];
+    size_t count = composer_chords_mixture_materials(chords, key_material, NULL, 0, candidates);
+    for (size_t i = 0; i < count; i++) {
+        int root;
+        StandardTonalityTriadQuality found;
+        if (pitch_material_triad_on(candidates[i], degree, &root, NULL, &found) && root == root_semitones && found == quality) {
+            return candidates[i];
+        }
+    }
+    return NULL;
+}
+
 /* The leading-tone chord of a minor key stands on the raised seventh degree. */
 #define LEADING_TONE_SEMITONES 11
 
@@ -97,6 +163,20 @@ bool composer_chord_intervals(const ComposerChords *chords, HarmonyMode mode, co
                               int *root_semitones, int intervals[4], size_t *count) {
     if (chord == NULL || root_semitones == NULL || intervals == NULL || count == NULL) {
         return false;
+    }
+    if (chord->borrowed_from != NULL) {
+        int triad[3];
+        StandardTonalityTriadQuality quality;
+        if (chord->seventh || chord->leading_tone || !pitch_material_triad_on(chord->borrowed_from, chord->degree, root_semitones, triad, &quality) ||
+            quality == STANDARD_TONALITY_TRIAD_AUGMENTED) {
+            return false;
+        }
+        intervals[0] = triad[0];
+        intervals[1] = triad[1];
+        intervals[2] = triad[2];
+        intervals[3] = 0;
+        *count = 3;
+        return true;
     }
     if (modal != NULL) {
         int triad[3];

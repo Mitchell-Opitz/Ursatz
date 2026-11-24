@@ -28,7 +28,7 @@ bool harmony_read_chord_for(const Plan *plan, LaneSpanId id, const HarmonyKind *
 
 bool harmony_read_chord(const Plan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length,
                        PhraseChord *out) {
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     return harmony_read_chord_for(plan, id, &kind, cell_length, out);
 }
 
@@ -40,7 +40,7 @@ bool harmony_read_chord_in_for(const Plan *plan, LaneSpanId id, const HarmonyKin
 
 bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
                            PhraseChord *out) {
-    HarmonyKind kind = {mode, NULL, NULL};
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     return harmony_read_chord_in_for(plan, id, &kind, metre, out);
 }
 
