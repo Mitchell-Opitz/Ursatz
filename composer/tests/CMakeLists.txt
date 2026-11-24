@@ -89,8 +89,10 @@ ursatz_test(test_modal_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_modal_compose LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+# Slow: 33 s alone (2026-11-24); its smoke runs every PR.
 ursatz_test(test_modal_color LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_modal_color_smoke TARGET test_modal_color ARGS smoke)
 
 ursatz_test(test_harmony_embellish LIBS ursatz_composer_engine composer_test_support)
 
