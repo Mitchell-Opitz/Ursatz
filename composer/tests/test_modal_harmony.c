@@ -33,7 +33,7 @@ static const Mode MODES[] = {
     {"mixolydian", "MmdMmmM", {"VII", "I"}, "VII", {11, 4 + 8}},
     {"dorian", "mmMMmdM", {"IV", "i"}, "IV", {11, 8}},
     {"phrygian", "mMMmdMm", {"II", "i"}, "II", {2, 9}},
-    {"locrian", "dMmmMMm", {"V", "io"}, "V", {7, 2}},
+    {"locrian", "dMmmMMm", {"V6", "io"}, "V", {7, 2}},
 };
 #define MODE_COUNT (sizeof(MODES) / sizeof(MODES[0]))
 

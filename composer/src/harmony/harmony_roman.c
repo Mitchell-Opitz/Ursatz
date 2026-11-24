@@ -132,6 +132,22 @@ bool harmony_function_in(const HarmonyKind *kind, const HarmonyChord *chord, Har
     return true;
 }
 
+int harmony_dominant_degree(const HarmonyKind *kind) {
+    if (kind != NULL && kind->modal != NULL && kind->cadence != NULL && kind->cadence->approach_count > 0) {
+        return kind->cadence->approach_degrees[kind->cadence->approach_count - 1];
+    }
+    return 5;
+}
+
+bool harmony_modal_tritone_approach(const HarmonyKind *kind) {
+    if (kind == NULL || kind->modal == NULL || kind->cadence == NULL || kind->cadence->approach_count == 0) {
+        return false;
+    }
+    int approach = pitch_material_step(kind->modal, kind->cadence->approach_degrees[kind->cadence->approach_count - 1]);
+    int arrival = pitch_material_step(kind->modal, kind->cadence->arrival_degree);
+    return approach >= 0 && arrival >= 0 && ((arrival - approach + 12) % 12) == 6;
+}
+
 bool harmony_roman_format(HarmonyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (!chord || !out || !harmony_chord_valid(chord) || chord->half_diminished) {
         return false;

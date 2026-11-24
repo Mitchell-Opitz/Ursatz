@@ -89,6 +89,11 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
             /* The last note of a bass that outlines a cadence is reached by a leap (V to I), which the
                rule for the last note of a strict counterpoint line forbids. */
             hard &= ~(1u << STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA);
+            /* A mode whose fifth is a tritone (locrian) has V and io a tritone apart: the bass between them leaps it (R-725). */
+            const PitchMaterial *modal = composer_chords_modal(context->composer_chords, &context->key);
+            if (modal != NULL && pitch_material_step(modal, 5) == 6) {
+                hard &= ~((1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_LEAP) | (1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE));
+            }
             for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
                 if (hard & (1u << rule)) {
                     verdict->hard = standard_counterpoint_melodic_rule_name((StandardCounterpointMelodicRule)rule);

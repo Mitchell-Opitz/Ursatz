@@ -29,13 +29,13 @@ const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
  * the tonic of a minor key too, R-195), so only the degree, the inversion and the seventh are read, not the case. False for
  * an altered chord or one aimed at another (applied), which the harmony operators write as they do.
  */
-static bool tone_chord(HarmonyMode mode, const char *numeral, PhraseChord *out) {
+static bool tone_chord(const HarmonyKind *kind, const char *numeral, PhraseChord *out) {
     StandardTonalityNumeralText parsed;
     if (!standard_tonality_numeral_parse(numeral, &parsed) || parsed.alteration != 0 || parsed.has_target) {
         return false;
     }
-    return harmony_make_chord(mode, parsed.degree, parsed.inversion,
-                              standard_tonality_numeral_quality_is_seventh(parsed.quality), false, 1, out);
+    return harmony_make_chord_in(kind, parsed.degree, parsed.inversion,
+                                 standard_tonality_numeral_quality_is_seventh(parsed.quality), false, 1, out);
 }
 
 /* The cell of the request that holds the time (counted from the plan's start), or false when it is outside. */
@@ -55,12 +55,12 @@ static bool cell_at(const PhraseRequest *request, Rational time, size_t *cell) {
 }
 
 /* Whether a chord can stand on an anchor of the shape. */
-static bool anchor_keeps(PlanHarmonyAnchor anchor, const PhraseChord *chord) {
+static bool anchor_keeps(const HarmonyKind *kind, PlanHarmonyAnchor anchor, const PhraseChord *chord) {
     if (anchor == PLAN_HARMONY_ANCHOR_TONIC) {
         return !chord->applied && chord->chord.degree == 1;
     }
     if (anchor == PLAN_HARMONY_ANCHOR_DOMINANT) {
-        return !chord->applied && chord->chord.degree == 5;
+        return !chord->applied && chord->chord.degree == harmony_dominant_degree(kind);
     }
     return true;
 }
@@ -71,6 +71,7 @@ static bool anchor_keeps(PlanHarmonyAnchor anchor, const PhraseChord *chord) {
  * target for the cadential shape; a prolongation has none. The anchors are the first and the last cell.
  */
 static void free_cells(PhraseRequest *request) {
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     bool prolongation = request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_PROLONGATION;
     if (!prolongation) {
         size_t from = harmony_metre_last_cell(&request->metre);
@@ -85,10 +86,10 @@ static void free_cells(PhraseRequest *request) {
     }
     if (request->has_shape && request->cells > 0) {
         size_t last = request->cells - 1;
-        if (request->motive_fixed[0] && !anchor_keeps(request->shape.starts_on, &request->motive_chord[0])) {
+        if (request->motive_fixed[0] && !anchor_keeps(&kind, request->shape.starts_on, &request->motive_chord[0])) {
             request->motive_fixed[0] = false;
         }
-        if (request->motive_fixed[last] && !anchor_keeps(request->shape.ends_on, &request->motive_chord[last])) {
+        if (request->motive_fixed[last] && !anchor_keeps(&kind, request->shape.ends_on, &request->motive_chord[last])) {
             request->motive_fixed[last] = false;
         }
     }
@@ -100,11 +101,11 @@ static void free_cells(PhraseRequest *request) {
 
 void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     request->has_motive = false;
     memset(request->motive_fixed, 0, sizeof(request->motive_fixed));
-    /* A shape that frees the harmony from the motive's chords (a formal function with free motive harmony, R-711) holds none; nor does
-       a modal key, whose chords are the phrase model's (R-725): a motive writes its harmony as the degrees of a major or minor key. */
-    if (request->modal != NULL || request->cells > HARMONY_GIVEN_CELLS || (request->has_shape && request->shape.free_motive)) {
+    /* A shape that frees the harmony from the motive's chords (a formal function with free motive harmony, R-711) holds none. */
+    if (request->cells > HARMONY_GIVEN_CELLS || (request->has_shape && request->shape.free_motive)) {
         return;
     }
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, request->span, ids, HARMONY_MAX_CHORDS);
@@ -143,7 +144,7 @@ void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
                 end = melody_end;
             }
             size_t first;
-            if (!tone_chord(request->mode, tone->numeral, &chord)) {
+            if (!tone_chord(&kind, tone->numeral, &chord)) {
                 continue;
             }
             if (rational_cmp(start, request->span.start) < 0) {
@@ -303,6 +304,7 @@ static bool sub_request(const PhraseRequest *request, Run run, PhraseRequest *ou
 /* The chord that holds a run when the phrase model has no room: the anchor it touches, else the chord next to it. */
 static bool plain_fill(const PhraseRequest *request, Run run, Fill *fill) {
     PhraseChord chord;
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     PlanHarmonyAnchor anchor = PLAN_HARMONY_ANCHOR_ANY;
     if (request->has_shape && run.first == 0) {
         anchor = request->shape.starts_on;
@@ -310,14 +312,14 @@ static bool plain_fill(const PhraseRequest *request, Run run, Fill *fill) {
         anchor = request->shape.ends_on;
     }
     if (anchor == PLAN_HARMONY_ANCHOR_TONIC || anchor == PLAN_HARMONY_ANCHOR_DOMINANT) {
-        if (!harmony_make_chord(request->mode, anchor == PLAN_HARMONY_ANCHOR_TONIC ? 1 : 5, 0, false, false, 1, &chord)) {
+        if (!harmony_make_chord_in(&kind, anchor == PLAN_HARMONY_ANCHOR_TONIC ? 1 : harmony_dominant_degree(&kind), 0, false, false, 1, &chord)) {
             return false;
         }
     } else if (run.first > 0 && request->motive_fixed[run.first - 1]) {
         chord = request->motive_chord[run.first - 1];
     } else if (run.first + run.count < request->cells && request->motive_fixed[run.first + run.count]) {
         chord = request->motive_chord[run.first + run.count];
-    } else if (!harmony_make_chord(request->mode, 1, 0, false, false, 1, &chord)) {
+    } else if (!harmony_make_chord_in(&kind, 1, 0, false, false, 1, &chord)) {
         return false;
     }
     return append_chord(request, &chord, run.first, run.count, fill);
@@ -361,12 +363,13 @@ static bool fill_open_run(const PhraseRequest *request, Run run, FillRng *rng, R
             return false;
         }
         out->fill_count = 1;
+        HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
         for (int degree = 1; degree <= 7 && out->fill_count < FILLS_PER_RUN; degree++) {
             PhraseChord chord;
             Fill *fill = &out->fills[out->fill_count];
             bool same = false;
             fill->chord_count = 0;
-            if (!harmony_make_chord(request->mode, degree, 0, false, false, 1, &chord) ||
+            if (!harmony_make_chord_in(&kind, degree, 0, false, false, 1, &chord) ||
                 !append_chord(request, &chord, run.first, run.count, fill)) {
                 continue;
             }
@@ -380,9 +383,9 @@ static bool fill_open_run(const PhraseRequest *request, Run run, FillRng *rng, R
             }
             /* A run that touches an anchor of the shape holds a chord the anchor allows. */
             bool anchored = !request->has_shape ||
-                            ((run.first != 0 || anchor_keeps(request->shape.starts_on, &fill->chords[0])) &&
+                            ((run.first != 0 || anchor_keeps(&kind, request->shape.starts_on, &fill->chords[0])) &&
                              (run.first + run.count != request->cells ||
-                              anchor_keeps(request->shape.ends_on, &fill->chords[fill->chord_count - 1])));
+                              anchor_keeps(&kind, request->shape.ends_on, &fill->chords[fill->chord_count - 1])));
             if (!same && anchored &&
                 (!request->has_shape ||
                  harmony_shape_keeps_in(&request->shape, cells, fill->chord_count, &request->metre, false))) {
@@ -466,6 +469,12 @@ static bool whole_fits(const PhraseRequest *request, const PhraseChord *chords, 
         HeardPhrase phrase = {chords, count, request->mode, request->cadence, request->cells_per_bar, request->cell_length,
                               false, NULL, true, false, NULL, NULL, false, &request->metre, NULL, NULL};
         phrase.composer_chords = request->composer_chords;
+        phrase.modal = request->modal;
+        if (request->modal != NULL) {
+            /* The recognizer hears major and minor: a modal phrase ends on its cadence kind's chords (R-725). */
+            HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
+            return kind.cadence != NULL && harmony_modal_ending_holds(&phrase, kind.cadence);
+        }
         if (!harmony_hear_phrase(&phrase, &heard, &at_end) || !at_end || heard != request->cadence) {
             return false;
         }

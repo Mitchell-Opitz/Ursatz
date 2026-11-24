@@ -79,6 +79,23 @@ static const Figure PEDAL_FIGURES[] = {
     {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 2, {V, V7}},
 };
 
+/*
+ * The figures of a modal key (R-725): its dominant is the last approach chord of its cadence kind, written for V here and read as that
+ * degree (make_figure_chord). It has no V6, V65, V43 or viio6, so only the root-position figures remain, with a dominant to tonic
+ * figure of its own.
+ */
+static const Figure MODAL_FIGURES[] = {
+    {ANCHOR_TONIC, ANCHOR_TONIC, 1, {I}},
+    {ANCHOR_TONIC, ANCHOR_TONIC, 3, {I, V, I}},
+    {ANCHOR_TONIC, ANCHOR_TONIC, 3, {I, IV, I}},
+    {ANCHOR_TONIC, ANCHOR_DOMINANT, 2, {I, V}},
+    {ANCHOR_DOMINANT, ANCHOR_TONIC, 2, {V, I}},
+};
+
+static const Figure MODAL_PEDAL_FIGURES[] = {
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 1, {V}},
+};
+
 #undef I64
 #undef V7
 #undef I
@@ -112,19 +129,15 @@ static bool make_figure_chord(const HarmonyKind *kind, const FigureChord *spec, 
     if (spec->leading_tone) {
         return harmony_make_leading_tone(kind->mode, spec->inversion, cells, out);
     }
-    return harmony_make_chord_in(kind, spec->degree, spec->inversion, spec->seventh, false, cells, out);
+    /* The V of a modal key's figure is its dominant, the last approach chord of its cadence. */
+    int degree = spec->degree == 5 && kind->modal != NULL ? harmony_dominant_degree(kind) : spec->degree;
+    return harmony_make_chord_in(kind, degree, spec->inversion, spec->seventh, false, cells, out);
 }
 
 /* One deal of the request's cells to the figure's chords, or false when this deal does not keep to the shape. */
 static bool deal_figure(const PhraseRequest *request, const Figure *figure, FillRng *rng, PhraseProgression *out) {
     if (figure->count > request->cells) {
         return false;
-    }
-    /* A modal key has no V, V6, V65, V43 or viio6 (R-725): only the figures on its tonic and IV are written. */
-    for (size_t i = 0; request->modal != NULL && i < figure->count; i++) {
-        if ((figure->chords[i].degree != 1 && figure->chords[i].degree != 4) || figure->chords[i].seventh) {
-            return false;
-        }
     }
     size_t cells[MAX_FIGURE_CHORDS];
     size_t cap = request->shape.max_cells_per_chord > 0 ? (size_t)request->shape.max_cells_per_chord : 0;
@@ -234,8 +247,11 @@ static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, 
         !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, composer_context_chords(context), &request)) {
         return false;
     }
-    const Figure *table = request.shape.pedal ? PEDAL_FIGURES : FIGURES;
-    size_t table_count = request.shape.pedal ? PEDAL_FIGURE_COUNT : FIGURE_COUNT;
+    const Figure *table = request.modal != NULL ? (request.shape.pedal ? MODAL_PEDAL_FIGURES : MODAL_FIGURES)
+                                                : (request.shape.pedal ? PEDAL_FIGURES : FIGURES);
+    size_t table_count = request.modal != NULL ? (request.shape.pedal ? sizeof(MODAL_PEDAL_FIGURES) / sizeof(MODAL_PEDAL_FIGURES[0])
+                                                                       : sizeof(MODAL_FIGURES) / sizeof(MODAL_FIGURES[0]))
+                                               : (request.shape.pedal ? PEDAL_FIGURE_COUNT : FIGURE_COUNT);
     size_t wanted[FIGURE_COUNT > PEDAL_FIGURE_COUNT ? FIGURE_COUNT : PEDAL_FIGURE_COUNT];
     size_t wanted_count = 0;
     for (size_t i = 0; i < table_count; i++) {

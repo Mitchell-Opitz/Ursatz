@@ -447,6 +447,15 @@ void harmony_options_applied(const Plan *plan, const PhraseContext *phrase, Opti
 bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                         PhraseChord *out);
 
+/* The degree of the chord a dominant anchor stands on: 5 in a major or minor key, the last approach degree of a modal key's cadence. */
+int harmony_dominant_degree(const HarmonyKind *kind);
+
+/* Whether the last approach chord of a modal cadence has its root a tritone from the arrival's (the locrian V and io). */
+bool harmony_modal_tritone_approach(const HarmonyKind *kind);
+
+/* Whether the last chords of a phrase in a modal key are its cadence kind's approach then arrival (PAC, IAC), or end on the last approach (HC). */
+bool harmony_modal_ending_holds(const HeardPhrase *phrase, const VocabularyCadence *cadence);
+
 /* The same in the kind's key: a modal key's chord is stacked from its material, numbered and given its function there. */
 bool harmony_make_chord_in(const HarmonyKind *kind, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                            PhraseChord *out);

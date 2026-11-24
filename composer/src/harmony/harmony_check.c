@@ -120,17 +120,21 @@ bool harmony_root_progression_holds(const HarmonyChord *chords, size_t count) {
 }
 
 /* Whether the last chords are the cadence kind's approach (then, unless the phrase ends on it, its arrival). */
-static bool modal_ending_holds(const HeardPhrase *phrase, const VocabularyCadence *cadence) {
+bool harmony_modal_ending_holds(const HeardPhrase *phrase, const VocabularyCadence *cadence) {
     bool half = phrase->requested == CADENCE_TYPE_HALF;
     size_t length = cadence->approach_count + (half ? 0 : 1);
     if ((!half && phrase->requested != CADENCE_TYPE_PERFECT_AUTHENTIC && phrase->requested != CADENCE_TYPE_IMPERFECT_AUTHENTIC) ||
         phrase->count < length) {
         return false;
     }
+    HarmonyKind kind = {phrase->mode, phrase->modal, cadence};
+    bool tritone = harmony_modal_tritone_approach(&kind);
     const PhraseChord *last = &phrase->chords[phrase->count - length];
     for (size_t i = 0; i < length; i++) {
         int expected = i < cadence->approach_count ? cadence->approach_degrees[i] : cadence->arrival_degree;
-        if (last[i].applied || last[i].chord.degree != expected || last[i].chord.seventh || last[i].chord.inversion != 0) {
+        /* The last approach chord of a tritone cadence (the locrian V and io) stands in first inversion, as the phrase model writes it. */
+        int inversion_allowed = i + 1 == cadence->approach_count && !half && tritone ? 1 : 0;
+        if (last[i].applied || last[i].chord.degree != expected || last[i].chord.seventh || last[i].chord.inversion != inversion_allowed) {
             return false;
         }
     }
@@ -165,7 +169,8 @@ static bool judge_modal(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             hard = "chord not readable";
         } else if (!exempt && pitch_material_avoids(phrase->modal, chord->chord.degree)) {
             hard = "chord the mode avoids";
-        } else if (!exempt && chord->chord.inversion != 0) {
+        } else if (!exempt && chord->chord.inversion != 0 &&
+                   !(chord->chord.inversion == 1 && i + 2 == count && phrase->requested != CADENCE_TYPE_HALF && harmony_modal_tritone_approach(&kind))) {
             hard = "chord with no reason to be there";
         }
         model[i] = chord->chord;
@@ -185,7 +190,7 @@ static bool judge_modal(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             hard = "phrase model broken";
         }
     }
-    if (!hard && !phrase->open_ended && !modal_ending_holds(phrase, kind.cadence)) {
+    if (!hard && !phrase->open_ended && !harmony_modal_ending_holds(phrase, kind.cadence)) {
         hard = "not the mode's cadence";
     }
     unsigned soft_total = 1;

@@ -9,7 +9,6 @@ workshop/src/analysis/import_cache.c workshop_import_cache_imports  # test hook:
 workshop/src/analysis/import_cache.c workshop_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 workshop/src/items/piece_lock.c workshop_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_vocabulary  # grow reads the progression types through the links of the formal functions (R-707), so no app looks one up by id; its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
 library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P74 (playback is built by the Analyzer from the score, not from a realization); its tests call it
@@ -20,7 +19,6 @@ library/theory/harmony/harmony_cadence_kinds.c harmony_cadence_kind_at  # the vo
 library/theory/harmony/harmony_cadence_kinds.c harmony_cadence_kind_count  # the vocabulary pin test walks the table; its tests call it
 library/theory/knowledge/instrument.c instrument_in_range  # no app calls it until P75 (keyboard limits test a note against the range); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
-
 analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it
 library/model/containers/section.c section_id  # no app reads a section's id since P62 B11 (the claims that named it are gone); its tests call it
 library/analysis/dimension/dimension.c dimension_name  # no app reads a dimension by name until the dimension targets of P69 (R-709); its test calls it
@@ -40,3 +38,7 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_at  # n
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_count  # no app lists the voicings until P69 B9 (voicings); its tests call it
 library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # the no-snapshot fallback of common_practice_triad_intervals_with (R-728); its tests call it
 library/theory/tonality/chord_vocabulary_seventh.c common_practice_seventh_intervals  # the no-snapshot fallback of common_practice_seventh_intervals_with (R-728); its tests call it
+composer/src/harmony/harmony_context.c harmony_read_chord  # the mode form of harmony_read_chord_for (P69 B3): every application reads a key through its kind; its tests call it
+composer/src/harmony/harmony_context.c harmony_read_chord_in  # the mode form of harmony_read_chord_in_for (P69 B3); its tests call it
+composer/src/harmony/harmony_hear.c harmony_read_lane_keys  # the mode form of the multi-key lane read (P69 B3): the applications read one key through harmony_read_lane_for; its tests call it
+composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of harmony_find_kind (P69 B3); its tests call it

@@ -39,12 +39,14 @@ static bool make_from(const HarmonyKind *kind, HarmonyChord chord, size_t cells,
     if (kind->modal != NULL && (chord.leading_tone || pitch_material_avoids(kind->modal, chord.degree))) {
         return false;
     }
-    if (!harmony_chord_valid(&chord) || !harmony_function_in(kind, &chord, &function) ||
+    /* A modal key without its cadence kind at hand (a Motive holds no snapshot) has the chord without a function. */
+    bool has_function = harmony_function_in(kind, &chord, &function);
+    if (!harmony_chord_valid(&chord) || (!has_function && !(kind->modal != NULL && kind->cadence == NULL)) ||
         !harmony_roman_format_in(kind, &chord, out->roman)) {
         return false;
     }
-    out->function = function;
-    out->has_function = true;
+    out->function = has_function ? function : HARMONIC_FUNCTION_TONIC;
+    out->has_function = has_function;
     out->chord = chord;
     out->cells = cells;
     return true;
@@ -296,6 +298,15 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     if (!make_chord(&kind, last, last_cells, &chords[before_count])) {
         free(chords);
         return false;
+    }
+    /* An approach chord whose root lies a tritone from the arrival's (the locrian V to io) would put a tritone leap in the bass: it is
+       written in first inversion, whose bass steps to the arrival (R-725). */
+    if (kind.modal != NULL && !half && before_count > 0 && harmony_modal_tritone_approach(&kind)) {
+        size_t cells_of = chords[before_count - 1].cells;
+        if (!harmony_make_chord_in(&kind, kind.cadence->approach_degrees[approach - 1], 1, false, false, cells_of, &chords[before_count - 1])) {
+            free(chords);
+            return false;
+        }
     }
     size_t count = before_count + 1;
     /* Chords that do not stand on the given bass or carry the given melody are dealt again, after the dominant is
