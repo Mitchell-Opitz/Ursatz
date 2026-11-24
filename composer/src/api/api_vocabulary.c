@@ -807,6 +807,27 @@ static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
     return list != NULL;
 }
 
+/* The voicings of the snapshot (K3, R-731), user entries included, in id order: {value: id, label: name, fits: [the chord type ids]}. */
+static bool add_voicings(cJSON *root, const KnowledgeSnapshot *knowledge) {
+    cJSON *list = add_list(root, "voicings");
+    for (size_t i = 0; list && i < knowledge_snapshot_voicing_count(knowledge); i++) {
+        const VoicingEntry *voicing = knowledge_snapshot_voicing_at(knowledge, i);
+        cJSON *item = voicing != NULL ? add_choice(list, voicing->id, voicing->name) : NULL;
+        cJSON *fits = item != NULL ? cJSON_AddArrayToObject(item, "fits") : NULL;
+        for (size_t f = 0; fits != NULL && f < voicing->fit_count; f++) {
+            cJSON *id = cJSON_CreateString(voicing->fits[f]->id);
+            if (id == NULL || !cJSON_AddItemToArray(fits, id)) {
+                cJSON_Delete(id);
+                return false;
+            }
+        }
+        if (fits == NULL) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 UrsatzStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
@@ -815,7 +836,7 @@ UrsatzStatus composer_api_vocabulary(const ComposerContext *context, ComposerRes
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_schemas(root, &materials)) {
+    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_voicings(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }

@@ -42,6 +42,7 @@
     "preference_keys",
     "rules",
     "relations",
+    "voicings",
     "schemas",
     "theme_developments",
     "lanes",
@@ -99,6 +100,20 @@
       "description": "The relations of the knowledge snapshot (K6) a section's region may name, from an anchor (R-610).",
       "items": {
         "$ref": "#/$defs/relation"
+      }
+    },
+    "voicings": {
+      "type": "array",
+      "description": "The voicings of the knowledge snapshot (K3, R-731), user entries included, in id order: what an accompaniment of pattern block may sound its chords with, and the chord types each fits.",
+      "items": {
+        "type": "object",
+        "required": ["value", "label", "fits"],
+        "additionalProperties": false,
+        "properties": {
+          "value": { "type": "string" },
+          "label": { "type": "string" },
+          "fits": { "type": "array", "items": { "type": "string" } }
+        }
       }
     },
     "theme_form_members": {
