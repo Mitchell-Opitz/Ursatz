@@ -56,6 +56,30 @@ static bool pick(const Option *options, size_t count, int max_distance, const Me
     return true;
 }
 
+/*
+ * The mode's color (R-732): a strong or long anchor, not the first or last note, whose options hold a pitch class of the key's
+ * characteristic steps takes the one nearest the ideal pitch when the draw says so (params->color_note of color_note + 1). Draws
+ * nothing for a key with no characteristic step or with the setting at 0.
+ */
+static bool take_color(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody, size_t i,
+                       const Option *options, size_t count, FillRng *rng, int *pitch) {
+    const MelodyNote *note = &melody->notes[i];
+    if (context->color_mask == 0 || params->color_note == 0 || i == 0 || i + 1 == melody->count ||
+        !(note->strong || rational_cmp(note->duration, context->cell) >= 0)) {
+        return false;
+    }
+    for (size_t j = 0; j < count; j++) {
+        if ((context->color_mask >> util_pitch_class(options[j].pitch)) & 1u) {
+            if (fill_rng_below(rng, (uint64_t)params->color_note + 1) < params->color_note) {
+                *pitch = options[j].pitch;
+                return true;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
 static MelodyNote *push(MelodyCandidate *out, Rational onset, Rational duration) {
     if (out->count >= MELODY_MAX_NOTES) {
         return NULL;
@@ -292,7 +316,8 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, MAX_MOVE, params, rng, &note->pitch)) {
+        } else if (!take_color(context, params, out, i, options, kept, rng, &note->pitch) &&
+                   !pick(options, kept, MAX_MOVE, params, rng, &note->pitch)) {
             return false;
         }
         if (i > 0 && before + 1 < i) {

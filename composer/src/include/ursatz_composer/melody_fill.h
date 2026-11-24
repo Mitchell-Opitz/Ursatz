@@ -194,13 +194,19 @@ typedef struct {
      * `waive` names). false (the default) changes nothing and draws no random number.
      */
     bool cadence_long;
+    /*
+     * Color note (P69, R-732): in a modal key, the chance that a strong or long anchor whose chord offers one of the mode's
+     * characteristic steps takes it: color_note draws in color_note + 1, the step when the draw is below color_note (0 to 20).
+     * 0 never takes it and draws nothing; a major or minor key has no characteristic step and draws nothing at any value.
+     */
+    unsigned color_note;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
  * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first, rhythm_repeat_bars,
- * leap_weight, register_weight, waive and reverse 0, and cadence_long false.
+ * leap_weight, register_weight, waive and reverse 0, cadence_long false and color_note 2.
  */
 MelodyFillParams melody_fill_params_default(void);
 

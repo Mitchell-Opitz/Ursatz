@@ -126,6 +126,8 @@ typedef struct {
     int before_register;
     /* The chord types the chord masks are read with (R-728); NULL: the fallback tables. */
     const ComposerChords *composer_chords;
+    /* The pitch classes of the key's characteristic steps on its tonic (R-732); 0 for a key whose mode names none (major, natural minor). */
+    unsigned color_mask;
 } MelodyContext;
 
 #define MELODY_TONE_CHORD (-1)
@@ -191,6 +193,9 @@ static inline bool melody_has_generated(const MelodyCandidate *melody) {
 
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);
+
+/* The pitch classes of the characteristic steps of a key's mode on its tonic; 0 for a key whose material names none. */
+unsigned melody_color_mask(const SpelledKey *key);
 
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)

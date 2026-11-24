@@ -214,6 +214,18 @@ static bool ends_its_section(const Plan *plan, NodeId owner, PlanSpan span) {
     return false;
 }
 
+unsigned melody_color_mask(const SpelledKey *key) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    unsigned mask = 0;
+    for (size_t i = 0; material != NULL && i < material->characteristic_count; i++) {
+        int step = pitch_material_step(material, material->characteristic_degrees[i]);
+        if (step >= 0) {
+            mask |= 1u << ((spelled_key_tonic_pitch_class(key) + step) % 12);
+        }
+    }
+    return mask;
+}
+
 bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, const ComposerChords *chords,
                         MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
@@ -223,6 +235,7 @@ bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKe
     context->owner = owner;
     context->span = span;
     context->key = key;
+    context->color_mask = melody_color_mask(&key);
     HarmonyKind kind = harmony_kind(chords, &key);
     if (!harmony_read_lane_for(plan, span, &kind, context->chords, &context->count, &context->metre)) {
         return false;
@@ -593,6 +606,7 @@ static bool melody_idea_read(const Plan *plan, LaneSpanId target, const Composer
         !harmony_find_key(plan, target, owner, span, &context->key)) {
         return false;
     }
+    context->color_mask = melody_color_mask(&context->key);
     PlanSpan meter_span = plan_lane_span_span(plan, meters[0]);
     PhraseMetre *metre = &context->metre;
     metre->meter = plan_lane_span_payload(plan, meters[0])->meter;
