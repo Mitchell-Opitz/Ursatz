@@ -205,11 +205,26 @@ static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
 
 /*
  * The block of a K3 voicing (R-731) on a beat whose chord sounds it: the members on the chord's root, the lowest note the root's from C3
- * (MIDI 48) up, one note per member, low to high. False when the block would not lie in the beat's window, above the bass and below the
- * melody.
+ * (MIDI 48) up, one note per member, low to high. False when the block would not lie above the bass and below the melody of the beat.
  */
-static bool voice_block(const AccompContext *context, size_t chord, int low, int high, int out[ACCOMP_VOICES], size_t *size) {
+static bool voice_block(const AccompContext *context, size_t chord, Rational start, Rational end, int out[ACCOMP_VOICES], size_t *size) {
     const VoicingEntry *voicing = context->voicing;
+    /* The voicing has its own register: the constraint's low holds, its high does not (a shimmer spans 21 semitones, the default window 19),
+       the melody still closes the block from above. */
+    int low = context->low;
+    int high = 127;
+    for (size_t i = 0; i < context->bass_count; i++) {
+        const AccompLine *line = &context->bass[i];
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch + 1 > low) {
+            low = line->pitch + 1;
+        }
+    }
+    for (size_t i = 0; i < context->melody_count; i++) {
+        const AccompLine *line = &context->melody[i];
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch - 1 < high) {
+            high = line->pitch - 1;
+        }
+    }
     int bottom = 48 + util_pitch_class(context->chord_pcs[chord][0]);
     if (voicing == NULL || voicing->member_count > ACCOMP_VOICES || bottom < low ||
         bottom + voicing->members[voicing->member_count - 1].semitones > high) {
@@ -425,7 +440,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         voiced_pcs(context, accomp_chord_at(context, start), pcs);
         beat_window(context, start, out->beat_end[b], &low, &high);
         if (pattern == PLAN_ACCOMPANIMENT_BLOCK && context->chord_voiced[accomp_chord_at(context, start)] &&
-            voice_block(context, accomp_chord_at(context, start), low, high, out->voicing[b], &out->voicing_size[b])) {
+            voice_block(context, accomp_chord_at(context, start), start, out->beat_end[b], out->voicing[b], &out->voicing_size[b])) {
             out->voiced[b] = true;
             previous = out->voicing[b];
             previous_size = out->voicing_size[b];

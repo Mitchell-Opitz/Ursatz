@@ -313,7 +313,7 @@ void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowled
         for (size_t n = 0; n < candidate->note_count[voice] && !verdict->hard; n++) {
             const AccompNote *note = &candidate->notes[voice][n];
             Rational end = position_add(note->onset, note->duration);
-            if (note->pitch < context->low || note->pitch > context->high) {
+            if (note->pitch < context->low || (note->pitch > context->high && !context->chord_voiced[accomp_chord_at(context, note->onset)])) {
                 verdict->hard = "a note outside the range";
             } else if (rational_cmp(note->onset, POSITION_ZERO) < 0 || rational_cmp(end, context->length) > 0 ||
                        !position_is_positive(note->duration)) {
