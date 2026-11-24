@@ -246,10 +246,17 @@ static void test_lists(void) {
     assert(cJSON_GetArraySize(list("cadences")) == 5);
     assert(cJSON_GetArraySize(list("theme_cadences")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("cadences"), 0)), "PAC") == 0);
-    assert(cJSON_GetArraySize(list("piece_materials")) == 3 && cJSON_GetArraySize(list("materials")) == 2);
-    assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), 0)), "omt.material.major") == 0 &&
-           strcmp(value_of(cJSON_GetArrayItem(list("materials"), 1)), "omt.material.natural-minor") == 0 &&
-           strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 2)), "style") == 0);
+    /* Major, natural minor, then the modal keys from the darkest (R-725); a piece's list ends with "style", a region's has none. */
+    static const char *const MATERIALS[7] = {"omt.material.major",    "omt.material.natural-minor", "omt.material.locrian", "omt.material.phrygian",
+                                             "omt.material.dorian",   "omt.material.mixolydian",    "omt.material.lydian"};
+    assert(cJSON_GetArraySize(list("piece_materials")) == 8 && cJSON_GetArraySize(list("materials")) == 7 &&
+           cJSON_GetArraySize(list("region_materials")) == 7);
+    for (int i = 0; i < 7; i++) {
+        assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), i)), MATERIALS[i]) == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(list("region_materials"), i)), MATERIALS[i]) == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), i)), MATERIALS[i]) == 0);
+    }
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 7)), "style") == 0);
     {
         const cJSON *names = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(list("pitch_class_names"), 1), "names");
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.major")->valuestring, "Db") == 0 &&

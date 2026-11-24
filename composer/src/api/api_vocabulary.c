@@ -167,12 +167,49 @@ static bool add_choices(cJSON *root, const char *name, const ApiChoice *table) {
     return list != NULL;
 }
 
-/* The materials the Composer composes in, as {value: the material's id, label: its key word}; a piece's list adds "style". */
-static bool add_materials(cJSON *root, const CommonPracticeMaterials *materials, const char *name, bool with_style) {
+#define MODAL_KEYS_MAX 8
+
+/* The modal keys the Composer writes (R-725), darkest first: by the sum of their steps, locrian 33 to lydian 39. */
+static size_t modal_keys(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const PitchMaterial *out[MODAL_KEYS_MAX]) {
+    size_t count = 0;
+    for (size_t i = 0; knowledge != NULL && i < knowledge_snapshot_entry_count(knowledge) && count < MODAL_KEYS_MAX; i++) {
+        const KnowledgeEntry *entry = knowledge_snapshot_entry_at(knowledge, i);
+        const PitchMaterial *material = entry && strcmp(entry->kind, "material") == 0 ? knowledge_snapshot_material(knowledge, entry->id) : NULL;
+        if (material != NULL && material != materials->major && material != materials->natural_minor && composer_material_supported(materials, material)) {
+            out[count++] = material;
+        }
+    }
+    for (size_t i = 1; i < count; i++) {
+        for (size_t k = i; k > 0; k--) {
+            int a = 0;
+            int b = 0;
+            for (int degree = 1; degree <= 7; degree++) {
+                a += pitch_material_step(out[k - 1], degree);
+                b += pitch_material_step(out[k], degree);
+            }
+            if (a <= b) {
+                break;
+            }
+            const PitchMaterial *swap = out[k];
+            out[k] = out[k - 1];
+            out[k - 1] = swap;
+        }
+    }
+    return count;
+}
+
+/* The materials the Composer composes in, as {value: the material's id, label: its key word}: major, natural minor, then the modal keys from the
+   darkest; a piece's list adds "style" (a region's list, region_materials, has none). */
+static bool add_materials(cJSON *root, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const char *name, bool with_style) {
     cJSON *list = add_list(root, name);
-    return list && add_choice(list, materials->major->id, materials->major->key_word) &&
-           add_choice(list, materials->natural_minor->id, materials->natural_minor->key_word) &&
-           (!with_style || add_choice(list, "style", "From the brief"));
+    const PitchMaterial *modal[MODAL_KEYS_MAX];
+    size_t count = modal_keys(knowledge, materials, modal);
+    bool ok = list && add_choice(list, materials->major->id, materials->major->key_word) &&
+              add_choice(list, materials->natural_minor->id, materials->natural_minor->key_word);
+    for (size_t i = 0; ok && i < count; i++) {
+        ok = add_choice(list, modal[i]->id, modal[i]->key_word) != NULL;
+    }
+    return ok && (!with_style || add_choice(list, "style", "From the brief"));
 }
 
 /* The meters: the value, the beats of a bar and where a second chord may start (theme chords start on a cell of the meter). */
@@ -758,8 +795,9 @@ static bool add_defaults(cJSON *root) {
            cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "balanced");
 }
 
-bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
-    return add_meters(root) && add_defaults(root) && add_theme_form_members(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
+bool api_vocabulary_build(cJSON *root, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials) {
+    return add_meters(root) && add_defaults(root) && add_theme_form_members(root) && add_materials(root, knowledge, materials, "materials", false) && add_materials(root, knowledge, materials, "piece_materials", true) &&
+           add_materials(root, knowledge, materials, "region_materials", false) &&
            add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&
@@ -836,7 +874,7 @@ UrsatzStatus composer_api_vocabulary(const ComposerContext *context, ComposerRes
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_voicings(root, context->knowledge) || !add_schemas(root, &materials)) {
+    if (!root || !api_vocabulary_build(root, context->knowledge, &materials) || !add_relations(root, context->knowledge) || !add_voicings(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
