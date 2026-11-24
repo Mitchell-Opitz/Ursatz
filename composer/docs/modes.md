@@ -102,6 +102,11 @@ A region of a piece is in any material the Composer writes, on one tonic or anot
 
 Each section row of a piece response has `brightness` (`{"numerator", "denominator"}`, null for a section without notes): the measure of R-730 over the section's melody, bass and inner voices, against the tonic and material of the key lane at its start. A diatonic mode whose notes all sound measures its rank, locrian 1 to lydian 7. For the R-611 piece (seed 1, themes drawn from a motive with no harmony) A measures 1 and B 4: B is more than 3/2 brighter than A, which `test_ternary_modes` asserts. The `brightness` dimension is not a contrast aspect; a brightness target is a region relation.
 
+
+## The measures
+
+The modal measures of P69 (R-543, gate 2) are tests, so CI keeps them. `test_modal_sweep_<mode>` (slow, one for each church mode, about five minutes alone) draws twenty themes from seed 500 of a sentence and of a period in C, as `listen --what themes --count 20 --seed 500 --into <form> --material <mode> --meter 4/4` does (`compose_theme_in` in `tests/support/test_modal_theme.h`), and checks from the plans: every chord of the harmony lane in the mode's collection, at most 0.020 of the melody notes outside it (chromatic embellishment), a characteristic step in a chord, in the chord before the final one (a modal cadence) and on a strong beat in at least three quarters of the themes, at least ten composed. The counts that compose and put the step on a strong beat are pinned (`modal_props.py` over `batches.sh` gives the same ones; for dorian a sentence composes 16 of 20 with 13 on a strong beat, a period 14 with 12). `test_modal_sweep_smoke` is seed 500 alone in two batches, in the fast set. `test_piece_r611` builds `r611.sh`'s request (two themes at seed 1 from a motive with no harmony, a ternary with A in C locrian and B two steps brighter) and asserts the regions, C locrian, C natural minor and C locrian again, and B's brightness 4 against A's 1.
+
 ## What a modal key does not write
 
 - Applied chords, dominant options, predominant forms and the prolongation figures with V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws the figures on the tonic, IV and the root-position dominant (the approach chord of the mode's cadence).

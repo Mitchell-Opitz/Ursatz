@@ -6,6 +6,17 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 API 4.7 (R-725, P69 B4): a key's material may be one of the church modes: `"dorian"`, `"lydian"`, `"mixolydian"`, `"phrygian"` or `"locrian"` (the `material` of the theme, piece, plan, grow, counterpoint and random motive requests). The old `mode` member stays major or minor. A region in a piece may be in the home's mode only, or change between major and minor ([modes.md](modes.md)). A word the Composer does not write is refused with "the Composer writes major, minor and modal keys; '<word>' is not one of them". The seventh is raised to a leading tone in the natural minor only; a motive in D natural minor is no longer a motive in D dorian.
 
+
+Color notes (R-732, P69 B5): `melody.color_note` (0 to 20, default 2) and `motif.color_note` (0 to 8, default 4) move a modal theme's melody and random motif onto the mode's characteristic steps; major and minor keys have none.
+
+Modal mixture and brightness (R-729, R-730, P69 B6 and B7): `harmony.mixture` (`share`, `from`; off by default) borrows predominant chords from other modes on the tonic, the theme response's chord rows gain `borrowed_from`, and the plan's harmony lane keeps it. The piece response's section rows gain `brightness` (`{"numerator", "denominator"}`, null for a section with no notes); a region may name any mode the Composer writes, and a theme given to a section must be in the section's material.
+
+Color chords (R-727, P69 B8): a numeral takes a suffix (`Iadd9`, `IV69`, `V9`, `Imaj9`, `ii9`, `Vq3`) that names a chord type of the knowledge snapshot; the chord sounds the type's members while every check reads the basic chord. `harmony.color` (`share`, `types`) and `motif.color_chords` (a ratio; off by default) draw them, `motif.plan` and the motive harmony text (`IVadd9@2`) and the given `chords` of a theme or piece request take the suffix. Preference keys are 149 with the workshop's two.
+
+Voicings (R-731, P69 B9 and B10): a theme or piece request's `accompaniment` takes `"voicing": "<id>"` with the pattern `block`; the vocabulary lists `voicings` (`value`, `label`, `fits`), and the materials lists (`materials`, `piece_materials`, and the new `region_materials`) hold major, natural minor and the five church modes from the darkest. The workshop reads the `knowledge` folder of the data folder as user knowledge when it opens.
+
+Modal sweep (P69 B11): `test_modal_sweep_<mode>` (slow) and `test_modal_sweep_smoke` hold twenty sentences and twenty periods in each church mode to the gate-2 targets, and `test_piece_r611` the R-611 ternary from C locrian to two steps brighter.
+
 ## Unreleased (phase P68)
 
 Ranking by the critic (R-722, P68 B5): with `critic.rank` on, a theme request makes `critic.candidates` themes for each one it keeps, judges them together and keeps the best; the response gains `critic` in each theme and `rejected` in the document (`theme.response.schema.json`, `grow.response.schema.json`). `GrowSetup.critic`, `GrowTheme.judged` and `.judgment`, `GrowRun.rejected`, `.ranked`. `ursatz listen` varies the generated motifs of a theme batch when `candidates.variety` is above 0. With rank off every output is as it was.
