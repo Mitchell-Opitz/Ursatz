@@ -262,7 +262,7 @@ check(M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change sa
 /* Material default from the basic motif (R-205) */
 const minorBody = { motif: { material: "omt.material.natural-minor" } };
 const majorBody = { motif: { material: "omt.material.major" } };
-check(T.motifMaterial(minorBody) === "omt.material.natural-minor" && T.motifMaterial(majorBody) === "omt.material.major" && T.motifMaterial({}) === null && T.motifMaterial({ motif: { material: "omt.material.dorian" } }) === null, "a motif body gives its material");
+check(T.motifMaterial(minorBody) === "omt.material.natural-minor" && T.motifMaterial(majorBody) === "omt.material.major" && T.motifMaterial({}) === null && T.motifMaterial({ motif: { material: "omt.material.dorian" } }) === "omt.material.dorian" && T.motifMaterial({ motif: { material: "omt.material.harmonic-minor" } }) === null, "a motif body gives its material (a dorian body is dorian)");
 const fresh = T.emptyState("thm-2");
 check(T.applyBasicMaterial(fresh, false, minorBody) && fresh.material === "omt.material.natural-minor", "the first basic motif sets the material");
 const chosen = T.emptyState("thm-2");

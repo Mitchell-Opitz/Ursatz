@@ -60,6 +60,13 @@ check(P.pieceOfBody(P.bodyFromState(freeState)).structure.sections[2].fill.into 
 check(same(P.pieceOfBody(body).structure.sections[4].harmony, { progression: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
 check(same(P.pieceOfBody(body).motive, { item_id: "mot-9", version: 3 }) && P.pieceOfBody(body).pool === "approved", "motive and pool are in the body");
 check(same(P.pieceOfBody(body).accompaniment, { pattern: "alberti" }), "the accompaniment is a pattern");
+/* a block accompaniment keeps its voicing (R-731); another pattern has none, and a region may name any modal key but not "style" */
+const voiced = filled();
+voiced.accompaniment = { kind: "pattern", pattern: "block", voicing: "omt.voicing.shell-dominant" };
+check(same(P.pieceOfBody(P.bodyFromState(voiced)).accompaniment, { pattern: "block", voicing: "omt.voicing.shell-dominant" }) && P.stateFromBody(P.bodyFromState(voiced), "x").accompaniment.voicing === "omt.voicing.shell-dominant", "a block accompaniment keeps its voicing");
+voiced.accompaniment = { kind: "pattern", pattern: "alberti", voicing: "omt.voicing.shell-dominant" };
+check(same(P.pieceOfBody(P.bodyFromState(voiced)).accompaniment, { pattern: "alberti" }), "another pattern drops it");
+check(P.REGION_MATERIALS.length === 7 && !P.REGION_MATERIALS.some((entry) => entry.value === "style") && P.MATERIALS.length === 8 && P.REGION_MATERIALS[2].label === "Locrian", "a region's materials are the modal keys without style");
 check(P.pieceOfBody(body).brief.scopes.length === 1 && P.pieceOfBody(body).brief.style_ids[0] === "sty-1", "the brief comes from the picks");
 check(same(P.pieceOfBody(body).without, ["motive-rhythm"]) && P.pieceOfBody(body).style_weight === "1", "the switches and the weight are in the body");
 check(P.pieceOfBody(body).tempo === 170 && P.pieceOfBody(body).seed === 7 && P.pieceOfBody(body).check === true, "tempo, seed and check are in the body");

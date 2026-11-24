@@ -100,7 +100,7 @@ const values = M.motifFormValues(body);
 check(values.role === "accompaniment" && values.material === "omt.material.natural-minor" && values.pickup === "1/2", "form values read the motif and its material");
 check(M.motifFormValues({ motif: { material: "omt.material.major" } }).material === "omt.material.major", "a motif in C major reads as major");
 check(M.motifFormValues({ motif: { material: null } }).material === "omt.material.major" && M.motifFormValues(null).material === "omt.material.major", "the material defaults to major");
-check(same(M.MOTIF_MATERIALS.map((entry) => [entry.value, entry.label]), [["omt.material.major", "major"], ["omt.material.natural-minor", "minor"]]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the materials and the tonic hint");
+check(same(M.MOTIF_MATERIALS.map((entry) => entry.value), Vocabulary.values("materials")) && same(M.MOTIF_MATERIALS.map((entry) => entry.label).slice(0, 3), ["major", "minor", "locrian"]) && M.MOTIF_MATERIALS.length === 7 && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the materials and the tonic hint");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
 check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
 check(M.buildMotifBody({ ...values, harmony: " I V6@2 " }, null).motif.harmony === "I V6@2", "the body holds the trimmed harmony");
@@ -115,7 +115,7 @@ check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && bla
 
 const rebuilt = M.buildMotifBody({ ...values, notes: " C4:q ", pickup: "" }, body);
 check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.material === "omt.material.natural-minor" && !("key" in rebuilt.motif) && rebuilt.motif.pickup === "0", "body trims notes, stores the material and no key text, and an empty pickup is 0");
-check(M.buildMotifBody({ ...values, material: "omt.material.major" }, null).motif.material === "omt.material.major" && M.buildMotifBody({ ...values, material: "omt.material.dorian" }, null).motif.material === "omt.material.major", "the body material is the chosen one, major for anything else");
+check(M.buildMotifBody({ ...values, material: "omt.material.major" }, null).motif.material === "omt.material.major" && M.buildMotifBody({ ...values, material: "omt.material.dorian" }, null).motif.material === "omt.material.dorian" && M.buildMotifBody({ ...values, material: "omt.material.harmonic-minor" }, null).motif.material === "omt.material.major", "the body material is the chosen one the Composer offers, major for anything else");
 check(M.buildMotifBody({ ...values, form: "rhythm", material: "omt.material.natural-minor" }, null).motif.material === "omt.material.natural-minor", "every form is written in C");
 check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body stores features from 0");
 check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");

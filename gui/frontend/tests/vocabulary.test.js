@@ -54,6 +54,10 @@ async function main() {
   // lists and limits
   check(same(V.values("meters"), ["2/4", "3/4", "4/4", "6/8"]), "the meters are the Composer's four");
   check(V.labelOf("piece_materials", "style") === "From the brief" && V.labelOf("materials", "omt.material.natural-minor") === "minor" && V.keyWord("omt.material.natural-minor") === "minor" && V.materialWord("style") === "style" && V.materialWord("omt.material.major") === "major" && V.materialChoices("piece_materials")[0].label === "Major" && V.labelOf("meters", "9/8") === "9/8", "labels come from the list, else the value");
+  check(same(V.values("materials"), ["omt.material.major", "omt.material.natural-minor", "omt.material.locrian", "omt.material.phrygian", "omt.material.dorian", "omt.material.mixolydian", "omt.material.lydian"]) &&
+        same(V.values("region_materials"), V.values("materials")) && same(V.values("piece_materials"), [...V.values("materials"), "style"]) && V.materialChoices("region_materials")[2].label === "Locrian",
+        "the materials are major, minor and the modal keys from the darkest; a region's list has no style, a piece's ends with it");
+  check(V.list("voicings").length >= 4 && V.list("voicings")[0].value === "omt.voicing.shell-dominant" && same(V.list("voicings")[0].fits, ["omt.chord-type.dominant-seventh"]), "the voicings are listed with the chord types they fit");
   check(V.entry("meters", "6/8").beats === 6 && V.entry("meters", "6/8").second_chord_beat === 3 && V.entry("meters", "2/4").second_chord_beat === undefined,
         "a meter says its beats and where a second chord starts");
   check(same(V.values("keys").slice(0, 3), ["C major", "Db major", "D major"]) && V.entry("pitch_class_names", 3).names["omt.material.natural-minor"] === "D#" && V.entry("pitch_class_names", 3).names["omt.material.major"] === "Eb",
