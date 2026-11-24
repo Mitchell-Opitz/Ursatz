@@ -69,7 +69,7 @@ const PitchMaterial *composer_chords_key_material(const ComposerChords *chords, 
 /*
  * The materials a chord may be borrowed from in a key of `key_material` (R-729), nearest first, into out[COMPOSER_MIXTURE_MAX]: the
  * materials of the relation words `from` (resolved on a tonal region of the material: "parallel", "one step darker", ...) in order,
- * NULL for the defaults (parallel, one step darker, one step brighter), then every other diatonic material of the snapshot in
+ * none for NULL `from`, then every other diatonic material of the snapshot in
  * brightness order from the key's (darker before brighter at a tie; with `only_from` the list stops after the words). The key's own
  * material is never listed and none twice. A word that resolves to nothing for this material is skipped. Returns the count (0 without a
  * snapshot or a material with no brightness).
@@ -78,7 +78,7 @@ size_t composer_chords_mixture_materials(const ComposerChords *chords, const Pit
                                          size_t from_count, bool only_from, const PitchMaterial **out);
 
 /*
- * The material a borrowed numeral is taken from: the first of composer_chords_mixture_materials (default order) whose triad on `degree`
+ * The material a borrowed numeral is taken from: the first of composer_chords_mixture_materials (no words: the nearest in brightness, darker before brighter) whose triad on `degree`
  * has the root `root_semitones` above the tonic and the quality `quality` (major, minor or diminished). NULL for none.
  */
 const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords, const PitchMaterial *key_material, int degree,

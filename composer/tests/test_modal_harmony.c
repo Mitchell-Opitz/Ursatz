@@ -108,7 +108,7 @@ static void test_numerals(void) {
     SpelledKey major = test_key(0, "major");
     kind = harmony_kind(chords, &major);
     assert(kind.modal == NULL && harmony_roman_parse_in(&kind, "V", &chord) && chord.borrowed_from == NULL);
-    assert(harmony_roman_parse_in(&kind, "v", &chord) && chord.borrowed_from == test_material("minor")); /* borrowed (B6) */
+    assert(harmony_roman_parse_in(&kind, "v", &chord) && chord.borrowed_from == test_material("mixolydian")); /* borrowed (B6), from the nearest mode */
 }
 
 static void test_functions(void) {

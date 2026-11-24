@@ -114,8 +114,6 @@ const PitchMaterial *composer_chords_key_material(const ComposerChords *chords, 
     return chords != NULL ? (mode == HARMONY_MODE_MINOR ? chords->materials.natural_minor : chords->materials.major) : NULL;
 }
 
-static const char *const DEFAULT_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter"};
-
 static size_t mixture_add(const PitchMaterial *key_material, const PitchMaterial *material, const PitchMaterial **out, size_t count) {
     if (material == NULL || material == key_material || !pitch_material_is_diatonic(material)) {
         return count;
@@ -136,13 +134,9 @@ size_t composer_chords_mixture_materials(const ComposerChords *chords, const Pit
     if (chords == NULL || chords->knowledge == NULL || key_material == NULL || out == NULL || !key_material->has_brightness) {
         return 0;
     }
-    if (from == NULL) {
-        from = DEFAULT_MIXTURE_FROM;
-        from_count = sizeof(DEFAULT_MIXTURE_FROM) / sizeof(DEFAULT_MIXTURE_FROM[0]);
-    }
     size_t count = 0;
     Region anchor = region_tonal(0, key_material);
-    for (size_t i = 0; i < from_count; i++) {
+    for (size_t i = 0; from != NULL && i < from_count; i++) {
         Region reached;
         char why[160];
         if (region_resolve_named(chords->knowledge, from[i], &anchor, &reached, why, sizeof(why)) == REGION_RELATION_OK) {
