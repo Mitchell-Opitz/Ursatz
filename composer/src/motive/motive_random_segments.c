@@ -298,15 +298,22 @@ bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences
     return !(only_open && (last == 4 || last == 6));
 }
 
-/* Whether a note on a beat of the motif sounds one of the characteristic steps of the key's mode (R-732). */
-static bool color_on_beat(const Motive *motive, const SpelledKey *key) {
+/*
+ * Whether a note on a beat of the motif sounds one of the characteristic steps of the key's mode; with `strong_only`, a note on the first
+ * beat of a bar or the third of four (R-732).
+ */
+static bool color_on_beat(const Motive *motive, const SpelledKey *key, bool strong_only) {
     unsigned mask = composer_key_color_mask(key);
     PlanMeter meter = motive_meter(motive);
     Rational pickup = motive_pickup(motive);
+    long beats = meter.beats_per_bar;
     for (size_t i = 0; i < motive->note_count; i++) {
         Rational at = motive_time_minus(motive->notes[i].onset, pickup);
         bool on_beat = at.den != 0 && (at.num * (long)meter.beat_unit) % (long)at.den == 0;
-        if (on_beat && ((mask >> util_pitch_class(motive_pitch(motive, i))) & 1u)) {
+        long beat = on_beat ? (((at.num * (long)meter.beat_unit) / (long)at.den) % beats) : -1;
+        beat = beat < 0 && on_beat ? beat + beats : beat;
+        bool strong = on_beat && (beat == 0 || (beats % 2 == 0 && beat % 2 == 0));
+        if ((strong_only ? strong : on_beat) && ((mask >> util_pitch_class(motive_pitch(motive, i))) & 1u)) {
             return true;
         }
     }
@@ -352,8 +359,10 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
             return false;
         }
         if (fault == NULL) {
-            /* In a modal key the first tries want its characteristic step on a beat; later ones keep any motif. */
-            if ((unsigned)attempt < preferences->color_note && composer_key_color_mask(key) != 0 && !color_on_beat(out, key)) {
+            /* In a modal key the first tries want its characteristic step on a strong beat, the next ones on any beat, up to color_note
+               tries; later ones keep any motif. */
+            if ((unsigned)attempt < preferences->color_note && composer_key_color_mask(key) != 0 &&
+                !color_on_beat(out, key, (unsigned)attempt < (preferences->color_note + 1) / 2)) {
                 continue;
             }
             *found = true;
