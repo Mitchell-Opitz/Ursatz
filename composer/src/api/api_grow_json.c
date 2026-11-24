@@ -664,6 +664,7 @@ static bool idea_span(const Plan *plan, NodeId idea, const PlanMeter *meter, Dim
         return false;
     }
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar >= 6 && meter->beats_per_bar % 3 == 0;
+    memset(out, 0, sizeof(*out));
     out->notes = notes;
     out->count = payload->note_count;
     out->beat = compound ? rational_ratio(3, 8) : rational_ratio(1, meter->beat_unit > 0 ? meter->beat_unit : 4);

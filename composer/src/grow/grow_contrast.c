@@ -242,6 +242,7 @@ static bool motive_span(const GrowThemeRequest *request, const Motive *motive, D
         notes[i].pitch = motive_pitch(motive, i);
     }
     bool compound = request->meter.beat_unit == 8 && request->meter.beats_per_bar >= 6 && request->meter.beats_per_bar % 3 == 0;
+    memset(out, 0, sizeof(*out));
     out->notes = notes;
     out->count = motive->note_count;
     out->length = motive->length;

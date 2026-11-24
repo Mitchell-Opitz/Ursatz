@@ -64,11 +64,63 @@ static DimensionResult measure_density(const DimensionSpan *span, Rational *out)
     return result == DIMENSION_OK ? from_rational(rational_div(count, beats, out)) : result;
 }
 
+/*
+ * Brightness (R-730): 1 plus, for each of the degrees 2 to 7, the share of its sounding duration in its raised form (the degree sounds as
+ * either of two pitch classes above the center: 2: 1 or 2, 3: 3 or 4, 4: 5 or 6, 5: 6 or 7, 6: 8 or 9, 7: 10 or 11; the larger is the raised
+ * one) or, when it does not sound, 1 if the span's material has the raised form, 0 if it has only the lowered, 1/2 with no material. A
+ * diatonic mode whose notes all sound measures its rank: locrian 1 to lydian 7. A span without a center is refused.
+ */
+static DimensionResult measure_brightness(const DimensionSpan *span, Rational *out) {
+    static const int LOWERED[6] = {1, 3, 5, 6, 8, 10};
+    if (!span->has_center || span->center < 0 || span->center > 11) {
+        return DIMENSION_ERR_INVALID_INPUT;
+    }
+    Rational sum = ONE;
+    for (int degree = 0; degree < 6; degree++) {
+        int lowered = LOWERED[degree];
+        int raised = lowered + 1;
+        Rational raised_length = ZERO;
+        Rational sounding = ZERO;
+        for (size_t i = 0; i < span->count; i++) {
+            int pitch_class = ((span->notes[i].pitch - span->center) % 12 + 12) % 12;
+            if (pitch_class != lowered && pitch_class != raised) {
+                continue;
+            }
+            DimensionResult added = from_rational(rational_add(sounding, span->notes[i].duration, &sounding));
+            if (added == DIMENSION_OK && pitch_class == raised) {
+                added = from_rational(rational_add(raised_length, span->notes[i].duration, &raised_length));
+            }
+            if (added != DIMENSION_OK) {
+                return added;
+            }
+        }
+        Rational share;
+        if (rational_cmp(sounding, ZERO) > 0) {
+            DimensionResult divided = from_rational(rational_div(raised_length, sounding, &share));
+            if (divided != DIMENSION_OK) {
+                return divided;
+            }
+        } else if (span->material == NULL) {
+            share = (Rational){1, 2};
+        } else {
+            bool has_raised = pitch_material_contains(span->material, raised);
+            bool has_lowered = pitch_material_contains(span->material, lowered);
+            share = has_raised && !has_lowered ? ONE : has_lowered && !has_raised ? ZERO : (Rational){1, 2};
+        }
+        DimensionResult total = from_rational(rational_add(sum, share, &sum));
+        if (total != DIMENSION_OK) {
+            return total;
+        }
+    }
+    *out = sum;
+    return DIMENSION_OK;
+}
+
 /* The name table of the dimensions (target architecture 5.3): a name and the function that measures it. */
 static const struct {
     const char *name;
     DimensionResult (*measure)(const DimensionSpan *span, Rational *out);
-} MEASURES[DIMENSION_COUNT] = {{"register", measure_register}, {"density", measure_density}};
+} MEASURES[DIMENSION_COUNT] = {{"register", measure_register}, {"density", measure_density}, {"brightness", measure_brightness}};
 
 const char *dimension_name(Dimension dimension) {
     return dimension >= 0 && dimension < DIMENSION_COUNT ? MEASURES[dimension].name : NULL;
