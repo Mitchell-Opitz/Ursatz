@@ -1009,6 +1009,7 @@ static PieceResult run_once(Plan *plan, const ComposeConfig *config, unsigned ch
     }
     run.accompaniment = accompaniment_params_default();
     run.accompaniment.knowledge = config->knowledge;
+    run.accompaniment.voicing = config->block_voicing;
     run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;
 

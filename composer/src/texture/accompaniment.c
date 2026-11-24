@@ -15,7 +15,7 @@
 #define SMOOTH_LIMIT 3
 
 AccompanimentParams accompaniment_params_default(void) {
-    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES, NULL};
+    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES, NULL, NULL};
     return params;
 }
 
@@ -99,6 +99,40 @@ void accomp_color_voice(const ComposerChords *chords, const SpelledKey *key, con
         out[found] = root;
     }
     *colored = true;
+}
+
+void accomp_set_voicing(AccompContext *context, const KnowledgeSnapshot *knowledge, const VoicingEntry *voicing) {
+    context->voicing = NULL;
+    memset(context->chord_voiced, 0, sizeof(context->chord_voiced));
+    memset(context->chord_voicing_mask, 0, sizeof(context->chord_voicing_mask));
+    if (knowledge == NULL || voicing == NULL || voicing->member_count == 0 || context->pattern != PLAN_ACCOMPANIMENT_BLOCK) {
+        return;
+    }
+    context->voicing = voicing;
+    int tonic = spelled_key_tonic_pitch_class(&context->key);
+    for (size_t i = 0; i < context->chord_count; i++) {
+        const int *pcs = context->chord_pcs[i];
+        if (context->chord_pc_count[i] < 3) {
+            continue;
+        }
+        unsigned basic = 0;
+        for (size_t k = 1; k < context->chord_pc_count[i]; k++) {
+            basic |= 1u << util_pitch_class(pcs[k] - pcs[0]);
+        }
+        const ChordType *type = knowledge_snapshot_chord_type_of(knowledge, basic);
+        bool fits = false;
+        for (size_t f = 0; f < voicing->fit_count; f++) {
+            fits = fits || (type != NULL && voicing->fits[f] == type);
+        }
+        int root = util_pitch_class(pcs[0] - tonic);
+        unsigned mask = 0;
+        for (size_t m = 0; fits && m < voicing->member_count; m++) {
+            fits = pitch_material_contains(context->key.material, root + voicing->members[m].semitones);
+            mask |= 1u << util_pitch_class(pcs[0] + voicing->members[m].semitones);
+        }
+        context->chord_voiced[i] = fits;
+        context->chord_voicing_mask[i] = fits ? mask : 0;
+    }
 }
 
 /* The span of voice (2 or 3) that is to be written with the target: none, or an open one over the same time. */
@@ -284,7 +318,8 @@ void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowled
             } else if (rational_cmp(note->onset, POSITION_ZERO) < 0 || rational_cmp(end, context->length) > 0 ||
                        !position_is_positive(note->duration)) {
                 verdict->hard = "a note outside the span";
-            } else if (!(context->chord_mask[accomp_chord_at(context, note->onset)] & (1u << (note->pitch % 12)))) {
+            } else if (!((context->chord_mask[accomp_chord_at(context, note->onset)] | context->chord_voicing_mask[accomp_chord_at(context, note->onset)]) &
+                         (1u << (note->pitch % 12)))) {
                 verdict->hard = "a note that is not a tone of its chord";
             }
             for (size_t i = 0; i < context->bass_count && !verdict->hard; i++) {
@@ -399,6 +434,9 @@ static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng,
     }
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read))) {
         ok = false;
+    }
+    if (ok && params != NULL) {
+        accomp_set_voicing(read, params->knowledge, params->voicing);
     }
     for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
         if (accomp_pattern_allowed(read, p)) {
@@ -515,6 +553,9 @@ bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperat
     out->score_denominator = 1;
     if (ok) {
         const AccompanimentParams *params = composer_context_params(operator_->context);
+        if (params != NULL) {
+            accomp_set_voicing(read, params->knowledge, params->voicing);
+        }
         accomp_judge(read, params ? params->knowledge : NULL, accompaniment, &verdict);
         out->hard_violation = verdict.hard != NULL;
         if (verdict.hard) {

@@ -5,6 +5,7 @@
 #include <theory/vocabulary/texture_rules.h>
 
 #include "texture/texture_internal.h"
+#include "util/util.h"
 
 /* The widest a voicing of three notes spans, in semitones, and the narrowest gap between two of its notes. */
 #define VOICING_SPAN 16
@@ -200,6 +201,25 @@ static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
     if (tonic && context->chord_pc_count[chord] == 3 && (pcs[2] - pcs[0] + 12) % 12 == 6) {
         out[2] = pcs[0];
     }
+}
+
+/*
+ * The block of a K3 voicing (R-731) on a beat whose chord sounds it: the members on the chord's root, the lowest note the root's from C3
+ * (MIDI 48) up, one note per member, low to high. False when the block would not lie in the beat's window, above the bass and below the
+ * melody.
+ */
+static bool voice_block(const AccompContext *context, size_t chord, int low, int high, int out[ACCOMP_VOICES], size_t *size) {
+    const VoicingEntry *voicing = context->voicing;
+    int bottom = 48 + util_pitch_class(context->chord_pcs[chord][0]);
+    if (voicing == NULL || voicing->member_count > ACCOMP_VOICES || bottom < low ||
+        bottom + voicing->members[voicing->member_count - 1].semitones > high) {
+        return false;
+    }
+    for (size_t m = 0; m < voicing->member_count; m++) {
+        out[m] = bottom + voicing->members[m].semitones;
+    }
+    *size = voicing->member_count;
+    return true;
 }
 
 /* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */
@@ -404,6 +424,13 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         }
         voiced_pcs(context, accomp_chord_at(context, start), pcs);
         beat_window(context, start, out->beat_end[b], &low, &high);
+        if (pattern == PLAN_ACCOMPANIMENT_BLOCK && context->chord_voiced[accomp_chord_at(context, start)] &&
+            voice_block(context, accomp_chord_at(context, start), low, high, out->voicing[b], &out->voicing_size[b])) {
+            out->voiced[b] = true;
+            previous = out->voicing[b];
+            previous_size = out->voicing_size[b];
+            continue;
+        }
         if (!choose_voicing(pcs, low, high, previous, previous_size, previous ? 0 : FIRST_SLACK, rng, out->voicing[b],
                             &out->voicing_size[b])) {
             return false;

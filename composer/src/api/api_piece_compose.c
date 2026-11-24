@@ -115,6 +115,7 @@ void api_piece_make_config(const PieceSpec *request, bool check, unsigned long s
     config->pool_count = request->pool_count;
     config->job = request->job;
     config->knowledge = request->knowledge;
+    config->block_voicing = request->request.accompaniment_voicing;
 }
 
 static PieceResult compose_version(const PieceSpec *request, bool check, unsigned long seed, PieceVersion *version) {

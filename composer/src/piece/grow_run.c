@@ -71,6 +71,7 @@ GrowResult grow_run(Plan *plan, const GrowConfig *config, GrowOutcome *outcome) 
     compose.melody = config->melody;
     compose.mixture = config->mixture;
     compose.color = config->color;
+    compose.block_voicing = config->block_voicing;
     compose.style = config->style;
     compose.style_weight = config->style_weight;
     compose.basic = config->basic;

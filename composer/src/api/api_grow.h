@@ -115,6 +115,7 @@ typedef struct {
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
     const ComposerMixture *mixture;          /* the harmony group's mixture settings; NULL for the defaults; not owned */
     const ComposerColor *color;              /* the harmony group's color settings; NULL for the defaults; not owned */
+    const VoicingEntry *block_voicing;       /* the accompaniment's voicing (R-731); NULL for none; not owned */
     const UrsatzJob *job;
     const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
     const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */

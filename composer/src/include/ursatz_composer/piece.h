@@ -134,6 +134,7 @@ typedef struct {
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
     bool has_accompaniment;
     PlanAccompaniment accompaniment; /* read only with has_accompaniment; a layered form has one in any case */
+    const VoicingEntry *accompaniment_voicing; /* the K3 voicing of a block accompaniment (R-731), NULL for none; owned by the snapshot */
     /*
      * Keys (R-069): with modulate the sections' keys are planned from seed (piece_plan_keys): home, or a closely
      * related key reached by a pivot chord, and the cadences across the sections follow (piece_plan_cadences). Without

@@ -42,6 +42,13 @@ typedef struct {
     size_t candidates; /* the accompaniments proposed; 0 means ACCOMPANIMENT_DEFAULT_CANDIDATES */
     /* The knowledge the Analyzer hears a candidate's texture with (the call context's snapshot); NULL: no candidate holds its texture. */
     const KnowledgeSnapshot *knowledge;
+    /*
+     * A K3 voicing (R-731, "block" only): a chord whose basic type the voicing fits, and whose members all lie in the key's material on its
+     * root, sounds the members on the root as one block, the lowest note the root's from C3 (MIDI 48) up, in as many inner voices as the
+     * voicing has members (up to 8). Another chord, and a block where the block would not lie above the bass and below the melody, is voiced
+     * as without it. NULL: no voicing.
+     */
+    const VoicingEntry *voicing;
 } AccompanimentParams;
 
 AccompanimentParams accompaniment_params_default(void);

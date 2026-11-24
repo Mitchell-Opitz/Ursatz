@@ -394,6 +394,20 @@ static UrsatzStatus read_brief(PieceSpec *request, const cJSON *root, const char
             return status;
         }
         piece->has_accompaniment = true;
+        const cJSON *voicing_item = cJSON_GetObjectItemCaseSensitive(accompaniment, "voicing");
+        if (voicing_item && !cJSON_IsNull(voicing_item)) {
+            snprintf(path, sizeof path, "%s/accompaniment/voicing", base);
+            if (!cJSON_IsString(voicing_item)) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "\"voicing\" must be the id of a voicing");
+            }
+            if (strcmp(pattern, "block") != 0) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "a voicing needs the accompaniment pattern \"block\", not '%s'", pattern);
+            }
+            piece->accompaniment_voicing = knowledge_snapshot_voicing(request->knowledge, voicing_item->valuestring);
+            if (piece->accompaniment_voicing == NULL) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "'%s' is not a voicing; see the vocabulary's voicings", voicing_item->valuestring);
+            }
+        }
     }
     if (voicing) {
         snprintf(path, sizeof path, "%s/voicing", base);

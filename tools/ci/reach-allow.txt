@@ -32,7 +32,6 @@ analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_
 composer/src/critic/critic_evaluate.c critic_evaluator_function  # the function names of the evaluators: test_critic_rules pins the table to the entries' `function` both ways, no application reads it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_at  # no app lists the chord types until P69 B9 (voicings read the types they fit); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_count  # no app lists the chord types until P69 B9 (voicings read the types they fit); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing  # no app looks a voicing up by id until P69 B9 (voicings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_at  # no app lists the voicings until P69 B9 (voicings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_voicing_count  # no app lists the voicings until P69 B9 (voicings); its tests call it
 library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # the no-snapshot fallback of common_practice_triad_intervals_with (R-728); its tests call it

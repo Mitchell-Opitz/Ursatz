@@ -321,6 +321,7 @@ typedef struct {
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive grow_run */
     const ComposerMixture *mixture; /* the mixture settings of the phrase model's chords (R-729); NULL for the defaults; must outlive grow_run */
     const ComposerColor *color;     /* the color settings of the phrase model's chords (R-727); NULL for the defaults; must outlive grow_run */
+    const VoicingEntry *block_voicing; /* the K3 voicing a block accompaniment sounds its chords with (R-731); NULL for none; must outlive grow_run */
     const ComposerStyle *style;     /* NULL for none; must outlive grow_run (compose.h) */
     Rational style_weight;     /* a denominator of 0 is 1/1 */
     /*
