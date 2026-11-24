@@ -757,6 +757,42 @@ static UrsatzStatus check_overlay_regions(PieceSpec *request, const char *base, 
     return api_fail(error, URSATZ_ERR_REQUEST, path, "%s", why);
 }
 
+/*
+ * A theme given to a section must be in the section's material (R-610): a C natural minor theme is not given to a C locrian region.
+ * Refused at the section's fill, naming both keys.
+ */
+static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, UrsatzError *error) {
+    PieceRequest *piece = &request->request;
+    PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    memset(regions, 0, sizeof(regions));
+    size_t refused;
+    char why[256];
+    (void)piece_resolve_regions(piece, request->knowledge, regions, &refused, why, sizeof why);
+    for (size_t i = 0; i < piece->section_count; i++) {
+        const Plan *theme = piece->sections[i].theme_plan;
+        if (piece->sections[i].fill != PIECE_FILL_THEME || theme == NULL) {
+            continue;
+        }
+        PlanSpan everything = {{0, 1}, {1000000, 1}};
+        LaneSpanId ids[2];
+        SpelledKey section_key = regions[i].has_region && regions[i].key.material ? regions[i].key : piece->key;
+        if (plan_lane_find(theme, PLAN_LANE_REGION, 0, everything, ids, 2) < 1) {
+            continue;
+        }
+        const SpelledKey *theme_key = &plan_lane_span_payload(theme, ids[0])->region;
+        if (theme_key->material != section_key.material) {
+            char theme_name[48];
+            char section_name[48];
+            char at[200];
+            util_key_name(spelled_key_tonic_pitch_class(theme_key), theme_key->material, theme_name, sizeof(theme_name));
+            util_key_name(spelled_key_tonic_pitch_class(&section_key), section_key.material, section_name, sizeof(section_name));
+            snprintf(at, sizeof at, "%.150s/sections/%zu/fill", base, i);
+            return api_fail(error, URSATZ_ERR_REQUEST, at, "the theme is in %s, the section in %s", theme_name, section_name);
+        }
+    }
+    return URSATZ_OK;
+}
+
 /* The harmony each section gives can be given to it (R-610), tried on a scratch plan of its length, key and meter. */
 static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzError *error) {
     PieceRequest *piece = &request->request;
@@ -966,7 +1002,10 @@ UrsatzStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot 
             return api_fail(error, URSATZ_ERR_REQUEST, at, "%s", why);
         }
     }
-    status = check_harmony(request, base, error);
+    status = check_theme_fills(request, base, error);
+    if (status == URSATZ_OK) {
+        status = check_harmony(request, base, error);
+    }
     if (status != URSATZ_OK) {
         return status;
     }
