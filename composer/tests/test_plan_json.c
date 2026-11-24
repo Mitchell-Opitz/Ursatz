@@ -1174,8 +1174,8 @@ static void test_relation_refusals(void) {
         {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.subtonic", PLAN_KEY_ANCHOR_HOME,
          "relation 'subtonic' from C major: the triad on degree 7 is not major or minor"},
         {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.no-such-relation", PLAN_KEY_ANCHOR_HOME, "no relation has the id"},
-        {{0, "minor", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.two-steps-brighter", PLAN_KEY_ANCHOR_PREVIOUS,
-         "composes in"},
+        {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.two-steps-brighter", PLAN_KEY_ANCHOR_PREVIOUS,
+         "no diatonic mode has brightness rank 8"},
     };
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         const KeySpanCase spans[] = {cases[i].first, {0, NULL, cases[i].relation, cases[i].anchor, false}};

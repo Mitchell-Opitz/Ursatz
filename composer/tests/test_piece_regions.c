@@ -86,10 +86,10 @@ static void test_regions(void) {
     set_key(&sections[0].description.key_end, "G", "nosuch");
     assert(piece_resolve_regions(&request, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_BAD_REQUEST);
     assert(refused == 0 && strcmp(message, "section 'a': no material is named 'nosuch'") == 0);
-    /* The snapshot holds dorian; the Composer writes major and natural minor until P69 (R-611). */
+    /* The snapshot holds dorian; a piece in a major key changes mode only between major and minor (R-611, R-725). */
     set_key(&sections[0].description.key_end, "D", "dorian");
     assert(piece_resolve_regions(&request, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_BAD_REQUEST);
-    assert(refused == 0 && strstr(message, "until P69") != NULL && strstr(message, "dorian") != NULL);
+    assert(refused == 0 && strstr(message, "a section changes mode only between major and minor") != NULL && strstr(message, "dorian") != NULL);
     /* NULL arguments. */
     assert(piece_resolve_regions(NULL, test_knowledge(), regions, &refused, message, sizeof(message)) == PIECE_ERR_NULL);
     assert(piece_resolve_regions(&request, NULL, regions, &refused, message, sizeof(message)) == PIECE_ERR_NULL);

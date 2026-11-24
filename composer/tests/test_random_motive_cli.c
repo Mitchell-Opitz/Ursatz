@@ -131,7 +131,7 @@ static void test_style(void) {
 static void test_bad_arguments(void) {
     expect_failure("--meter 4/4", 1, "random-motive needs --material and --meter");
     expect_failure("--mode major", 1, "random-motive needs --material and --meter");
-    expect_failure("--mode dorian --meter 4/4", 1, "the Composer writes major and minor keys; 'dorian' is not one of them");
+    expect_failure("--mode overtone --meter 4/4", 1, "the Composer writes major, minor and modal keys; 'overtone' is not one of them");
     expect_failure("--mode major --meter 4", 1, "meter '4' is not a meter");
     expect_failure("--mode major --meter 4/4 --key \"D minor\"", 1, "key 'D minor' is not major");
     expect_failure("--mode major --meter 4/4 --key H", 1, "unknown key 'H'");

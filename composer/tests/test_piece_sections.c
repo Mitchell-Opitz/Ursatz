@@ -20,7 +20,7 @@
 /*
  * Per-section controls in a piece request (R-610, R-611): a sized form's overlays give a section a region, a motive of its own or a
  * composed theme; a game loop section gives a region. The R-611 ternary composes with A in C minor and B in E flat major, one theme
- * composed in each mode; the keys it refuses name P69; an overlay that names no section, a section twice, a fill on a section that
+ * composed in each mode; the keys it refuses name their mode; an overlay that names no section, a section twice, a fill on a section that
  * returns, an anchor that is not before the section are refused at their paths.
  */
 
@@ -313,10 +313,10 @@ static void test_game_loop_region(void) {
 /* --- refusals ------------------------------------------------------------------------------------------------------ */
 
 static void test_refusals(void) {
-    /* A in C locrian: named at A with P69; A in C minor and B two steps brighter: C mixolydian, named at B. */
+    /* A in C locrian: named at A, the piece being in C major; A in C minor and B two steps brighter: C mixolydian, named at B. */
     cJSON *sections = cJSON_CreateArray();
     assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "locrian"), NULL)));
-    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/0/region", "until P69");
+    expect_refusal(wrap(sized_request("ternary", sections), 1), "/request/sections/0/region", "a section changes mode only between major and minor");
     sections = cJSON_CreateArray();
     assert(cJSON_AddItemToArray(sections, overlay("A", region_key("C", "minor"), NULL)));
     assert(cJSON_AddItemToArray(sections, overlay("B", region_relation("two steps brighter", "A"), NULL)));
