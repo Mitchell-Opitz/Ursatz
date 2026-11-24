@@ -7,6 +7,7 @@
 #include <cJSON.h>
 #include <ursatz_composer/critic.h>
 #include <ursatz_composer/grow.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_random.h>
 
@@ -34,6 +35,17 @@ typedef struct {
     unsigned pool;
 } CandidatePreferences;
 
+/*
+ * The harmony group (P69): the settings of the phrase model's chords. mixture (R-729) is how often a predominant chord is borrowed
+ * from another mode: share 0 to 1 as "n/d" (default 0/1, nothing drawn) and from, the relation words (1 to 6) whose materials it is
+ * borrowed from, in order (default "parallel", "one step darker", "one step brighter"). color (R-727) is how often a chord of the phrase gets
+ * a color type: share 0 to 1 as "n/d" (default 0/1) and types, the K2 ids (1 to 12) the type is drawn from (default the ten persichetti types).
+ */
+typedef struct {
+    ComposerMixture mixture;
+    ComposerColor color;
+} HarmonyPreferences;
+
 typedef struct {
     MelodyFillParams melody;
     MotiveRandomPreferences motif;
@@ -44,6 +56,7 @@ typedef struct {
     GrowFunctions functions;       /* the development group's functions settings (P67, R-710 to R-712: all off) */
     CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
     CriticSettings critic;           /* the critic group (R-722): weights 1, nothing reversed, rank off */
+    HarmonyPreferences harmony;      /* the harmony group (P69): mixture off */
 } ComposerPreferences;
 
 /*

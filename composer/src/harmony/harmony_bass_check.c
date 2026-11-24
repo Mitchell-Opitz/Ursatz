@@ -62,7 +62,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
     for (size_t i = 0; ok && !verdict->hard && i < line->note_count; i++) {
         const BassNote *note = &line->notes[i];
         int pc;
-        if (note->chord >= context->count || !harmony_chord_bass_pc(&context->key, &context->chords[note->chord], &pc)) {
+        if (note->chord >= context->count || !harmony_chord_bass_pc(context->composer_chords, &context->key, &context->chords[note->chord], &pc)) {
             verdict->hard = "bass note without a chord";
         } else if (note->pitch < line->params.range_low || note->pitch > line->params.range_high) {
             verdict->hard = "outside the bass range";
@@ -89,6 +89,11 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
             /* The last note of a bass that outlines a cadence is reached by a leap (V to I), which the
                rule for the last note of a strict counterpoint line forbids. */
             hard &= ~(1u << STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA);
+            /* A mode whose fifth is a tritone (locrian) has V and io a tritone apart: the bass between them leaps it (R-725). */
+            const PitchMaterial *modal = composer_chords_modal(context->composer_chords, &context->key);
+            if (modal != NULL && pitch_material_step(modal, 5) == 6) {
+                hard &= ~((1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_LEAP) | (1u << STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE));
+            }
             for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
                 if (hard & (1u << rule)) {
                     verdict->hard = standard_counterpoint_melodic_rule_name((StandardCounterpointMelodicRule)rule);
@@ -137,7 +142,8 @@ bool harmony_check_bass(const Plan *plan, PlanSpan span, SpelledKey key, const H
     BassContext *context = &line->context;
     context->span = span;
     context->key = key;
-    bool ok = harmony_read_lane(plan, span, harmony_key_mode(&key), context->chords, &context->count, &context->metre);
+    HarmonyKind kind = harmony_kind(NULL, &key);
+    bool ok = harmony_read_lane_for(plan, span, &kind, context->chords, &context->count, &context->metre);
 
     /* Each chord has one bass span of its own span, whose notes follow one another to its end. */
     for (size_t i = 0; ok && i < context->count; i++) {

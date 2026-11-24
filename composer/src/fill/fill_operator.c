@@ -48,6 +48,11 @@ FillOperatorRegistry *fill_registry_create(void) {
 
 void fill_registry_destroy(FillOperatorRegistry *registry) {
     if (registry) {
+        for (size_t i = 0; i < registry->count; i++) {
+            if (registry->operators[i].destroy_context) {
+                registry->operators[i].destroy_context(registry->operators[i].context);
+            }
+        }
         free(registry->operators);
         free(registry);
     }

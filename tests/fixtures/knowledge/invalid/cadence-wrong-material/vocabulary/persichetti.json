@@ -1,0 +1,44 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "persichetti",
+  "entries": [
+    {
+      "id": "persichetti.vocabulary.dorian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "dorian cadence",
+      "content": {
+        "code": "dorian-cadence",
+        "label": "dorian cadence",
+        "abbreviation": "DOR",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.mixolydian",
+        "approach": [
+          "VII"
+        ],
+        "arrival": "I"
+      },
+      "citations": [
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the cadence of the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "VII",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

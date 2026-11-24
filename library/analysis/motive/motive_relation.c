@@ -225,7 +225,7 @@ void motive_relation_adapt_melody(const MotiveSketch *before, MotiveSketch *sket
         if (!new_chord || (old_chord && mch_same_tones(sketch, old_chord, new_chord))) {
             continue;
         }
-        int pcs[4];
+        int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
         size_t count = motive_sketch_chord_tones(sketch, new_chord, pcs);
         if (mch_has_pc(pcs, count, pitch_class_of_midi(note->pitch))) {
             continue;

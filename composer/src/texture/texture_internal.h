@@ -11,7 +11,7 @@
 #include "util/position.h"
 
 /* Time inside the operator is a Rational position in whole notes from the start of the target (util/position.h). */
-#define ACCOMP_VOICES 3
+#define ACCOMP_VOICES 8 /* a voicing of up to 8 members (R-731): the pattern writes voices 1 to 3, a voiced block up to 8 */
 #define ACCOMP_MAX_NOTES 256
 #define ACCOMP_MAX_BEATS 64
 #define ACCOMP_PAYLOAD_MAGIC 0x41434331UL
@@ -50,7 +50,13 @@ typedef struct {
     Rational chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the length */
     int chord_pcs[HARMONY_MAX_CHORDS][4];     /* root, third, fifth and seventh, as pitch classes */
     size_t chord_pc_count[HARMONY_MAX_CHORDS];
+    bool chord_colored[HARMONY_MAX_CHORDS];  /* a color chord (R-727): the voicing is chord_voice, the tones of the type */
+    int chord_voice[HARMONY_MAX_CHORDS][3];  /* its three voiced pitch classes: third, added tone or seventh, ninth (no fifth); a quartal chord's upper members */
     unsigned chord_mask[HARMONY_MAX_CHORDS];
+    /* The block voicing (R-731): its entry, and per chord whether it sounds there and the pitch classes of its members. */
+    const VoicingEntry *voicing;
+    bool chord_voiced[HARMONY_MAX_CHORDS];
+    unsigned chord_voicing_mask[HARMONY_MAX_CHORDS];
     AccompLine bass[ACCOMP_MAX_LINE];
     size_t bass_count;
     AccompLine melody[ACCOMP_MAX_LINE];
@@ -62,6 +68,7 @@ typedef struct {
     Rational motive_length;  /* where the motive's last note ends */
     Rational liquidate_from; /* from the target's start: the motive is liquidated from here (the last bar of the
                                 section); at or past length when the target does not end the section */
+    const ComposerChords *composer_chords; /* the chord types the chords are read with (R-728); NULL: the fallback tables */
 } AccompContext;
 
 typedef struct {
@@ -92,10 +99,13 @@ typedef struct {
 } AccompCandidate;
 
 /* Reads a target; false when it is not one the operator applies to. */
-bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out);
+bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
-bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
+bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
+void accomp_color_voice(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int out[3], bool *colored);
+/* Sets the block voicing of a read context: which chords sound it, and the pitch classes of its members (a NULL voicing or snapshot sounds none). */
+void accomp_set_voicing(AccompContext *context, const KnowledgeSnapshot *knowledge, const VoicingEntry *voicing);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out);
 

@@ -394,6 +394,20 @@ static UrsatzStatus read_brief(PieceSpec *request, const cJSON *root, const char
             return status;
         }
         piece->has_accompaniment = true;
+        const cJSON *voicing_item = cJSON_GetObjectItemCaseSensitive(accompaniment, "voicing");
+        if (voicing_item && !cJSON_IsNull(voicing_item)) {
+            snprintf(path, sizeof path, "%s/accompaniment/voicing", base);
+            if (!cJSON_IsString(voicing_item)) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "\"voicing\" must be the id of a voicing");
+            }
+            if (strcmp(pattern, "block") != 0) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "a voicing needs the accompaniment pattern \"block\", not '%s'", pattern);
+            }
+            piece->accompaniment_voicing = knowledge_snapshot_voicing(request->knowledge, voicing_item->valuestring);
+            if (piece->accompaniment_voicing == NULL) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "'%s' is not a voicing; see the vocabulary's voicings", voicing_item->valuestring);
+            }
+        }
     }
     if (voicing) {
         snprintf(path, sizeof path, "%s/voicing", base);
@@ -757,6 +771,73 @@ static UrsatzStatus check_overlay_regions(PieceSpec *request, const char *base, 
     return api_fail(error, URSATZ_ERR_REQUEST, path, "%s", why);
 }
 
+/*
+ * A theme given to a section must be in the section's material (R-610): a C natural minor theme is not given to a C locrian region.
+ * Refused at the section's fill, naming both keys.
+ */
+/* "C natural minor": the key's tonic and the name of its material. */
+static void key_in_material(const SpelledKey *key, char *out, size_t size) {
+    char name[48];
+    util_key_name(spelled_key_tonic_pitch_class(key), key->material, name, sizeof(name));
+    char *space = strchr(name, ' ');
+    if (space) {
+        *space = '\0';
+    }
+    snprintf(out, size, "%s %s", name, key->material && key->material->name ? key->material->name : "no material");
+}
+
+static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, UrsatzError *error) {
+    PieceRequest *piece = &request->request;
+    const FormSpecSize *size = request->form->request_sections ? NULL : form_spec_size(request->form, piece->bars, piece->count);
+    const PieceSection *items = request->form->request_sections ? piece->sections : piece->overlays;
+    size_t count = request->form->request_sections ? piece->section_count : piece->overlay_count;
+    PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    memset(regions, 0, sizeof(regions));
+    size_t refused;
+    char why[256];
+    bool regional = false;
+    if (request->form->request_sections) {
+        (void)piece_resolve_regions(piece, request->knowledge, regions, &refused, why, sizeof why);
+    } else if (size) {
+        (void)piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused, why, sizeof why);
+    }
+    for (size_t i = 0; i < count; i++) {
+        const Plan *theme = items[i].theme_plan;
+        if (items[i].fill != PIECE_FILL_THEME || theme == NULL) {
+            continue;
+        }
+        size_t at = i;
+        if (!request->form->request_sections) {
+            at = size ? size->section_count : 0;
+            for (size_t j = 0; size && j < size->section_count; j++) {
+                if (strcmp(size->sections[j].name, items[i].description.name) == 0) {
+                    at = j;
+                }
+            }
+            if (at == size->section_count) {
+                continue;
+            }
+        }
+        PlanSpan everything = {{0, 1}, {1000000, 1}};
+        LaneSpanId ids[2];
+        SpelledKey section_key = regions[at].has_region && regions[at].key.material ? regions[at].key : piece->key;
+        if (plan_lane_find(theme, PLAN_LANE_REGION, 0, everything, ids, 2) < 1) {
+            continue;
+        }
+        const SpelledKey *theme_key = &plan_lane_span_payload(theme, ids[0])->region;
+        if (theme_key->material != section_key.material) {
+            char theme_name[48];
+            char section_name[48];
+            char path[200];
+            key_in_material(theme_key, theme_name, sizeof(theme_name));
+            key_in_material(&section_key, section_name, sizeof(section_name));
+            snprintf(path, sizeof path, "%.150s/sections/%zu/fill", base, i);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "the theme is in %s, the section in %s", theme_name, section_name);
+        }
+    }
+    return URSATZ_OK;
+}
+
 /* The harmony each section gives can be given to it (R-610), tried on a scratch plan of its length, key and meter. */
 static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzError *error) {
     PieceRequest *piece = &request->request;
@@ -777,6 +858,8 @@ static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzEr
     if (plan_meter_bar_length(&piece->meter, &bar) != PLAN_OK) {
         return URSATZ_OK;
     }
+    ComposerChords tones;
+    const ComposerChords *chords = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
     for (size_t i = 0; i < count; i++) {
         const SectionHarmony *harmony = &items[i].description.harmony;
         if (harmony->kind == SECTION_HARMONY_NONE) {
@@ -802,7 +885,7 @@ static UrsatzStatus check_harmony(PieceSpec *request, const char *base, UrsatzEr
             }
             key = regional && regions[found].has_region ? regions[found].key : piece->key;
         }
-        if (!piece_check_harmony(&piece->meter, &key, length, harmony, why, sizeof why)) {
+        if (!piece_check_harmony_in(chords, &piece->meter, &key, length, harmony, why, sizeof why)) {
             snprintf(path, sizeof path, "%.150s/sections/%zu/harmony", base, i);
             return api_fail(error, URSATZ_ERR_REQUEST, path, "section '%s': %s", items[i].description.id, why);
         }
@@ -941,6 +1024,9 @@ UrsatzStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot 
     }
     if (!given_sections) {
         status = check_overlay_regions(request, base, error);
+        if (status == URSATZ_OK) {
+            status = check_theme_fills(request, base, error);
+        }
         return status == URSATZ_OK ? check_harmony(request, base, error) : status;
     }
     /* The request checks before the default ending joins it: a request without a body is a bad one. */
@@ -964,7 +1050,10 @@ UrsatzStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot 
             return api_fail(error, URSATZ_ERR_REQUEST, at, "%s", why);
         }
     }
-    status = check_harmony(request, base, error);
+    status = check_theme_fills(request, base, error);
+    if (status == URSATZ_OK) {
+        status = check_harmony(request, base, error);
+    }
     if (status != URSATZ_OK) {
         return status;
     }

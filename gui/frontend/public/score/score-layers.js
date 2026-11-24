@@ -98,6 +98,7 @@ const SOURCES = {
     arrayOf(doc.chords).map((claim) => ({
       claim,
       text: (claim.roman_numeral && claim.roman_numeral.label) || claim.label,
+      title: typeof claim.borrowed_from === "string" && claim.borrowed_from !== "" ? `Borrowed from ${claim.borrowed_from}` : undefined,
       at: hasSpan(claim) ? rat(claim.span.start) : undefined,
     })),
   cadences: (doc) =>
@@ -214,6 +215,7 @@ function collectLayerItems(document, layer) {
         layerId: layer.id,
         text: source.text !== undefined && source.text !== null ? String(source.text) : claim.label ?? "",
         label: claim.label ?? null,
+        title: typeof source.title === "string" ? source.title : null,
         start: rat(claim.span.start),
         end: rat(claim.span.end),
         noteIds: Array.isArray(claim.note_ids) ? claim.note_ids : [],

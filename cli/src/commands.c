@@ -571,7 +571,7 @@ const CliCommand CLI_COMMANDS[] = {
     "Notes on options:\n"
     "  --what and --out-dir are required; --out-dir is created if missing. --count is how many samples, 1 to 64\n"
     "  (default 10). --seed is a whole number from 0 for the first sample (default 1). --settings is a preferences\n"
-    "  document (docs/preferences.md); absent: none is sent. --material is major (default) or minor (--mode is the\n"
+    "  document (docs/preferences.md); absent: none is sent. --material is major (default), minor or a church mode (--mode is the\n"
     "  same option). --meter is beats over a beat unit (default 4/4). --style: draw 8 candidates for each motif and\n"
     "  keep the closest; themes prefer it too. --blend, --blend-weight and --blend-weights are for themes. --tempo\n"
     "  is quarter notes per minute from 20 to 400. --strategy is segments (default) or drawn, for motifs and for\n"

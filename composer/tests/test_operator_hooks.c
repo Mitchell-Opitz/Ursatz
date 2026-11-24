@@ -45,14 +45,14 @@ static void test_registrations(void) {
             none = grow_register(NULL, NULL);
             break;
         case 2:
-            first = harmony_motive_register(registry);
-            second = harmony_motive_register(registry);
-            none = harmony_motive_register(NULL);
+            first = harmony_motive_register(registry, test_composer_chords());
+            second = harmony_motive_register(registry, test_composer_chords());
+            none = harmony_motive_register(NULL, test_composer_chords());
             break;
         default:
-            first = form_return_register(registry, NULL);
-            second = form_return_register(registry, NULL);
-            none = form_return_register(NULL, NULL);
+            first = form_return_register(registry, NULL, test_composer_chords());
+            second = form_return_register(registry, NULL, test_composer_chords());
+            none = form_return_register(NULL, NULL, test_composer_chords());
             break;
         }
         assert(first == FILL_OK);

@@ -206,6 +206,7 @@ static cJSON *chords_json(const Plan *plan, NodeId theme_node, const PlanMeter *
             !cJSON_AddNumberToObject(item, "beat", (double)((int)(rest_num * meter->beat_unit / (long)rest_den) + 1)) ||
             !cJSON_AddStringToObject(item, "chord", harmony->roman_numeral) ||
             !cJSON_AddStringToObject(item, "function", util_function_name(harmony->has_function, harmony->function)) ||
+            (harmony->borrowed_from && !cJSON_AddStringToObject(item, "borrowed_from", harmony->borrowed_from->id)) ||
             !cJSON_AddStringToObject(item, "bass", bass) || !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);
@@ -657,12 +658,15 @@ static bool idea_span(const Plan *plan, NodeId idea, const PlanMeter *meter, Dim
         end = rational_cmp(note_end, end) > 0 ? note_end : end;
     }
     Rational bars;
+    Rational length;
     long long whole = 0;
     if (rational_div(end, bar, &bars) != RATIONAL_OK || rational_ceil(bars, &whole) != RATIONAL_OK || whole < 1 ||
-        rational_mul_int(bar, whole, &out->length) != RATIONAL_OK) {
+        rational_mul_int(bar, whole, &length) != RATIONAL_OK) {
         return false;
     }
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar >= 6 && meter->beats_per_bar % 3 == 0;
+    memset(out, 0, sizeof(*out));
+    out->length = length;
     out->notes = notes;
     out->count = payload->note_count;
     out->beat = compound ? rational_ratio(3, 8) : rational_ratio(1, meter->beat_unit > 0 ? meter->beat_unit : 4);

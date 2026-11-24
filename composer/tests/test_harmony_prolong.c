@@ -78,8 +78,8 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = harmony_prolong_checker;
-    assert(harmony_prolong_register_given(registry) == FILL_OK);
-    assert(harmony_phrase_register(registry) == FILL_OK);
+    assert(harmony_prolong_register_given(registry, test_composer_chords()) == FILL_OK);
+    assert(harmony_phrase_register(registry, test_composer_chords()) == FILL_OK);
     assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;
@@ -255,8 +255,8 @@ static void test_shape_decides_the_operator(void) {
     scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     Fixture fixture = build(&scenario);
     PhraseRequest request;
-    assert(harmony_prolong_read_request_given(fixture.plan, fixture.target, &request));
-    assert(!harmony_phrase_read_request(fixture.plan, fixture.target, &request));
+    assert(harmony_prolong_read_request_given(fixture.plan, fixture.target, test_composer_chords(), &request));
+    assert(!harmony_phrase_read_request(fixture.plan, fixture.target, test_composer_chords(), &request));
     plan_destroy(fixture.plan);
 }
 

@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
@@ -30,6 +30,14 @@ const EnsembleTemplate *solo = knowledge_snapshot_ensemble(snapshot, "omt.instru
 ```
 
 Both lookups return NULL for an id that is absent or of another kind or subtype. Every field the loader reads is checked; a bad one refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: content.<field>: <problem>`. An ensemble slot whose instrument is not an instrument entry of the snapshot (embedded or user) refuses it too. The first two entries are the piano and a solo-piano ensemble; other instruments and the General MIDI catalogue come with P74, keyboard hand span and crossing with P75.
+
+## The modal fields, chord constructions and voicings (P69 B1)
+
+A `PitchMaterial` carries `primary_degrees`, `avoided_degrees` (the numerals of `primary_chords` and `chords_to_avoid` read as degrees; the case and the `o` are checked against the stacked triad by `check-knowledge.py` and not kept), `characteristic_degrees` and `cadence` (an id, or NULL), each count 0 when the entry gives none. A numeral with an alteration (`bII`) or a degree above the step count refuses the build with `content.primary_chords` or `content.chords_to_avoid`. A cadence-kind `VocabularyCadence` gains `material` (linked once every entry is read), `approach_count`, `approach_degrees[3]` and `arrival_degree`: the dorian cadence is degree 4 then 1 of `omt.material.dorian`.
+
+A `ChordType` gains `construction` (`ChordConstruction`, tertian when the entry gives none); `knowledge_snapshot_chord_type_count` and `_at` list the chord types in id order.
+
+`voicing_entry.h` holds a `VoicingEntry`: `members` (a role and 0 to 35 semitones, rising from the root at 0) and `fits`, the chord types it sounds (`const ChordType *`, linked once every entry is read; a fit that is no chord type refuses the build with `content.fits`). Members that do not rise refuse it with `content.members`. `knowledge_snapshot_voicing`, `_voicing_count` and `_voicing_at` find them; no application reads them before P69 B9, so they have rows in `tools/ci/reach-allow.txt`.
 
 ## The vocabulary kind (K4, R-707)
 

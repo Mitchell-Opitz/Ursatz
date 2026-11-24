@@ -206,6 +206,8 @@ static void set_chord_list(const MotiveRandomPreferences *preferences, const Set
         for (size_t k = 0; k < layout->chord_count; k++) {
             const MotiveRandomPlanChord *chord = &preferences->plan[k];
             layout->chord_degree[k] = chord->degree;
+            layout->chord_color[k] = setup->chord_color[k];
+            layout->chord_color_mask[k] = setup->chord_color_mask[k];
             layout->chord_onset[k] =
                 k == 0 ? 0 : setup->pickup + (((long)chord->bar - 1) * setup->grid.beats + (long)chord->beat - 1) * setup->grid.beat;
         }
@@ -214,6 +216,8 @@ static void set_chord_list(const MotiveRandomPreferences *preferences, const Set
     layout->chord_count = setup->plan.count;
     for (size_t s = 0; s < layout->chord_count; s++) {
         layout->chord_degree[s] = setup->plan.degrees[s];
+        layout->chord_color[s] = setup->chord_color[s];
+        layout->chord_color_mask[s] = setup->chord_color_mask[s];
         layout->chord_onset[s] = s == 0 ? 0 : layout->start[s];
     }
 }
@@ -241,6 +245,7 @@ static void set_note_chords(Layout *layout) {
             }
         }
         layout->degree[i] = layout->chord_degree[chord];
+        layout->color_mask[i] = layout->chord_color_mask[chord];
         layout->chord_first[i] = i > 0 && chord != previous;
         previous = chord;
         at += layout->rhythm.ticks[i];

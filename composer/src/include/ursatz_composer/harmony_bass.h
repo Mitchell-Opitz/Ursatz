@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan_lanes.h>
 
 /*
@@ -61,6 +62,6 @@ bool harmony_check_bass(const Plan *plan, PlanSpan span, SpelledKey key, const H
  * Registers the operator with these parameters. The registry keeps the pointer,
  * not a copy, so params must outlive it (NULL means the defaults).
  */
-FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBassParams *params);
+FillResult harmony_bass_register(FillOperatorRegistry *registry, const HarmonyBassParams *params, const ComposerChords *chords);
 
 #endif

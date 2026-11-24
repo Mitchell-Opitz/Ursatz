@@ -124,7 +124,7 @@ UrsatzStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char
     }
     if (!composer_material_supported(&materials, named)) {
         return api_fail(error, URSATZ_ERR_REQUEST, path,
-                        "the Composer writes major and minor keys; '%s' is not one of them", text);
+                        "the Composer writes major, minor and modal keys; '%s' is not one of them", text);
     }
     *material = named;
     return URSATZ_OK;

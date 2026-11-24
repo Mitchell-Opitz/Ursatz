@@ -2,6 +2,9 @@
 #define URSATZ_THEORY_KNOWLEDGE_VOCABULARY_ENTRY_H
 
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "model/pitch/pitch_material.h"
 
 /*
  * K4 vocabulary (target architecture 5.2, R-707): the names the enums of the theory library stand for, as entries a person can read
@@ -47,6 +50,11 @@ typedef struct {
     const char *core; /* the name of the core cadence type the kind reduces to ("unknown" for none) */
     int strength;
     bool conclusive;
+    /* A modal cadence kind names its mode and the degrees it moves through: the approach (1 to 3 degrees), then the arrival. NULL and 0 for the others. */
+    const PitchMaterial *material;
+    size_t approach_count;
+    int approach_degrees[3];
+    int arrival_degree;
 } VocabularyCadence;
 
 typedef struct {

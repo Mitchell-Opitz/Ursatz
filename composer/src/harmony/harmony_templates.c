@@ -40,6 +40,7 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
     size_t target = phrase->target;
     size_t count = 0;
     memset(out, 0, sizeof(*out));
+    out->composer_chords = phrase->composer_chords;
     for (size_t i = 0; i < phrase->count; i++) {
         if (i == target) {
             for (size_t k = 0; k < edit->piece_count; k++) {
@@ -74,7 +75,7 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
 
 /* The marked chord is a plain root-position triad or seventh on this degree. */
 static bool is_plain(const PhraseChord *chord, int degree) {
-    return !chord->applied && chord->chord.degree == degree && chord->chord.inversion == 0;
+    return !chord->applied && chord->chord.borrowed_from == NULL && chord->chord.degree == degree && chord->chord.inversion == 0;
 }
 
 static void with_cells(const PhraseChord *chord, size_t cells, PhraseChord *out) {

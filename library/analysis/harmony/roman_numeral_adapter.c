@@ -75,11 +75,12 @@ static bool melodic_minor_fits(int degree, bool raised, bool raised_sixth, const
 
 /* The numeral of a chord whose intervals above its root are those of a triad or seventh quality (triad_rules.h,
    seventh_rules.h); false for any other set. */
-static bool numeral_from_intervals(const int *intervals, size_t count, int degree, StandardTonalityRomanNumeral *out) {
+static bool numeral_from_intervals(const CommonPracticeMaterials *materials, const int *intervals, size_t count, int degree,
+                                   StandardTonalityRomanNumeral *out) {
     if (count == 3) {
         for (int q = 0; q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
             int owner[3];
-            if (standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, owner) &&
+            if (common_practice_triad_semitones(materials, (StandardTonalityTriadQuality)q, owner) &&
                 memcmp(intervals, owner, sizeof(owner)) == 0) {
                 return standard_tonality_roman_numeral_triad(degree, (StandardTonalityTriadQuality)q, out);
             }
@@ -87,7 +88,7 @@ static bool numeral_from_intervals(const int *intervals, size_t count, int degre
     } else if (count == 4) {
         for (int q = 0; q < STANDARD_TONALITY_SEVENTH_QUALITY_COUNT; q++) {
             int owner[4];
-            if (standard_tonality_seventh_quality_semitones((StandardTonalitySeventhQuality)q, owner) &&
+            if (common_practice_seventh_semitones(materials, (StandardTonalitySeventhQuality)q, owner) &&
                 memcmp(intervals, owner, sizeof(owner)) == 0) {
                 return standard_tonality_roman_numeral_seventh_chord(degree, (StandardTonalitySeventhQuality)q, out);
             }
@@ -121,7 +122,7 @@ static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonal
         return false;
     }
     StandardTonalityRomanNumeral numeral;
-    if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral)) {
+    if (!numeral_from_intervals(input->materials, input->intervals, input->interval_count, degree, &numeral)) {
         return false;
     }
     bool is_minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;

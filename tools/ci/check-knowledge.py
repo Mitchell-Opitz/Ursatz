@@ -426,6 +426,110 @@ def check_theme_type(path, entry, functions):
             at = row["end"]
 
 
+ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"]
+CHORD_NUMERAL = re.compile(r"^(I|II|III|IV|V|VI|VII|i|ii|iii|iv|v|vi|vii)o?$")
+
+
+def stacked_numeral(steps, degree):
+    """The numeral of the triad stacked on `degree` of a seven-step collection: upper case major, lower case minor, a trailing o for
+    diminished; None for any other stack."""
+    if len(steps) != 7 or not 1 <= degree <= 7:
+        return None
+    root = steps[degree - 1]
+    stack = ((steps[(degree + 1) % 7] - root) % 12, (steps[(degree + 3) % 7] - root) % 12)
+    name = ROMAN_NUMERALS[degree - 1]
+    return {(4, 7): name, (3, 7): name.lower(), (3, 6): name.lower() + "o"}.get(stack)
+
+
+def numeral_degree(text):
+    if not isinstance(text, str) or not CHORD_NUMERAL.match(text):
+        return None
+    return ROMAN_NUMERALS.index(text.rstrip("o").upper()) + 1
+
+
+def check_numerals(path, entry_id, field, numerals, steps):
+    """Each numeral's case and o are the stacked triad's on that degree."""
+    for text in numerals if isinstance(numerals, list) else []:
+        degree = numeral_degree(text)
+        if degree is None:
+            continue
+        expected = stacked_numeral(steps, degree)
+        if expected != text:
+            problem(path, entry_id, "content.%s: '%s' does not match the stacked triad on degree %d ('%s')" % (
+                field, text, degree, expected))
+
+
+def check_modes(materials, locations, vocabulary_entries):
+    """A mode's primary and avoided chords are the stacked triads on their degrees, its cadence names a cadence kind of this mode,
+    and its characteristic degrees lie within its steps."""
+    cadences = {entry["id"]: entry for _, entry in vocabulary_entries if entry.get("subtype") == "cadence-kind"}
+    for material_id, entry in sorted(materials.items()):
+        content = entry.get("content", {})
+        path = locations[material_id]
+        steps = content.get("steps")
+        for field in ("primary_chords", "chords_to_avoid"):
+            check_numerals(path, material_id, field, content.get(field), steps)
+        for degree in content.get("characteristic_degrees", []) if isinstance(content.get("characteristic_degrees"), list) else []:
+            if isinstance(degree, int) and degree > len(steps):
+                problem(path, material_id, "content.characteristic_degrees: degree %d is above the %d steps" % (degree, len(steps)))
+        cadence = content.get("cadence")
+        if cadence is None:
+            continue
+        target = cadences.get(cadence)
+        if target is None:
+            problem(path, material_id, "content.cadence: '%s' is not a cadence-kind entry" % cadence)
+        elif target.get("content", {}).get("material") != material_id:
+            problem(path, material_id, "content.cadence: '%s' is a cadence of %s, not of this mode" % (
+                cadence, target.get("content", {}).get("material")))
+
+
+def check_cadence_kind(path, entry, materials):
+    """A modal cadence kind's approach and arrival, read on its material, are the numerals of its examples."""
+    content = entry.get("content", {})
+    if "material" not in content:
+        return
+    material = materials.get(content["material"])
+    if material is None:
+        problem(path, entry["id"], "content.material: '%s' is not a material entry" % content["material"])
+        return
+    steps = material.get("content", {}).get("steps")
+    numerals = (content.get("approach") if isinstance(content.get("approach"), list) else []) + [content.get("arrival")]
+    check_numerals(path, entry["id"], "approach and arrival", numerals, steps)
+    derived = []
+    for text in numerals:
+        degree = numeral_degree(text)
+        derived.append(stacked_numeral(steps, degree) if degree is not None else None)
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if isinstance(example, dict) and isinstance(example.get("numerals"), list) and example["numerals"] != derived:
+            problem(path, entry["id"], "example %d: the numerals %s are not the approach and arrival read on %s (%s)" % (
+                number, example["numerals"], content["material"], derived))
+
+
+def check_voicing(path, entry, chord_type_ids):
+    """Members ascend from the root at 0, an example's pitches are the members on its root, and every fit is a chord-type entry."""
+    content = entry.get("content", {})
+    members = content.get("members")
+    semitones = [member.get("semitones") for member in members if isinstance(member, dict)] if isinstance(members, list) else []
+    if semitones and all(isinstance(value, int) for value in semitones):
+        if semitones[0] != 0 or any(low >= high for low, high in zip(semitones, semitones[1:])):
+            problem(path, entry["id"], "content.members: the members are not ascending from 0")
+        else:
+            for number, example in enumerate(entry.get("examples", []), 1):
+                if not isinstance(example, dict) or not isinstance(example.get("root"), str) or \
+                        not isinstance(example.get("pitches"), list):
+                    continue
+                try:
+                    root = pitch_class(example["root"])
+                    pitches = [pitch_class(name) for name in example["pitches"]]
+                except (KeyError, IndexError, TypeError):
+                    continue
+                if pitches != [(root + value) % 12 for value in semitones]:
+                    problem(path, entry["id"], "example %d: pitches are not the members on %s" % (number, example["root"]))
+    for fit in content.get("fits", []) if isinstance(content.get("fits"), list) else []:
+        if fit not in chord_type_ids:
+            problem(path, entry["id"], "content.fits: '%s' is not a chord-type entry" % fit)
+
+
 def main(argv):
     if len(argv) not in (2, 3):
         print("usage: check-knowledge.py <knowledge dir> [<schema dir>]")
@@ -459,6 +563,7 @@ def main(argv):
     vocabulary_entries = []
     rule_entries = []
     function_entries, theme_type_entries = {}, {}
+    chord_type_ids, voicing_entries = set(), []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "schema":
@@ -532,6 +637,10 @@ def main(argv):
                     if isinstance(steps, list) and steps and all(isinstance(step, int) for step in steps):
                         materials[entry_id] = entry
                         locations[entry_id] = rel
+                if kind == "chord-type":
+                    chord_type_ids.add(entry_id)
+                if kind == "voicing" and isinstance(entry.get("content"), dict):
+                    voicing_entries.append((rel, entry))
                 if kind == "relation":
                     relation_entries.append((rel, entry))
                 if kind == "instrument" and subtype == "instrument":
@@ -553,6 +662,12 @@ def main(argv):
     for rel, entry in ensemble_entries:
         check_ensemble(rel, entry, instrument_ids)
     check_vocabulary(vocabulary_entries)
+    check_modes(materials, locations, vocabulary_entries)
+    for rel, entry in vocabulary_entries:
+        if entry.get("subtype") == "cadence-kind":
+            check_cadence_kind(rel, entry, materials)
+    for rel, entry in voicing_entries:
+        check_voicing(rel, entry, chord_type_ids)
     check_rule(rule_entries)
     progression_ids = {entry["id"] for _, entry in vocabulary_entries if entry.get("subtype") == "progression-type"}
     for rel, entry in function_entries.values():

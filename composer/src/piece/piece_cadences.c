@@ -158,10 +158,11 @@ bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out) {
     return true;
 }
 
-/* The Composer composes in the major and the natural minor only (a key is one of them: composer_key_is_minor). */
+/* The Composer composes in the major, the natural minor and the church modes (R-725). */
 static bool plan_material_supported(const PitchMaterial *material, void *data) {
     (void)data;
-    return material != NULL && (strcmp(material->id, "omt.material.major") == 0 || strcmp(material->id, "omt.material.natural-minor") == 0);
+    return material != NULL && (strcmp(material->id, "omt.material.major") == 0 || strcmp(material->id, "omt.material.natural-minor") == 0 ||
+                                pitch_material_is_modal_key(NULL, material));
 }
 
 static PlanResult plan_form_record_migrate(Plan *plan, void *data) {

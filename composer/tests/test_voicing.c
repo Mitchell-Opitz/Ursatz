@@ -160,7 +160,7 @@ static FillOutcome voice(Plan *plan, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = voicing_checker;
-    assert(registry && voicing_register(registry, NULL) == FILL_OK);
+    assert(registry && voicing_register(registry, NULL, test_composer_chords()) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;

@@ -463,6 +463,25 @@ bool plan_json_read_function(JsonReader *reader, const cJSON *object, const char
     return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
 }
 
+/* A chord's optional "borrowed_from" (format 6): the id of the material a borrowed chord is taken from; absent for none. */
+bool plan_json_read_borrowed_from(JsonReader *reader, const cJSON *object, const char *path, PlanHarmony *harmony) {
+    harmony->borrowed_from = NULL;
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "borrowed_from");
+    if (!item) {
+        return true;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "borrowed_from");
+    if (!cJSON_IsString(item)) {
+        return json_bad_format(reader, at, "expected a material id like \"omt.material.natural-minor\"");
+    }
+    harmony->borrowed_from = knowledge_snapshot_material(reader->knowledge, item->valuestring);
+    if (!harmony->borrowed_from) {
+        return json_bad_format(reader, at, "no material has this id");
+    }
+    return true;
+}
+
 /* A figure constraint: every member required; change_at is a bar from 1 or null for none. */
 static bool read_figure(JsonReader *reader, const cJSON *item, const char *path, SectionFigure *out) {
     const cJSON *kind = plan_json_member(reader, item, path, "figure", true);

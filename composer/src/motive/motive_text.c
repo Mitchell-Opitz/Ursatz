@@ -251,8 +251,26 @@ static bool read_beats(const char *text, int beat_unit, Rational *out) {
            rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
+/* The type of a color suffix ("add9", "69", "9", "maj9", "q3", "q4") after a numeral as the type a major triad takes with it (R-727); the type's
+   third and fifth are replaced by the key's own where the chord sounds. False for a suffix that names no type or no snapshot. */
+bool motive_color_type(const KnowledgeSnapshot *knowledge, const char *suffix, const ChordType **type) {
+    char text[16];
+    StandardTonalityNumeralText numeral;
+    if (knowledge == NULL || snprintf(text, sizeof text, "I%s", suffix) >= (int)sizeof text ||
+        !standard_tonality_numeral_parse(text, &numeral) || numeral.color == NULL || numeral.inversion != 0 || numeral.alteration != 0 ||
+        numeral.has_target) {
+        return false;
+    }
+    return standard_tonality_numeral_color_type(knowledge, &numeral, type);
+}
+
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveSketchChord *out, size_t *count,
                                   MotiveError *error) {
+    return motive_harmony_parse_in(NULL, text, meter, out, count, error);
+}
+
+MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const char *text, const PlanMeter *meter, MotiveSketchChord *out,
+                                     size_t *count, MotiveError *error) {
     if (!text || !meter || !out || !count) {
         motive_set_error(error, "", "text, meter or output is NULL");
         return MOTIVE_ERR_NULL;
@@ -324,9 +342,13 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
             return MOTIVE_ERR_SYNTAX;
         }
         if (!read_figure(symbol, &chord.inversion, &chord.seventh)) {
-            motive_set_error(error, location, "'%s' is not a figure; use 6, 64, 7, 65, 43 or 42 after the numeral",
-                             symbol);
-            return MOTIVE_ERR_SYNTAX;
+            if (!motive_color_type(knowledge, symbol, &chord.color)) {
+                motive_set_error(error, location,
+                                 "'%s' is not a figure; use 6, 64, 7, 65, 43 or 42 after the numeral (or add9, add6, 69, 9, maj9, q3 or q4 for a "
+                                 "color chord)",
+                                 symbol);
+                return MOTIVE_ERR_SYNTAX;
+            }
         }
         if (found > 0 && rational_cmp(chord.onset, out[found - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
@@ -348,6 +370,12 @@ bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size
     numeral.degree = chord->degree;
     numeral.quality = chord->seventh ? STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH : STANDARD_TONALITY_NUMERAL_MAJOR;
     numeral.inversion = chord->inversion;
+    if (chord->color != NULL) {
+        numeral.color = standard_tonality_color_suffix(chord->color);
+        if (numeral.color == NULL || chord->seventh || chord->inversion != 0) {
+            return false;
+        }
+    }
     return standard_tonality_numeral_format(&numeral, out, size);
 }
 

@@ -210,6 +210,8 @@ CriticResult critic_pair_contrast(const CriticLine *line, const CriticIdeaPair *
     DimensionNote against[MOTIVE_MAX_NOTES * 2];
     DimensionSpan a;
     DimensionSpan b;
+    memset(&a, 0, sizeof(a));
+    memset(&b, 0, sizeof(b));
     *measured = false;
     if (pair->idea_count == 0 || pair->against_count == 0 || pair->idea_count > MOTIVE_MAX_NOTES * 2 ||
         pair->against_count > MOTIVE_MAX_NOTES * 2) {

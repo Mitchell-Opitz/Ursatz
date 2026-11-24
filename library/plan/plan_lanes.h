@@ -59,6 +59,7 @@ typedef struct {
     char roman_numeral[PLAN_ROMAN_NUMERAL_MAX];
     HarmonicFunction function; /* meaningful only when has_function */
     bool has_function;         /* false for chords read from an analysis, which records no function */
+    const PitchMaterial *borrowed_from; /* the material a borrowed chord is taken from (R-729), NULL for none; snapshot-owned */
 } PlanHarmony;
 
 /*

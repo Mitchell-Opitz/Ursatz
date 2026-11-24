@@ -258,6 +258,7 @@ static cJSON *loop_row_json(const PieceSpec *request, const ApiPieceRow *row) {
               cJSON_AddNumberToObject(entry, "beats", (double)row->section->description.beats) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
+              api_add(entry, "brightness", row->plan ? api_piece_brightness_json(row->plan, row->node) : cJSON_CreateNull()) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
               cJSON_AddStringToObject(entry, "source", row->source) &&
               api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
@@ -319,7 +320,7 @@ static cJSON *changes_json(const ApiPieceRow *row) {
     const PitchMaterial *to_material = NULL;
     bool mapped = form_return_mode_change(row->plan, row->node, &to_material);
     const char *material_id = mapped && to_material ? to_material->id : NULL;
-    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
+    const char *mode = mapped ? (pitch_material_is_modal_key(NULL, to_material) ? to_material->key_word : composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", section_return_variation_name(spec->variation)) &&
               api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));
@@ -438,7 +439,7 @@ static void figure_text(const SectionDescription *spec, bool raised, const char 
 static cJSON *figure_json(const ApiPieceRow *row) {
     const SectionDescription *spec = row->spec;
     FormSkeleton *skeleton = (spec->has_figure && form_return_copies(row->plan, row->node)) ? calloc(1, sizeof(*skeleton)) : NULL;
-    if (!skeleton || !form_figure_skeleton(row->plan, row->node, skeleton)) {
+    if (!skeleton || !form_figure_skeleton(row->plan, NULL, row->node, skeleton) /* only the masks are read: the fallback tables give the same */) {
         free(skeleton);
         return cJSON_CreateNull();
     }
@@ -518,6 +519,7 @@ static cJSON *size_row_json(const PieceSpec *request, const ApiPieceRow *row) {
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "figure", figure_json(row)) &&
               api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
+              api_add(entry, "brightness", row->plan ? api_piece_brightness_json(row->plan, row->node) : cJSON_CreateNull()) &&
               api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&
               api_add(entry, "connective", row->connective < 0 ? cJSON_CreateNull() : cJSON_CreateBool(row->connective > 0)) &&
               add_construction_text(entry, row) && add_time_texts(entry, request, row, api_piece_span_beats(request, row->length));

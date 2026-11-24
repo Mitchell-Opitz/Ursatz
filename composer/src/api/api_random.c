@@ -98,7 +98,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
                             "for example \"D minor\"",
                             key_text);
         }
-        if (composer_key_is_minor(&out->key) != composer_material_is_minor(out->material)) {
+        if (!composer_material_same_mode(out->key.material, out->material)) {
             return api_fail(error, URSATZ_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }
@@ -130,6 +130,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return URSATZ_ERR_REQUEST;
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;
+    out->color = *has_preferences ? &preferences->harmony.color : NULL;
     /* The candidates group (R-673): variety 0, the default, draws as it always did. */
     out->variety = *has_preferences ? preferences->candidates.variety : 0;
     out->pool = *has_preferences ? preferences->candidates.pool : 4;

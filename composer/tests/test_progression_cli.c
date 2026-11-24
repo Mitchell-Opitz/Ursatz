@@ -273,7 +273,7 @@ static void test_errors(void) {
         {"--key \"C major\" --meter 4/4 --bars 8", 1},
         {"--key \"C major\" --meter 4/4 --bars 8 --cadence PAC --bogus", 1},
         {"--key \"H major\" --meter 4/4 --bars 8 --cadence PAC", 1},
-        {"--key \"D dorian\" --meter 4/4 --bars 8 --cadence PAC", 1},
+        {"--key \"D overtone\" --meter 4/4 --bars 8 --cadence PAC", 1},
         {"--key D --meter 4/4 --bars 8 --cadence PAC", 1},
         {"--key \"D#b minor\" --meter 4/4 --bars 8 --cadence PAC", 1},
         {"--key \"C major\" --meter 5/4 --bars 8 --cadence PAC", 1},

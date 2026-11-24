@@ -323,7 +323,7 @@ static bool theme_motive(const PieceRequest *request, const PieceSection *sectio
     }
     span = plan_node_span(theme_plan, theme);
     if (!return_meter_over(theme_plan, span, &meter) || !key_over(theme_plan, span, &key) ||
-        composer_key_is_minor(&key) != composer_key_is_minor(&request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
+        !composer_key_same_mode(&key, &request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
     int shift = pitch_class_step(spelled_key_tonic_pitch_class(&key), spelled_key_tonic_pitch_class(&request->key), true);
@@ -382,7 +382,7 @@ static bool loop_motive(const PieceRequest *request, const Plan *loop_plan, Moti
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           composer_key_is_minor(&key) == composer_key_is_minor(&request->key) && spelled_key_tonic_pitch_class(&key) == spelled_key_tonic_pitch_class(&request->key) &&
+           composer_key_same_mode(&key, &request->key) && spelled_key_tonic_pitch_class(&key) == spelled_key_tonic_pitch_class(&request->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 
@@ -799,7 +799,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         }
         /* The section's harmony (R-610): Given from its start; the harmony stage fills what is left of the section. */
         if (result == PIECE_OK && !from_loop && copy.sections[i].description.harmony.kind != SECTION_HARMONY_NONE) {
-            result = piece_give_harmony(plan, id, &copy.sections[i].description.harmony, &request->meter, &regions[i].key, NULL, 0);
+            ComposerChords tones;
+            const ComposerChords *chords = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
+            result = piece_give_harmony_in(plan, chords, id, &copy.sections[i].description.harmony, &request->meter, &regions[i].key, NULL, 0);
         }
         if (result == PIECE_OK && !loop_plan && is_held(form, &copy, i, cells)) {
             SectionDescription held = *plan_node_section(plan, id);

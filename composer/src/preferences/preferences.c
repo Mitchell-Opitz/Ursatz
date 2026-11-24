@@ -24,6 +24,9 @@
 #define LEAPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX
 #define SYNCOPATION_ONE_IN_MAX COMPOSER_PREFERENCES_SYNCOPATION_ONE_IN_MAX
 #define SKIPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_SKIPS_PER_MOTIF_MAX
+#define COLOR_NOTE_MAX 20      /* melody.color_note, R-732 */
+#define MOTIF_COLOR_NOTE_MAX 8 /* motif.color_note, R-732 */
+#define COLOR_CHORDS_DENOMINATOR_MAX 16 /* motif.color_chords, R-727 */
 #define PLAN_MAX COMPOSER_PREFERENCES_PLAN_MAX
 #define PLAN_BEAT_MAX COMPOSER_PREFERENCES_PLAN_BEAT_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
@@ -68,6 +71,8 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
     out->candidates.pool = 4;
     critic_settings_default(&out->critic);
+    composer_mixture_default(&out->harmony.mixture);
+    composer_color_default(&out->harmony.color);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -356,6 +361,8 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
         } else if (strcmp(key, "cadence_long") == 0) {
             ok = cJSON_IsBool(item) ? (melody->cadence_long = cJSON_IsTrue(item), true)
                                     : refuse_melody(refusal, key, "must be true or false");
+        } else if (strcmp(key, "color_note") == 0) {
+            ok = read_unsigned(item, key, 0, COLOR_NOTE_MAX, &melody->color_note, refusal);
         } else if (strcmp(key, "waive") == 0) {
             ok = read_rule_list(item, false, &melody->waive, refusal);
         } else if (strcmp(key, "reverse") == 0) {
@@ -436,7 +443,18 @@ static bool plan_digits(const char *text, size_t *at, unsigned *out) {
     return digits > 0;
 }
 
-/* One plan chord: a Roman numeral I to VII in any case, an optional o or degree sign, an optional @bar or @bar:beat. */
+/* The color suffixes a motif's plan chord takes (R-727): the added-note and ninth types; the quartal ones replace the triad and are not drawn in a motif. */
+static bool plan_color_suffix(const char *text, size_t length) {
+    static const char *const SUFFIXES[] = {"add9", "add6", "69", "9", "maj9"};
+    for (size_t i = 0; i < sizeof(SUFFIXES) / sizeof(SUFFIXES[0]); i++) {
+        if (strlen(SUFFIXES[i]) == length && strncmp(text, SUFFIXES[i], length) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* One plan chord: a Roman numeral I to VII in any case, an optional o or degree sign or a color suffix (add9, add6, 69, 9, maj9), an optional @bar or @bar:beat. */
 static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord *out) {
     size_t n = standard_tonality_roman_numeral_letters(text);
     size_t at = n;
@@ -445,10 +463,23 @@ static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord 
     if (degree == 0) {
         return PLAN_CHORD_SYNTAX;
     }
+    out->color[0] = '\0';
     if (text[at] == 'o') {
         at++;
     } else if ((unsigned char)text[at] == 0xC2 && (unsigned char)text[at + 1] == 0xB0) {
         at += 2;
+    } else {
+        size_t start = at;
+        while (text[at] != '\0' && text[at] != '@') {
+            at++;
+        }
+        if (at > start) {
+            if (at - start >= MOTIVE_RANDOM_COLOR_SUFFIX_MAX || !plan_color_suffix(text + start, at - start)) {
+                return PLAN_CHORD_SYNTAX;
+            }
+            memcpy(out->color, text + start, at - start);
+            out->color[at - start] = '\0';
+        }
     }
     out->degree = degree;
     out->bar = 0;
@@ -499,7 +530,7 @@ static bool read_plan(const cJSON *item, MotiveRandomPreferences *motif, const R
     cJSON_ArrayForEach(entry, item) {
         PlanChordResult result = cJSON_IsString(entry) ? parse_plan_chord(entry->valuestring, &plan[count]) : PLAN_CHORD_SYNTAX;
         if (result == PLAN_CHORD_SYNTAX) {
-            return refuse_plan_chord(refusal, count, "must be a Roman numeral I to VII with an optional @bar or @bar:beat");
+            return refuse_plan_chord(refusal, count, "must be a Roman numeral I to VII, with an optional color (add9, add6, 69, 9 or maj9) and an optional @bar or @bar:beat");
         }
         if (result == PLAN_CHORD_BAR) {
             return refuse_plan_chord(refusal, count, "the bar must be 1 or 2");
@@ -631,6 +662,15 @@ static bool read_contrast_fidelity_min(const cJSON *item, MotiveRandomPreference
     return true;
 }
 
+static bool read_color_chords(const cJSON *item, MotiveRandomPreferences *motif, const Refusal *refusal) {
+    Rational ratio;
+    if (!cJSON_IsString(item) || !preferences_parse_ratio(item->valuestring, COLOR_CHORDS_DENOMINATOR_MAX, &ratio)) {
+        return preferences_refuse_in(refusal, "motif", "color_chords", "must be a ratio n/d with 0 <= n <= d and 1 <= d <= 16");
+    }
+    motif->color_chords = ratio;
+    return true;
+}
+
 static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
@@ -720,6 +760,14 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             if (!preferences_read_unsigned_in(item, "motif", key, 0, SKIPS_PER_MOTIF_MAX, &motif->skips_per_motif, refusal)) {
                 return false;
             }
+        } else if (strcmp(key, "color_note") == 0) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, MOTIF_COLOR_NOTE_MAX, &motif->color_note, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "color_chords") == 0) {
+            if (!read_color_chords(item, motif, refusal)) {
+                return false;
+            }
         } else if (strcmp(key, "plan") == 0) {
             if (!read_plan(item, motif, refusal)) {
                 return false;
@@ -793,6 +841,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             if (!preferences_read_critic(item, out, &refusal)) {
                 return false;
             }
+        } else if (strcmp(item->string, "harmony") == 0) {
+            if (!preferences_read_harmony(item, out, &refusal)) {
+                return false;
+            }
         } else {
             return preferences_refuse(&refusal, item->string, "unknown member");
         }
@@ -845,7 +897,8 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
          preferences_add_number(closure, "first", melody->closure_first) &&
          preferences_add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
          preferences_add_number(group, "leaps", melody->leap_weight) && preferences_add_number(group, "register", melody->register_weight) &&
-         cJSON_AddBoolToObject(group, "cadence_long", melody->cadence_long) != NULL;
+         cJSON_AddBoolToObject(group, "cadence_long", melody->cadence_long) != NULL &&
+         preferences_add_number(group, "color_note", melody->color_note);
     cJSON *waive = ok ? cJSON_AddArrayToObject(group, "waive") : NULL;
     for (unsigned i = 0; waive && i < MELODY_RULE_COUNT; i++) {
         if (melody->waive & (1u << i)) {
@@ -895,12 +948,12 @@ static bool write_plan(cJSON *group, const MotiveRandomPreferences *motif) {
     }
     array = cJSON_AddArrayToObject(group, "plan");
     for (size_t k = 0; array && k < motif->plan_count; k++) {
-        char text[24];
+        char text[32];
         const MotiveRandomPlanChord *chord = &motif->plan[k];
         if (chord->bar > 0) {
-            snprintf(text, sizeof(text), "%s@%u:%u", standard_tonality_roman_numeral_degree(chord->degree, true), chord->bar, chord->beat);
+            snprintf(text, sizeof(text), "%s%s@%u:%u", standard_tonality_roman_numeral_degree(chord->degree, true), chord->color, chord->bar, chord->beat);
         } else {
-            snprintf(text, sizeof(text), "%s", standard_tonality_roman_numeral_degree(chord->degree, true));
+            snprintf(text, sizeof(text), "%s%s", standard_tonality_roman_numeral_degree(chord->degree, true), chord->color);
         }
         cJSON *string = cJSON_CreateString(text);
         if (!string || !cJSON_AddItemToArray(array, string)) {
@@ -933,6 +986,8 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     }
     snprintf(ratio, sizeof(ratio), "%lld/%lld", motif->contrast_fidelity_min.num,
              motif->contrast_fidelity_min.den);
+    char color_chords[32];
+    snprintf(color_chords, sizeof(color_chords), "%lld/%lld", motif->color_chords.num, motif->color_chords.den > 0 ? motif->color_chords.den : 1);
     ok = ok && cJSON_AddBoolToObject(group, "avoid_repeats", motif->avoid_repeats) != NULL &&
          preferences_add_number(group, "leaps_per_motif", motif->leaps_per_motif) &&
          cJSON_AddBoolToObject(group, "leap_recovery", motif->leap_recovery) != NULL &&
@@ -953,7 +1008,9 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     for (size_t i = 0; ok && i < MOTIF_LIST_L3_COUNT; i++) {
         ok = add_weighted_list(group, &MOTIF_LISTS_L3[i], motif);
     }
-    ok = ok && preferences_add_number(group, "skips_per_motif", motif->skips_per_motif) && write_plan(group, motif);
+    ok = ok && preferences_add_number(group, "skips_per_motif", motif->skips_per_motif) &&
+         preferences_add_number(group, "color_note", motif->color_note) &&
+         cJSON_AddStringToObject(group, "color_chords", color_chords) != NULL && write_plan(group, motif);
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -993,6 +1050,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *harmony = preferences_write_harmony(preferences);
+    if (!harmony || !cJSON_AddItemToObject(document, "harmony", harmony)) {
+        cJSON_Delete(harmony);
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -1003,6 +1066,12 @@ static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-o
                                           "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
 static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
                                                    "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
+static const char *const WORDS_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter", "two steps darker", "two steps brighter", NULL};
+static const char *const WORDS_COLOR_TYPES[] = {"persichetti.chord-type.add9",          "persichetti.chord-type.minor-add9",
+                                                "persichetti.chord-type.add6",          "persichetti.chord-type.minor-add6",
+                                                "persichetti.chord-type.six-nine",      "persichetti.chord-type.dominant-ninth",
+                                                "persichetti.chord-type.major-ninth",   "persichetti.chord-type.minor-ninth",
+                                                "persichetti.chord-type.quartal-three", "persichetti.chord-type.quartal-four", NULL};
 static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
                                             "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
 
@@ -1039,6 +1108,7 @@ static const ComposerPreferenceKey KEYS[] = {
     {"melody.leaps", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"melody.register", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"melody.cadence_long", COMPOSER_KEY_BOOLEAN, 0, 0, true, NULL},
+    {"melody.color_note", COMPOSER_KEY_INTEGER, 0, COLOR_NOTE_MAX, false, NULL},
     {"melody.waive", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_WAIVE},
     {"melody.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_REVERSE},
     {"motif.bars.one", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
@@ -1114,6 +1184,8 @@ static const ComposerPreferenceKey KEYS[] = {
     {"motif.syncopation_levels.eighth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"motif.syncopation_levels.sixteenth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"motif.skips_per_motif", COMPOSER_KEY_INTEGER, 0, SKIPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.color_note", COMPOSER_KEY_INTEGER, 0, MOTIF_COLOR_NOTE_MAX, false, NULL},
+    {"motif.color_chords", COMPOSER_KEY_RATIO, 0, COLOR_CHORDS_DENOMINATOR_MAX, false, NULL},
     {"motif.plan", COMPOSER_KEY_PLAN, 0, 0, true, NULL},
     {"development.fidelity_minimum.melody.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
     {"development.fidelity_minimum.melody.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
@@ -1151,7 +1223,11 @@ static const ComposerPreferenceKey KEYS[] = {
     {"critic.weights.stray_syncopation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.one_rhythm", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
-    {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL}};
+    {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
+    {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM},
+    {"harmony.color.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
+    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {

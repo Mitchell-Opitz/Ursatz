@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/triad_rules.h"
 
@@ -76,6 +77,34 @@ static void test_rows_follow_the_chord_type_entries(void) {
     knowledge_snapshot_destroy(snapshot);
 }
 
+static void test_materials_hold_the_entries(void) {
+    KnowledgeSnapshot *snapshot = NULL;
+    char message[256];
+    CommonPracticeMaterials materials;
+    assert(knowledge_snapshot_build(NULL, 0, &snapshot, message, sizeof(message)) == KNOWLEDGE_OK);
+    assert(common_practice_materials_resolve(snapshot, &materials, message, sizeof(message)));
+    for (int q = 0; q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
+        assert(materials.triad_types[q] == knowledge_snapshot_chord_type(snapshot, TRIAD_ENTRIES[q]));
+        int with[3];
+        int without[3];
+        assert(common_practice_triad_semitones(&materials, (StandardTonalityTriadQuality)q, with));
+        assert(common_practice_triad_semitones(NULL, (StandardTonalityTriadQuality)q, without));
+        assert(with[0] == without[0] && with[1] == without[1] && with[2] == without[2]);
+    }
+    for (int q = 0; q < STANDARD_TONALITY_SEVENTH_QUALITY_COUNT; q++) {
+        assert(materials.seventh_types[q] == knowledge_snapshot_chord_type(snapshot, SEVENTH_ENTRIES[q]));
+        int with[4];
+        int without[4];
+        assert(common_practice_seventh_semitones(&materials, (StandardTonalitySeventhQuality)q, with));
+        assert(common_practice_seventh_semitones(NULL, (StandardTonalitySeventhQuality)q, without));
+        assert(with[0] == without[0] && with[1] == without[1] && with[2] == without[2] && with[3] == without[3]);
+    }
+    int out[3];
+    assert(!common_practice_triad_semitones(&materials, STANDARD_TONALITY_TRIAD_QUALITY_COUNT, out));
+    assert(!common_practice_triad_semitones(NULL, (StandardTonalityTriadQuality)-1, out));
+    knowledge_snapshot_destroy(snapshot);
+}
+
 static void test_known_rows(void) {
     int triad[3];
     assert(standard_tonality_triad_quality_semitones(STANDARD_TONALITY_TRIAD_MAJOR, triad));
@@ -106,6 +135,7 @@ int main(void) {
     test_triad_rows_follow_the_intervals();
     test_seventh_rows_follow_the_intervals();
     test_rows_follow_the_chord_type_entries();
+    test_materials_hold_the_entries();
     test_known_rows();
     test_invalid_arguments();
     printf("All quality semitone tests passed.\n");

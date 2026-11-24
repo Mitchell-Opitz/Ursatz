@@ -191,16 +191,16 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     SpelledKey key;
     if (options->has_key) {
         key = options->key;
-        if (composer_key_is_minor(&key) != composer_material_is_minor(options->material) || spelled_key_tonic_pitch_class(&key) < 0 || spelled_key_tonic_pitch_class(&key) > 11) {
+        if (!composer_material_same_mode(key.material, options->material) || spelled_key_tonic_pitch_class(&key) < 0 || spelled_key_tonic_pitch_class(&key) > 11) {
             return MOTIVE_RANDOM_ERR_KEY;
         }
     } else {
-        key = plan_key_of_pitch_class(composer_material_is_minor(options->material) ? 9 : 0, options->material);
+        key = plan_key_of_pitch_class(composer_material_default_tonic(options->material), options->material);
     }
 
     /* A given chord plan that can never fit is refused before anything is drawn. */
     if (options->strategy == MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->preferences && options->preferences->plan_count > 0 &&
-        !motive_random_segments_plan_fits(options->preferences, &options->meter)) {
+        (!motive_random_segments_plan_fits(options->preferences, &options->meter) || !motive_random_segments_plan_colors_fit(options, &key))) {
         return MOTIVE_RANDOM_ERR_PLAN;
     }
 

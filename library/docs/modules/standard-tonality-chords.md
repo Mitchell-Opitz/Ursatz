@@ -19,6 +19,22 @@ Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md)
   `standard_tonality_triad_quality_semitones` and
   `standard_tonality_seventh_quality_semitones` give the root-relative
   semitones of each triad and seventh quality.
+- **Chord types from the snapshot** (R-728, `common_practice_materials.h`):
+  `common_practice_materials_resolve` also resolves the nine quality rows'
+  chord types, `omt.chord-type.major-triad`, `minor-triad`,
+  `diminished-triad`, `augmented-triad`, `major-seventh`,
+  `dominant-seventh`, `minor-seventh`, `half-diminished-seventh` and
+  `diminished-seventh`, into `triad_types` and `seventh_types` (a missing
+  one refuses the resolve, naming it). `common_practice_triad_semitones`
+  and `common_practice_seventh_semitones` give a quality's members from
+  them; with NULL materials (a call that holds no snapshot) they fall back
+  to the quality rows above, which the test `standard_tonality_quality_semitones`
+  pins to the entries. The chord identification
+  (`CommonPracticeRankedChord.intervals`), the harmony segment inputs
+  (`HarmonySegmentInput.materials`), the applied-chord and numeral readers
+  and the chain's cadence claims read the types this way;
+  `chord_vocabulary.c` and `chord_vocabulary_seventh.c` keep the fallback
+  and add `_intervals_with` variants.
 - **Seventh chord structure** (`seventh_rules.h`): four notes stacked in
   thirds, all on lines or all on spaces; root, third, fifth, seventh;
   five qualities set by the triad and the seventh above the root
@@ -35,3 +51,20 @@ Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md)
   chord fully diminished. The raised leading tone in the chords on do
   and me would give qualities outside the five, so they stay as in
   natural minor.
+- **Color suffixes** (`roman_numeral_grammar.h`, P69, R-727): a numeral may
+  carry `add9`, `add6`, `69`, `9`, `maj9`, `q3` or `q4` after its quality
+  and before its figures (`Iadd9`, `IV69`, `V9`, `Vq3`).
+  `standard_tonality_numeral_color_type` names the K2 chord type the suffix
+  and the quality select; `standard_tonality_color_suffix` is the way back.
+  A colored numeral is a triad, so a seventh figure on it is refused.
+- **Chords of a modal key** (`modal_chords.h`, P69, R-725): a seven-step
+  material that is neither the major nor the natural minor and names a
+  cadence kind (the five church modes) stacks its triad on a degree from
+  its own steps (`pitch_material_triad_on`: major, minor, diminished or
+  augmented; nothing is raised, there is no leading tone). The function
+  of a chord there (`modal_function_of`) is tonic on degree 1, dominant on
+  an approach degree of the mode's cadence kind, predominant on any other
+  major or minor triad the material does not avoid
+  (`pitch_material_avoids`, the entry's `chords_to_avoid`). The Composer
+  maps the three functions onto `HarmonicFunction`; the recognizer is not
+  asked about a modal key until P80.

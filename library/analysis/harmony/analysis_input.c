@@ -30,9 +30,9 @@ static const Shape SHAPES[] = {
      HARMONY_APPLIED_FULLY_DIMINISHED_SEVENTH, true}};
 
 /* The shape's intervals above the root. */
-static bool shape_intervals(const Shape *shape, int out[HARMONY_SEGMENT_MAX_INTERVALS]) {
-    return shape->count == 3 ? standard_tonality_triad_quality_semitones(shape->triad, out)
-                             : standard_tonality_seventh_quality_semitones(shape->seventh, out);
+static bool shape_intervals(const Shape *shape, const CommonPracticeMaterials *materials, int out[HARMONY_SEGMENT_MAX_INTERVALS]) {
+    return shape->count == 3 ? common_practice_triad_semitones(materials, shape->triad, out)
+                             : common_practice_seventh_semitones(materials, shape->seventh, out);
 }
 
 static const Shape *shape_of(const HarmonySegmentInput *input) {
@@ -41,7 +41,7 @@ static const Shape *shape_of(const HarmonySegmentInput *input) {
     }
     for (size_t i = 0; i < sizeof(SHAPES) / sizeof(SHAPES[0]); i++) {
         int intervals[HARMONY_SEGMENT_MAX_INTERVALS];
-        if (SHAPES[i].count == input->interval_count && shape_intervals(&SHAPES[i], intervals) &&
+        if (SHAPES[i].count == input->interval_count && shape_intervals(&SHAPES[i], input->materials, intervals) &&
             memcmp(intervals, input->intervals, SHAPES[i].count * sizeof(int)) == 0) {
             return &SHAPES[i];
         }

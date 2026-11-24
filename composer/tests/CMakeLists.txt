@@ -84,6 +84,31 @@ ursatz_test(test_harmony_phrase LIBS ursatz_composer_engine)
 
 ursatz_test(test_harmony_roman LIBS ursatz_composer_engine composer_test_support)
 
+ursatz_test(test_modal_harmony LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
+
+ursatz_test(test_modal_mixture LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+ursatz_test(test_color_chords LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+ursatz_test(test_modal_compose LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# The sweep of the five church modes: 20 themes of a sentence and of a period in each, a theme takes seconds, so one slow test for each mode
+# (about 5 minutes alone); its smoke (seed 500 in two batches) runs every PR.
+ursatz_test_executable(test_modal_sweep SOURCES test_modal_sweep.c LIBS ursatz_composer_engine composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+foreach(mode dorian mixolydian lydian phrygian locrian)
+    ursatz_test(test_modal_sweep_${mode} TARGET test_modal_sweep ARGS ${mode} LABELS slow)
+endforeach()
+ursatz_test(test_modal_sweep_smoke TARGET test_modal_sweep ARGS smoke)
+
+# Slow: 33 s alone (2026-11-24); its smoke runs every PR.
+ursatz_test(test_modal_color LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_modal_color_smoke TARGET test_modal_color ARGS smoke)
+
 ursatz_test(test_harmony_embellish LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_harmony_bass LIBS ursatz_composer_engine composer_test_support)
@@ -621,6 +646,9 @@ ursatz_test(test_piece_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_piece_sections LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+ursatz_test(test_piece_r611 LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 # Labeled slow (about 28 s alone, 51 s on the CI runner, 2026-11-22): the setup of the fixture api_responses_written, which the fast tests that
 # require it still run first (ctest adds a fixture's setup whatever the label filter). Splitting what it writes from what it checks is not in P66c
 # (R-699).
@@ -865,10 +893,13 @@ ursatz_test_executable(test_critic_observe LIBS ursatz_composer_engine cjson com
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ursatz_test(test_critic_observe TARGET test_critic_observe)
 # The critic choosing among theme candidates (P68 B5, R-722): rank off changes nothing, rank on keeps the best of four and reports the rest.
-# It writes a theme request and response with the critic for test_api_schema (api_theme_files).
-ursatz_test(test_critic_rank LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+# Slow (23 s alone, 35 s on CI, over the fast set's 30 s); its smoke writes the theme request and response with the critic that test_api_schema
+# reads (api_theme_files), so it is the setup of the fixture api_responses_written and stays in the fast set.
+ursatz_test_executable(test_critic_rank LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_critic_rank TARGET test_critic_rank LABELS slow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES RESOURCE_LOCK api_theme_files)
+ursatz_test(test_critic_rank_smoke TARGET test_critic_rank ARGS smoke WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 
 # The critic's ranking over the theme quality sweep (P68 gate 2, R-722): the eight cases with every P67 setting, seeds 1 to 5, rank on against rank off.

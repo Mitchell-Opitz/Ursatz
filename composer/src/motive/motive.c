@@ -460,6 +460,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     }
     /* A motive with no key has no scale: its key reads as C major (motive_key). */
     motive_set_key(motive, &key, source);
+    motive->dominant_seventh = document->materials.seventh_types[STANDARD_TONALITY_SEVENTH_MAJOR_MINOR];
     if (motive->form == MOTIVE_SKETCH_FORM_RHYTHM) {
         /* A rhythm has no pitches (the library's rhythm sketch); motive_pitch sounds them on degree 1 of the key. */
         for (size_t i = 0; i < motive->note_count; i++) {
@@ -481,8 +482,8 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         motive->chord_count = options->harmony_count;
     } else if (document->has_harmony_text) {
         MotiveError parsed;
-        MotiveResult read = motive_harmony_parse(document->harmony_text, &meter, motive->chords, &motive->chord_count,
-                                                 &parsed);
+        MotiveResult read = motive_harmony_parse_in(document->knowledge, document->harmony_text, &meter, motive->chords,
+                                                    &motive->chord_count, &parsed);
         if (read != MOTIVE_OK) {
             motive_set_error(error, "harmony", "%s: %s", parsed.location, parsed.message);
             return read;
@@ -520,6 +521,10 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
             chord->inversion < 0 || chord->inversion > 3 || (chord->inversion == 3 && !chord->seventh)) {
             motive_set_error(error, location,
                              "a chord is degree 1 to 7, altered by -1 to 1, in inversion 0 to 2 (3 only on a seventh)");
+            return MOTIVE_ERR_VALUE;
+        }
+        if (chord->color != NULL && (chord->seventh || chord->inversion != 0)) {
+            motive_set_error(error, location, "a color chord is a triad in root position with a color type's members");
             return MOTIVE_ERR_VALUE;
         }
         if (chord->onset.den == 0 || chord->onset.num < 0 || rational_cmp(chord->onset, motive->length) >= 0) {
@@ -742,7 +747,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
         const MotiveSketchChord *x = &a->chords[i];
         const MotiveSketchChord *y = &b->chords[i];
         if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
-            x->inversion != y->inversion || x->seventh != y->seventh) {
+            x->inversion != y->inversion || x->seventh != y->seventh || x->color != y->color) {
             return false;
         }
     }
@@ -1012,7 +1017,7 @@ static bool read_key(MotiveReader *reader, const cJSON *item, MotiveDocument *do
         }
         picked = knowledge_snapshot_material_named(document->knowledge, material->valuestring);
         if (!picked || !composer_material_supported(&document->materials, picked)) {
-            return reader_bad(reader, "key.material", "expected a material the Composer writes keys in (major or minor)");
+            return reader_bad(reader, "key.material", "expected a material the Composer writes keys in (major, minor or a church mode)");
         }
     } else {
         const cJSON *mode = reader_member(reader, item, "key", "mode", true);

@@ -384,7 +384,7 @@ static int test_reharmonize(void) {
             assert(same_subtree(plan, source, sections[2]));
             /* The melody is the theme's; the harmony and the bass under it are written, the melody fits them. */
             assert(lane_same(plan, source, sections[2], PLAN_LANE_MELODY, 0, 0));
-            assert(form_return_melody_fits(plan, sections[2]));
+            assert(form_return_melody_fits(plan, test_composer_chords(), sections[2]));
             size_t an = events(plan, source, PLAN_LANE_HARMONY, 0, a);
             size_t bn = events(plan, sections[2], PLAN_LANE_HARMONY, 0, b);
             assert(an > 0 && bn > 0 && strcmp(a[an - 1].roman, b[bn - 1].roman) == 0);
@@ -438,7 +438,7 @@ static size_t check_varied(const Plan *plan, NodeId source, NodeId section) {
     }
     assert(bn == an + added && added > 0);
     /* Every strong-beat note is a tone of the chord now under it. */
-    assert(form_return_melody_fits(plan, section));
+    assert(form_return_melody_fits(plan, test_composer_chords(), section));
     return added;
 }
 

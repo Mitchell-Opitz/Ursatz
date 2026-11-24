@@ -783,6 +783,35 @@ static void test_a_resolved_accent_is_key_evidence_when_asked(void) {
     assert(as_bass.bass_pitch == 55);
 }
 
+static void test_a_ranked_chord_carries_the_intervals_of_its_quality(void) {
+    /* C E G Bb: every ranked chord holds the semitones of its quality's chord type, read with the materials the config names. */
+    CommonPracticeMember members[4] = {member(60, false, 1.0, BEAT_STRENGTH_STRONG), member(64, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 1.0, BEAT_STRENGTH_STRONG), member(70, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 4);
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+    assert(count > 0);
+    for (size_t i = 0; i < count; i++) {
+        int expected[4] = {0, 0, 0, 0};
+        size_t size = ranked[i].is_seventh ? 4 : 3;
+        assert(ranked[i].interval_count == size);
+        assert(ranked[i].is_seventh ? common_practice_seventh_intervals_with(test_materials(), ranked[i].seventh, expected)
+                                    : common_practice_triad_intervals_with(test_materials(), ranked[i].triad, expected));
+        for (size_t k = 0; k < size; k++) {
+            assert(ranked[i].intervals[k] == expected[k]);
+        }
+        int read[4];
+        assert(common_practice_ranked_chord_intervals(&ranked[i], read) == size);
+    }
+    /* a chord built by hand has none: the intervals are computed from the quality tables */
+    CommonPracticeRankedChord by_hand;
+    memset(&by_hand, 0, sizeof(by_hand));
+    by_hand.is_seventh = true;
+    by_hand.seventh = COMMON_PRACTICE_SEVENTH_DOMINANT7;
+    int dominant[4];
+    assert(common_practice_ranked_chord_intervals(&by_hand, dominant) == 4 && dominant[3] == 10);
+}
+
 int main(void) {
     test_default_config();
     test_a_pure_triad_weighs_its_three_pitch_classes();
@@ -820,6 +849,7 @@ int main(void) {
     test_the_ranking_without_the_flag_is_unchanged();
     test_a_resolved_accent_carries_no_weight();
     test_a_resolved_accent_is_key_evidence_when_asked();
+    test_a_ranked_chord_carries_the_intervals_of_its_quality();
     printf("test_weighted_identification: ok\n");
     return 0;
 }

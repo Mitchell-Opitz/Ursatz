@@ -45,15 +45,15 @@ PlanResult harmony_embellish_open(Plan *plan, PlanSpan range) {
     return result;
 }
 
-static const HarmonyEmbellishParams *params_of(void *context) {
+static const HarmonyEmbellishParams *params_of(const void *params) {
     static const HarmonyEmbellishParams defaults = {DEFAULT_DENSITY, HARMONY_EMBELLISH_ALL};
-    return context ? context : &defaults;
+    return params ? params : &defaults;
 }
 
 static bool embellish_applies(const Plan *plan, FillTarget target, void *context) {
     PhraseContext phrase;
-    (void)context;
-    return target.kind == FILL_TARGET_LANE_SPAN && harmony_context_read(plan, (LaneSpanId)target.id, &phrase);
+    return target.kind == FILL_TARGET_LANE_SPAN &&
+           harmony_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &phrase);
 }
 
 static bool add_plain(FillCandidateList *out) {
@@ -119,7 +119,9 @@ static bool propose_edits(const Plan *plan, const PhraseContext *phrase, const H
         }
         HeardPhrase heard = {scratch->chords, scratch->count, scratch->mode, scratch->cadence,
                              scratch->cells_per_bar, scratch->cell_length, false, NULL, false, false, NULL, NULL, false,
-                             &scratch->metre};
+                             &scratch->metre, NULL, NULL};
+        heard.composer_chords = phrase->composer_chords;
+        heard.modal = phrase->modal;
         PhraseVerdict verdict;
         if (!harmony_judge(&heard, &verdict)) {
             ok = false;
@@ -143,9 +145,10 @@ static bool propose_edits(const Plan *plan, const PhraseContext *phrase, const H
 
 static bool embellish_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                                FillCandidateList *out) {
-    const HarmonyEmbellishParams *params = params_of(context);
+    const HarmonyEmbellishParams *params = params_of(composer_context_params(context));
     PhraseContext phrase;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_context_read(plan, (LaneSpanId)target.id, &phrase)) {
+    if (target.kind != FILL_TARGET_LANE_SPAN ||
+        !harmony_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &phrase)) {
         return false;
     }
     /* The draw is made whether or not it is used, so the random stream does not depend on the parameters. */
@@ -243,12 +246,11 @@ static PlanResult apply_edit(Plan *plan, const PhraseContext *phrase, const Embe
 static PlanResult embellish_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const EmbellishCandidate *edit = candidate ? candidate->payload : NULL;
     PhraseContext phrase;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !edit) {
         return PLAN_ERR_NULL;
     }
     if (!edit->plain) {
-        if (!harmony_context_read(plan, (LaneSpanId)target.id, &phrase)) {
+        if (!harmony_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &phrase)) {
             return PLAN_ERR_BAD_PAYLOAD;
         }
         PlanResult result = apply_edit(plan, &phrase, edit);
@@ -259,7 +261,7 @@ static PlanResult embellish_apply(Plan *plan, FillTarget target, const FillCandi
     return clear_marker(plan, (LaneSpanId)target.id);
 }
 
-FillResult harmony_embellish_register(FillOperatorRegistry *registry, const HarmonyEmbellishParams *params) {
+FillResult harmony_embellish_register(FillOperatorRegistry *registry, const HarmonyEmbellishParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_EMBELLISH_OPERATOR_NAME;
@@ -273,6 +275,5 @@ FillResult harmony_embellish_register(FillOperatorRegistry *registry, const Harm
     operator_.applies = embellish_applies;
     operator_.generate = embellish_generate;
     operator_.apply = embellish_apply;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

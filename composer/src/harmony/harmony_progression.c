@@ -18,6 +18,7 @@
 typedef struct {
     int degree;
     bool seventh;
+    const PitchMaterial *borrowed; /* the material a borrowed chord is taken from (R-729), NULL for a diatonic chord */
 } ChordSpec;
 
 /* The predominants that may stand before V, in the order they are played. IV goes before ii, never after. */
@@ -32,42 +33,167 @@ static const PredominantRun AFTER_IV[] = {{1, {2}}};
 /* The root-position ii in a minor key is a diminished chord that standard-harmony prefers in first inversion. */
 static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 
-static bool make_from(HarmonyMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
+static bool make_from(const HarmonyKind *kind, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
-    if (!harmony_chord_valid(&chord) || !harmony_function_of(mode, &chord, &function) ||
-        !harmony_roman_format(mode, &chord, out->roman)) {
+    /* A modal key has no leading tone and keeps out the chord its mode avoids (R-725); a borrowed chord keeps out the one its source
+       mode avoids. */
+    const PitchMaterial *avoiding = chord.borrowed_from != NULL ? chord.borrowed_from : kind->modal;
+    if ((avoiding != NULL && pitch_material_avoids(avoiding, chord.degree)) || (kind->modal != NULL && chord.leading_tone)) {
         return false;
     }
-    out->function = function;
-    out->has_function = true;
+    /* A borrowed chord has the function of the key's own chord on its degree: it stands in its place (R-729). */
+    HarmonyChord functional = chord;
+    functional.borrowed_from = NULL;
+    /* A modal key without its cadence kind at hand (a Motive holds no snapshot) has the chord without a function. */
+    bool has_function = harmony_function_in(kind, &functional, &function);
+    if (!harmony_chord_valid(&chord) || (!has_function && !(kind->modal != NULL && kind->cadence == NULL)) ||
+        !harmony_roman_format_in(kind, &chord, out->roman)) {
+        return false;
+    }
+    out->function = has_function ? function : HARMONIC_FUNCTION_TONIC;
+    out->has_function = has_function;
     out->chord = chord;
     out->cells = cells;
     return true;
 }
 
-bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
-                        PhraseChord *out) {
+bool harmony_make_chord_in(const HarmonyKind *kind, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                           PhraseChord *out) {
     HarmonyChord chord;
     memset(&chord, 0, sizeof(chord));
     chord.degree = degree;
     chord.inversion = inversion;
     chord.seventh = seventh;
     chord.cadential = cadential;
-    return make_from(mode, chord, cells, out);
+    return make_from(kind, chord, cells, out);
+}
+
+bool harmony_make_chord(HarmonyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+                        PhraseChord *out) {
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
+    return harmony_make_chord_in(&kind, degree, inversion, seventh, cadential, cells, out);
 }
 
 bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, PhraseChord *out) {
     HarmonyChord chord;
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
     memset(&chord, 0, sizeof(chord));
     chord.degree = 7;
     chord.inversion = inversion;
     chord.leading_tone = mode == HARMONY_MODE_MINOR;
-    return make_from(mode, chord, cells, out);
+    return make_from(&kind, chord, cells, out);
 }
 
-static bool make_chord(HarmonyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
-    return harmony_make_chord(mode, spec.degree, 0, spec.seventh, false, cells, out);
+static bool make_chord(const HarmonyKind *kind, ChordSpec spec, size_t cells, PhraseChord *out) {
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    chord.degree = spec.degree;
+    chord.seventh = spec.seventh;
+    chord.borrowed_from = spec.borrowed;
+    return make_from(kind, chord, cells, out);
+}
+
+/*
+ * Whether the triad on `degree` of `source` can stand in for the key's own chord there (R-729): its triad differs from the key's, it is
+ * major, minor or diminished, the source does not avoid it, and its numeral is writable (a root within a semitone of the key's step).
+ */
+static bool borrowable(const HarmonyKind *kind, const PitchMaterial *source, int degree) {
+    HarmonyChord plain;
+    HarmonyChord borrowed;
+    int plain_root;
+    int borrowed_root;
+    int plain_intervals[4];
+    int borrowed_intervals[4];
+    size_t plain_count;
+    size_t borrowed_count;
+    PhraseChord probe;
+    memset(&plain, 0, sizeof(plain));
+    plain.degree = degree;
+    borrowed = plain;
+    borrowed.borrowed_from = source;
+    return !pitch_material_avoids(source, degree) &&
+           composer_chord_intervals(kind->chords, kind->mode, kind->modal, &plain, &plain_root, plain_intervals, &plain_count) &&
+           composer_chord_intervals(kind->chords, kind->mode, kind->modal, &borrowed, &borrowed_root, borrowed_intervals, &borrowed_count) &&
+           (plain_root != borrowed_root || memcmp(plain_intervals, borrowed_intervals, 3 * sizeof(int)) != 0) &&
+           make_chord(kind, (ChordSpec){degree, false, source}, 1, &probe);
+}
+
+/*
+ * Mixture (R-729): with share above 0, each predominant chord of the run (before[first] to before[first + count - 1]) draws once, and
+ * under the share becomes the triad on its degree of the first material of `from` that can stand there; a later predominant of the run
+ * takes the material the run already borrows from when it can. The tonic and the approach chords are never borrowed. With share 0
+ * nothing is drawn.
+ */
+static void borrow_predominants(const HarmonyKind *kind, FillRng *rng, ChordSpec *before, size_t first, size_t count) {
+    const ComposerMixture *mixture = kind->chords != NULL ? &kind->chords->mixture : NULL;
+    if (mixture == NULL || mixture->share.num <= 0 || mixture->share.den <= 0 || count == 0) {
+        return;
+    }
+    const char *words[COMPOSER_MIXTURE_FROM_MAX];
+    const PitchMaterial *sources[COMPOSER_MIXTURE_MAX];
+    for (size_t i = 0; i < mixture->from_count; i++) {
+        words[i] = mixture->from[i];
+    }
+    size_t source_count = composer_chords_mixture_materials(kind->chords, composer_chords_key_material(kind->chords, kind->mode, kind->modal),
+                                                            words, mixture->from_count, true, sources);
+    const PitchMaterial *held = NULL;
+    for (size_t i = first; i < first + count; i++) {
+        if ((long long)fill_rng_below(rng, (size_t)mixture->share.den) >= mixture->share.num) {
+            continue;
+        }
+        const PitchMaterial *pick = held != NULL && borrowable(kind, held, before[i].degree) ? held : NULL;
+        for (size_t m = 0; pick == NULL && m < source_count; m++) {
+            pick = borrowable(kind, sources[m], before[i].degree) ? sources[m] : NULL;
+        }
+        if (pick != NULL) {
+            before[i].borrowed = pick;
+            held = pick;
+        }
+    }
+}
+
+/*
+ * Color (R-727): with share above 0, each chord of the dealt phrase draws once, and under the share takes one color type drawn
+ * uniformly from those of `types` that fit it (composer_color_fits). The chord is still the basic triad to every check; its numeral
+ * gains the suffix of the type. A chord no type fits, a 6/4 and an applied chord stay as they are. With share 0 nothing is drawn.
+ */
+static void color_phrase(const HarmonyKind *kind, FillRng *rng, PhraseChord *chords, size_t count) {
+    const ComposerColor *color = kind->chords != NULL ? &kind->chords->color : NULL;
+    if (color == NULL || color->share.num <= 0 || color->share.den <= 0 || kind->chords->knowledge == NULL) {
+        return;
+    }
+    const ChordType *types[COMPOSER_COLOR_TYPES_MAX];
+    size_t type_count = 0;
+    for (size_t i = 0; i < color->type_count; i++) {
+        const ChordType *type = knowledge_snapshot_chord_type(kind->chords->knowledge, color->types[i]);
+        if (type != NULL) {
+            types[type_count++] = type;
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        if ((long long)fill_rng_below(rng, (uint64_t)color->share.den) >= color->share.num || chords[i].applied || chords[i].chord.cadential ||
+            chords[i].chord.color != NULL) {
+            continue;
+        }
+        const ChordType *fitting[COMPOSER_COLOR_TYPES_MAX];
+        size_t fit_count = 0;
+        for (size_t t = 0; t < type_count; t++) {
+            if (composer_color_fits(kind->chords, kind->mode, kind->modal, &chords[i].chord, types[t])) {
+                fitting[fit_count++] = types[t];
+            }
+        }
+        if (fit_count == 0) {
+            continue;
+        }
+        HarmonyChord colored = chords[i].chord;
+        char roman[PLAN_ROMAN_NUMERAL_MAX];
+        colored.color = fitting[fill_rng_below(rng, fit_count)];
+        if (harmony_roman_format_in(kind, &colored, roman)) {
+            chords[i].chord = colored;
+            memcpy(chords[i].roman, roman, PLAN_ROMAN_NUMERAL_MAX);
+        }
+    }
 }
 
 void harmony_progression_destroy(void *payload) {
@@ -85,7 +211,7 @@ void harmony_progression_destroy(void *payload) {
  */
 static bool open_on_cadential_six_four(const PhraseRequest *request, PhraseChord *chords, size_t *count, size_t dominant) {
     PhraseChord six_four;
-    if (request->cadence == CADENCE_TYPE_HALF || chords[dominant].cells < 2 || *count >= MAX_DEALT ||
+    if (request->modal != NULL || request->cadence == CADENCE_TYPE_HALF || chords[dominant].cells < 2 || *count >= MAX_DEALT ||
         !harmony_make_chord(request->mode, 1, 2, false, true, 1, &six_four)) {
         return false;
     }
@@ -140,7 +266,15 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
                      ? (size_t)request->shape.max_cells_per_chord
                      : 0;
-    size_t fixed = (opening_tonic ? 1 : 0) + (confirm ? 2 : 0) + (half ? 0 : 1) + (plagal ? 2 : 0);
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
+    if (kind.modal != NULL && (kind.cadence == NULL || request->cadence == CADENCE_TYPE_DECEPTIVE || plagal)) {
+        return false;
+    }
+    /* The dominant chords before the last: V unless the phrase ends on it; a modal cadence's approach chords (all of them, or
+       all but the last for a half cadence, which ends on it). */
+    size_t approach = kind.modal != NULL ? kind.cadence->approach_count : 1;
+    size_t dominants = half ? approach - 1 : approach;
+    size_t fixed = (opening_tonic ? 1 : 0) + (confirm ? 2 : 0) + dominants + (plagal ? 2 : 0);
     size_t last_cell = harmony_metre_last_cell(&request->metre);
     size_t last_cells = request->cells - last_cell;
     size_t room = last_cell;
@@ -148,9 +282,9 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
 
-    ChordSpec opening = {pivot > 0 ? pivot : 1, false};
+    ChordSpec opening = {pivot > 0 ? pivot : 1, false, NULL};
     PhraseChord probe;
-    bool pivot_predominant = pivot > 0 && make_chord(request->mode, opening, 1, &probe) &&
+    bool pivot_predominant = pivot > 0 && make_chord(&kind, opening, 1, &probe) &&
                              probe.has_function && probe.function == HARMONIC_FUNCTION_PREDOMINANT;
     const PredominantRun *runs = request->mode == HARMONY_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
     size_t run_count = request->mode == HARMONY_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
@@ -172,6 +306,30 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     }
     const PredominantRun *run = fitting_count ? &runs[fitting[fill_rng_below(rng, fitting_count)]] : NULL;
     bool seventh = fill_rng_below(rng, 2) == 1;
+    /* A modal key's predominant is one chord drawn from the mode's primary chords that are neither the tonic nor an approach chord
+       (none when none remains); it has no seventh chords. */
+    PredominantRun modal_run = {0, {0, 0}};
+    if (kind.modal != NULL) {
+        int pool[7];
+        size_t pool_count = 0;
+        seventh = false;
+        for (size_t i = 0; i < kind.modal->primary_count; i++) {
+            int degree = kind.modal->primary_degrees[i];
+            bool is_approach = false;
+            for (size_t a = 0; a < kind.cadence->approach_count; a++) {
+                is_approach = is_approach || kind.cadence->approach_degrees[a] == degree;
+            }
+            if (degree != 1 && !is_approach) {
+                pool[pool_count++] = degree;
+            }
+        }
+        run = NULL;
+        if (pool_count > 0 && fixed + 1 <= room) {
+            modal_run.count = 1;
+            modal_run.degrees[0] = pool[fill_rng_below(rng, pool_count)];
+            run = &modal_run;
+        }
+    }
 
     ChordSpec before[MAX_BEFORE_FINAL];
     size_t before_count = 0;
@@ -179,21 +337,28 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         before[before_count++] = opening;
     }
     if (confirm) {
-        before[before_count++] = (ChordSpec){5, true};
-        before[before_count++] = (ChordSpec){1, false};
+        before[before_count++] = (ChordSpec){5, true, NULL};
+        before[before_count++] = (ChordSpec){1, false, NULL};
     }
+    size_t run_first = before_count;
     for (size_t i = 0; run && i < run->count; i++) {
-        before[before_count++] = (ChordSpec){run->degrees[i], false};
+        before[before_count++] = (ChordSpec){run->degrees[i], false, NULL};
     }
+    borrow_predominants(&kind, rng, before, run_first, before_count - run_first);
     size_t dominant = before_count;
-    if (!half) {
-        before[before_count++] = (ChordSpec){5, seventh};
+    if (kind.modal != NULL) {
+        for (size_t a = 0; a < dominants; a++) {
+            before[before_count++] = (ChordSpec){kind.cadence->approach_degrees[a], false, NULL};
+        }
+    } else if (!half) {
+        before[before_count++] = (ChordSpec){5, seventh, NULL};
     }
     if (plagal) {
-        before[before_count++] = (ChordSpec){1, false};
-        before[before_count++] = (ChordSpec){4, false};
+        before[before_count++] = (ChordSpec){1, false, NULL};
+        before[before_count++] = (ChordSpec){4, false, NULL};
     }
-    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
+    ChordSpec last = half ? (ChordSpec){kind.modal != NULL ? kind.cadence->approach_degrees[approach - 1] : 5, seventh, NULL}
+                          : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false, NULL};
 
     size_t cells[MAX_BEFORE_FINAL];
     for (size_t i = 0; i < before_count; i++) {
@@ -240,16 +405,26 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
     for (size_t i = 0; i < before_count; i++) {
-        if (!make_chord(request->mode, before[i], cells[i], &chords[i])) {
+        if (!make_chord(&kind, before[i], cells[i], &chords[i])) {
             free(chords);
             return false;
         }
     }
-    if (!make_chord(request->mode, last, last_cells, &chords[before_count])) {
+    if (!make_chord(&kind, last, last_cells, &chords[before_count])) {
         free(chords);
         return false;
     }
+    /* An approach chord whose root lies a tritone from the arrival's (the locrian V to io) would put a tritone leap in the bass: it is
+       written in first inversion, whose bass steps to the arrival (R-725). */
+    if (kind.modal != NULL && !half && before_count > 0 && harmony_modal_tritone_approach(&kind)) {
+        size_t cells_of = chords[before_count - 1].cells;
+        if (!harmony_make_chord_in(&kind, kind.cadence->approach_degrees[approach - 1], 1, false, false, cells_of, &chords[before_count - 1])) {
+            free(chords);
+            return false;
+        }
+    }
     size_t count = before_count + 1;
+    color_phrase(&kind, rng, chords, count);
     /* Chords that do not stand on the given bass or carry the given melody are dealt again, after the dominant is
        tried on the cadential six-four. No random number is drawn for it, so a deal that fits is unchanged. */
     if (request->has_given && !harmony_given_fits(request, chords, count, NULL) &&

@@ -156,16 +156,16 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed, const Operato
     config.seed = seed;
     config.checker = harmony_phrase_checker;
     if (operators->schema) {
-        assert(harmony_schema_register(registry, operators->schema) == FILL_OK);
+        assert(harmony_schema_register(registry, operators->schema, test_composer_chords()) == FILL_OK);
     }
     if (operators->sequence) {
-        assert(harmony_sequence_register(registry, operators->sequence) == FILL_OK);
+        assert(harmony_sequence_register(registry, operators->sequence, test_composer_chords()) == FILL_OK);
     }
     if (operators->phrase) {
-        assert(harmony_phrase_register(registry) == FILL_OK);
+        assert(harmony_phrase_register(registry, test_composer_chords()) == FILL_OK);
     }
     if (operators->bass) {
-        assert(harmony_bass_register(registry, NULL) == FILL_OK);
+        assert(harmony_bass_register(registry, NULL, test_composer_chords()) == FILL_OK);
     }
     assert(fill_run(fixture->plan, registry, &config, &outcome, record) == FILL_OK);
     fill_registry_destroy(registry);
@@ -713,7 +713,7 @@ static void test_sequence_sweep(void) {
                                 FillOperatorRegistry *registry = fill_registry_create();
                                 FillSuggestions *suggestions = NULL;
                                 FillTarget target = {FILL_TARGET_LANE_SPAN, fixture.target};
-                                assert(harmony_sequence_register(registry, &params) == FILL_OK);
+                                assert(harmony_sequence_register(registry, &params, test_composer_chords()) == FILL_OK);
                                 assert(fill_suggest(fixture.plan, registry, &config, target, 8, &suggestions) == FILL_OK);
                                 count = fill_suggestions_count(suggestions);
                                 if (pick < count) {

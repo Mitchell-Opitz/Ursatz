@@ -338,7 +338,7 @@ static bool own_harmony_kept(const Motive *a, const Motive *b) {
     }
     for (size_t i = 0; i < a->chord_count; i++) {
         if (a->chords[i].degree != b->chords[i].degree || a->chords[i].alteration != b->chords[i].alteration ||
-            a->chords[i].inversion != b->chords[i].inversion || a->chords[i].seventh != b->chords[i].seventh ||
+            a->chords[i].inversion != b->chords[i].inversion || a->chords[i].seventh != b->chords[i].seventh || a->chords[i].color != b->chords[i].color ||
             rational_cmp(a->chords[i].onset, b->chords[i].onset) != 0) {
             return false;
         }

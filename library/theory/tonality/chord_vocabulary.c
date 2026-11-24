@@ -33,6 +33,13 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
     return standard_tonality_triad_quality_semitones(TRIAD_QUALITIES[triad], out);
 }
 
+bool common_practice_triad_intervals_with(const CommonPracticeMaterials *materials, CommonPracticeTriad triad, int out[3]) {
+    if (!valid_triad(triad) || out == NULL) {
+        return false;
+    }
+    return common_practice_triad_semitones(materials, TRIAD_QUALITIES[triad], out);
+}
+
 /* The label of a triad: a diatonic one is its Roman numeral (the degree in the case of its third, then the triad symbol: I, ii,
    vii with the degree sign), the others are named by quality. */
 static void triad_label(CommonPracticeTriad triad, char *out, size_t size) {

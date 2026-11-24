@@ -50,7 +50,7 @@ UrsatzStatus api_read_motive_extras(const cJSON *object, const char *base, const
     }
     if (has_harmony) {
         MotiveError detail;
-        if (!meter || motive_harmony_parse(harmony, meter, options->harmony, &options->harmony_count, &detail) != MOTIVE_OK) {
+        if (!meter || motive_harmony_parse_in(options->knowledge, harmony, meter, options->harmony, &options->harmony_count, &detail) != MOTIVE_OK) {
             return fail_at(error, URSATZ_ERR_REQUEST, base, "/harmony", "harmony '%s' at %s: %s", harmony,
                            meter ? detail.location : "the meter", meter ? detail.message : "is not known");
         }
@@ -419,7 +419,7 @@ UrsatzStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const c
     }
     MotiveError motive_error;
     if (harmony && harmony[0]) {
-        if (motive_harmony_parse(harmony, meter, options.harmony, &options.harmony_count, &motive_error) != MOTIVE_OK) {
+        if (motive_harmony_parse_in(knowledge, harmony, meter, options.harmony, &options.harmony_count, &motive_error) != MOTIVE_OK) {
             return fail_at(error, URSATZ_ERR_REQUEST, base, "/harmony", "%s: harmony '%s' at %s: %s", what, harmony,
                            motive_error.location, motive_error.message);
         }

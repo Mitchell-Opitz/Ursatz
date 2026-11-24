@@ -9,6 +9,7 @@
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/knowledge/rule_entry.h"
+#include "theory/knowledge/voicing_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
 
 /*
@@ -39,6 +40,10 @@ typedef struct {
     bool has_function;
     const char *harmony_targets[FORMAL_HARMONY_MAX]; /* the ids a formal function names, resolved once every entry is read */
     const char *against_target;
+    VoicingEntry voicing;
+    bool has_voicing;
+    const char *fit_targets[CHORD_TYPE_MEMBER_MAX]; /* the ids a voicing fits, resolved once every entry is read */
+    const char *cadence_material_target;            /* the id a modal cadence kind names, resolved likewise */
     ThemeType theme_type;
     bool has_theme_type;
     const char *beginning_target;
@@ -94,6 +99,15 @@ const Slot *knowledge_find_slot(const KnowledgeSnapshot *snapshot, const char *i
 KnowledgeStatus knowledge_read_text(Slot *slot, const cJSON *content, const char *name, const char **out, const char *path,
                                     char *message, size_t message_size);
 
+/* The role named by `text` ("third", "added-sixth"), or false. */
+bool knowledge_chord_role(const char *text, ChordMemberRole *role);
+
+/*
+ * A chord numeral without alteration: "I" to "VII" (major) or "i" to "vii" (minor), an "o" after it for diminished. Gives its degree
+ * 1 to 7 (the case and the "o" are not kept). False for an alteration, mixed case, a numeral past VII or any other text.
+ */
+bool knowledge_read_numeral(const char *text, int *degree);
+
 /* The index of `text` among `count` words, or -1 (also for NULL). */
 int knowledge_word_index(const char *text, const char *const *words, size_t count);
 
@@ -111,6 +125,14 @@ KnowledgeStatus knowledge_form_read_function(Slot *slot, const cJSON *entry, con
 KnowledgeStatus knowledge_form_read_theme_type(Slot *slot, const cJSON *entry, const char *path, char *message,
                                                size_t message_size);
 KnowledgeStatus knowledge_form_link(const KnowledgeSnapshot *snapshot, Slot *slot, char *message, size_t message_size);
+
+/*
+ * knowledge_voicing.c: reads the fields of a `voicing` entry into slot->voicing (the caller sets its id and name first), keeping the
+ * ids it fits; knowledge_voicing_link points them at the chord types, once every entry is read and sorted, or refuses naming the
+ * field. The link does nothing for a slot of another kind.
+ */
+KnowledgeStatus knowledge_voicing_read(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size);
+KnowledgeStatus knowledge_voicing_link(const KnowledgeSnapshot *snapshot, Slot *slot, char *message, size_t message_size);
 
 /*
  * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and

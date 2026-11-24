@@ -189,7 +189,7 @@ static void read_context(const Bar bars[2], MelodyContext *context, Plan **plan_
     assert(plan_node_set_state(plan, owner, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_node_set_state(plan, form_node, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(context, 0, sizeof(*context));
-    assert(melody_phrase_read(plan, owner, section, test_key(0, "major"), context));
+    assert(melody_phrase_read(plan, owner, section, test_key(0, "major"), test_composer_chords(), context));
     *plan_out = plan;
 }
 

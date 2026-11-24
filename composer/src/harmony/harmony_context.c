@@ -3,36 +3,53 @@
 #include <string.h>
 
 /* Reads the numeral of one span: a diatonic one, else an applied one. The cells are not counted. */
-static bool read_numeral(const Plan *plan, LaneSpanId id, HarmonyMode mode, PhraseChord *out) {
+static bool read_numeral(const Plan *plan, LaneSpanId id, const HarmonyKind *kind, PhraseChord *out) {
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memset(out, 0, sizeof(*out));
     memcpy(out->roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
     out->roman[PLAN_ROMAN_NUMERAL_MAX - 1] = '\0';
     out->function = harmony->function;
     out->has_function = harmony->has_function;
-    if (!harmony_roman_parse(mode, out->roman, &out->chord)) {
+    if (harmony_roman_parse_in(kind, out->roman, &out->chord)) {
+        /* The plan names the material a borrowed chord is taken from; the numeral alone reads the nearest that has it. */
+        if (out->chord.borrowed_from != NULL && harmony->borrowed_from != NULL) {
+            out->chord.borrowed_from = harmony->borrowed_from;
+        }
+    } else {
         out->applied = true;
-        if (!harmony_roman_parse_applied_inverted(mode, out->roman, &out->applied_chord, &out->applied_inversion)) {
+        /* A modal key has no applied chord (R-725). */
+        if (kind->modal != NULL ||
+            !harmony_roman_parse_applied_inverted(kind->mode, out->roman, &out->applied_chord, &out->applied_inversion)) {
             return false;
         }
     }
     return true;
 }
 
+bool harmony_read_chord_for(const Plan *plan, LaneSpanId id, const HarmonyKind *kind, Rational cell_length, PhraseChord *out) {
+    return read_numeral(plan, id, kind, out) &&
+           harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
+}
+
 bool harmony_read_chord(const Plan *plan, LaneSpanId id, HarmonyMode mode, Rational cell_length,
                        PhraseChord *out) {
-    return read_numeral(plan, id, mode, out) &&
-           harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
+    return harmony_read_chord_for(plan, id, &kind, cell_length, out);
+}
+
+bool harmony_read_chord_in_for(const Plan *plan, LaneSpanId id, const HarmonyKind *kind, const PhraseMetre *metre, PhraseChord *out) {
+    size_t first;
+    return read_numeral(plan, id, kind, out) &&
+           harmony_metre_find_cells(metre, plan_lane_span_span(plan, id), &first, &out->cells);
 }
 
 bool harmony_read_chord_in(const Plan *plan, LaneSpanId id, HarmonyMode mode, const PhraseMetre *metre,
                            PhraseChord *out) {
-    size_t first;
-    return read_numeral(plan, id, mode, out) &&
-           harmony_metre_find_cells(metre, plan_lane_span_span(plan, id), &first, &out->cells);
+    HarmonyKind kind = {mode, NULL, NULL, NULL};
+    return harmony_read_chord_in_for(plan, id, &kind, metre, out);
 }
 
-bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *out) {
+bool harmony_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) == NULL) {
@@ -83,6 +100,7 @@ bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *ou
 
     PhraseContext context;
     memset(&context, 0, sizeof(context));
+    context.composer_chords = chords;
     context.owner = owner;
     context.count = high - low + 1;
     context.target = at - low;
@@ -96,11 +114,16 @@ bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *ou
 
     PlanConstraint cadence;
     if (!harmony_read_metre(plan, context.span, &context.metre) ||
-        !harmony_find_mode(plan, target, owner, context.span, &context.mode) ||
+        !harmony_find_kind(plan, target, owner, context.span, chords, &context.mode, &context.modal) ||
         !harmony_find_constraint(plan, same_owner[high], owner, PLAN_CONSTRAINT_CADENCE, &cadence)) {
         return false;
     }
     context.cadence = cadence.params.cadence;
+    /* The applied chords, dominant options and predominant forms of the embellishment families are written for major and minor keys:
+       a modal key has none of them (R-725). */
+    if (context.modal != NULL) {
+        return false;
+    }
     for (size_t i = 0; i < context.count; i++) {
         LaneSpanId id = same_owner[low + i];
         PlanState state = plan_lane_span_state(plan, id);
@@ -109,7 +132,8 @@ bool harmony_context_read(const Plan *plan, LaneSpanId target, PhraseContext *ou
             return false;
         }
         context.ids[i] = id;
-        if (!harmony_read_chord_in(plan, id, context.mode, &context.metre, &context.chords[i])) {
+        HarmonyKind kind = harmony_kind_of(chords, context.mode, context.modal);
+        if (!harmony_read_chord_in_for(plan, id, &kind, &context.metre, &context.chords[i])) {
             return false;
         }
     }

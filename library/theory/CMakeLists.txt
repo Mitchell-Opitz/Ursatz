@@ -17,6 +17,7 @@ add_library(ursatz_theory
     knowledge/knowledge_rule.c
     knowledge/knowledge_snapshot.c
     knowledge/knowledge_vocabulary.c
+    knowledge/knowledge_voicing.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
@@ -32,6 +33,7 @@ add_library(ursatz_theory
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_materials.c
     tonality/interval.c
+    tonality/modal_chords.c
     tonality/key_vocabulary.c
     tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
@@ -184,10 +186,13 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/relation.h
         theory/knowledge/rule_entry.h
         theory/knowledge/vocabulary_entry.h
+        theory/knowledge/voicing_entry.h
+        theory/tonality/brightness.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_materials.h
         theory/tonality/interval.h
+        theory/tonality/modal_chords.h
         theory/tonality/key_vocabulary.h
         theory/tonality/region_relation.h
         theory/tonality/roman_numeral_analysis_rules.h

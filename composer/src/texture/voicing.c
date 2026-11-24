@@ -70,7 +70,8 @@ static bool read_chords(const Plan *plan, VoicingContext *out, Rational *cell_le
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     size_t count;
-    if (!harmony_read_lane(plan, out->span, harmony_key_mode(&out->key), chords, &count, &metre) || count == 0 ||
+    HarmonyKind kind = harmony_kind(out->composer_chords, &out->key);
+    if (!harmony_read_lane_for(plan, out->span, &kind, chords, &count, &metre) || count == 0 ||
         count > HARMONY_MAX_CHORDS ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count ||
         !position_is_positive(out->span.length) || !position_is_positive(metre.cell_length)) {
@@ -102,7 +103,7 @@ static bool read_chords(const Plan *plan, VoicingContext *out, Rational *cell_le
 static bool read_tones(VoicingContext *out, size_t i) {
     const PhraseChord *chord = &out->chord[i];
     int root_degree;
-    if (!accomp_chord_tones(&out->key, chord, out->pcs[i], &out->tone_count[i])) {
+    if (!accomp_chord_tones(out->composer_chords, &out->key, chord, out->pcs[i], &out->tone_count[i])) {
         return false;
     }
     root_degree = chord->applied ? harmony_applied_root_degree(harmony_key_mode(&out->key), &chord->applied_chord)
@@ -154,6 +155,7 @@ static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_le
     Rational origin;
     Rational length;
     size_t found;
+    HarmonyKind kind_before = harmony_kind(out->composer_chords, &out->key);
     if (out->span.start.num <= 0 || out->chord_count >= VOICING_MAX_CHORDS) {
         return true;
     }
@@ -168,9 +170,9 @@ static bool read_lead_in(const Plan *plan, VoicingContext *out, Rational cell_le
     before_span = plan_lane_span_span(plan, before);
     if (plan_span_end(before_span, &before_end) != PLAN_OK || rational_cmp(before_end, out->span.start) != 0 ||
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
-        !harmony_read_chord(plan, before, harmony_key_mode(&out->key), cell_length, &chord) ||
+        !harmony_read_chord_for(plan, before, &kind_before, cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
-         (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || composer_key_is_minor(&key) != composer_key_is_minor(&out->key))) ||
+         (spelled_key_tonic_pitch_class(&key) != spelled_key_tonic_pitch_class(&out->key) || !composer_key_same_mode(&key, &out->key))) ||
         !position_is_positive(before_span.length)) {
         return true;
     }
@@ -218,7 +220,7 @@ static void limit_cadence_soprano(const Plan *plan, VoicingContext *out) {
     }
 }
 
-bool voicing_read(const Plan *plan, LaneSpanId target, VoicingContext *out) {
+bool voicing_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, VoicingContext *out) {
     PlanConstraint constraint;
     AccompLine melody[ACCOMP_MAX_LINE];
     AccompLine bass[ACCOMP_MAX_LINE];
@@ -231,6 +233,7 @@ bool voicing_read(const Plan *plan, LaneSpanId target, VoicingContext *out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
+    out->composer_chords = chords;
     out->length = POSITION_ZERO;
     for (size_t i = 0; i <= VOICING_MAX_CHORDS; i++) {
         out->chord_start[i] = POSITION_ZERO;
@@ -367,12 +370,11 @@ bool voicing_options(const VoicingContext *context, size_t chord, VoicingOption 
 static bool operator_applies(const Plan *plan, FillTarget target, void *context) {
     VoicingContext *read;
     bool applies;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN) {
         return false;
     }
     read = calloc(1, sizeof(*read));
-    applies = read && voicing_read(plan, (LaneSpanId)target.id, read);
+    applies = read && voicing_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read);
     voicing_context_free(read);
     free(read);
     return applies;
@@ -390,13 +392,13 @@ static void candidate_label(const VoicingCandidate *candidate, size_t first, cha
 
 static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    const VoicingParams *params = context;
+    const VoicingParams *params = composer_context_params(context);
     size_t wanted = params && params->candidates > 0 ? params->candidates : VOICING_DEFAULT_CANDIDATES;
     size_t beam = params && params->beam > 0 ? params->beam : VOICING_DEFAULT_BEAM;
     VoicingContext *read = calloc(1, sizeof(*read));
     VoicingCandidate *found[MAX_CANDIDATES];
     size_t found_count = 0;
-    bool ok = read && target.kind == FILL_TARGET_LANE_SPAN && voicing_read(plan, (LaneSpanId)target.id, read);
+    bool ok = read && target.kind == FILL_TARGET_LANE_SPAN && voicing_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read);
     if (wanted > MAX_CANDIDATES) {
         wanted = MAX_CANDIDATES;
     }
@@ -438,7 +440,6 @@ static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandid
     VoicingContext *read;
     PlanNote *notes;
     PlanResult result = PLAN_OK;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !voicing || voicing->magic != VOICING_PAYLOAD_MAGIC) {
         return PLAN_ERR_NULL;
     }
@@ -450,7 +451,7 @@ static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandid
         return PLAN_ERR_ALLOC;
     }
     /* The plan must still be what the voicing was made for. */
-    if (!voicing_read(plan, (LaneSpanId)target.id, read) || voicing->chord_count != read->chord_count) {
+    if (!voicing_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read) || voicing->chord_count != read->chord_count) {
         result = PLAN_ERR_BAD_PAYLOAD;
     }
     for (size_t part = VOICING_SOPRANO; result == PLAN_OK && part < VOICING_PARTS; part++) {
@@ -479,7 +480,7 @@ static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandid
     return result;
 }
 
-FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams *params) {
+FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = VOICING_OPERATOR_NAME;
@@ -493,6 +494,5 @@ FillResult voicing_register(FillOperatorRegistry *registry, const VoicingParams 
     operator_.applies = operator_applies;
     operator_.generate = operator_generate;
     operator_.apply = operator_apply;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

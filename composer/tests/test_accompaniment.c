@@ -29,6 +29,7 @@
 #endif
 
 #define SEEDS 8
+#define ACCOMP_TEST_VOICES 8
 
 typedef struct {
     Plan *plan;
@@ -71,6 +72,8 @@ static Piece fixture_piece(void) {
 }
 
 static const char *const NUMERALS[8] = {"I", "IV", "V", "I", "I", "ii", "V", "I"};
+static const char *const *numerals_in_use = NUMERALS; /* the harmony of built_piece_with; a test swaps it */
+static int steady_melody = 72;                          /* the pitch of its steady melody */
 static const int BASS[8] = {48, 41, 43, 48, 48, 50, 43, 48};
 
 /*
@@ -136,7 +139,7 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
         PlanNote notes[8];
         memset(notes, 0, sizeof(notes));
         memset(&payload, 0, sizeof(payload));
-        strcpy(payload.harmony.roman_numeral, NUMERALS[b]);
+        strcpy(payload.harmony.roman_numeral, numerals_in_use[b]);
         payload.harmony.has_function = false;
         assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
@@ -153,7 +156,7 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
 
         size_t count = steady ? 1 : (size_t)beats_in_bar;
         for (size_t n = 0; n < count; n++) {
-            notes[n].midi = steady ? 72 : MELODY[(b + n) % 4];
+            notes[n].midi = steady ? steady_melody : MELODY[(b + n) % 4];
             notes[n].spelled = false;
             notes[n].offset = steady ? fraction(0, 1) : fraction(beat_num * (long)n, beat_den);
             notes[n].duration = steady ? bar : fraction(beat_num, beat_den);
@@ -211,19 +214,23 @@ static PlanAccompaniment ask(PlanAccompanimentPattern pattern, int texture) {
     return accompaniment;
 }
 
-static FillOutcome accompany(Plan *plan, unsigned long seed) {
+static FillOutcome accompany_with(Plan *plan, unsigned long seed, const AccompanimentParams *params, const ComposerChords *chords) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = accompaniment_checker;
-    AccompanimentParams params = accompaniment_params_default();
-    params.knowledge = test_knowledge();
-    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
+    assert(registry && accompaniment_register(registry, params, chords) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;
+}
+
+static FillOutcome accompany(Plan *plan, unsigned long seed) {
+    AccompanimentParams params = accompaniment_params_default();
+    params.knowledge = test_knowledge();
+    return accompany_with(plan, seed, &params, test_composer_chords());
 }
 
 static size_t voice_notes(const Piece *piece, int voice, CheckNote *out) {
@@ -600,7 +607,87 @@ static void test_motive_pattern_needs_its_motive(void) {
     }
 }
 
+/* The pitches of every inner voice that start at a bar, low to high. */
+static size_t block_at_bar(const Piece *piece, long bar_index, int out[ACCOMP_TEST_VOICES]) {
+    size_t count = 0;
+    for (int voice = 1; voice <= ACCOMP_TEST_VOICES; voice++) {
+        CheckNote notes[CHECK_MAX_NOTES];
+        size_t n = voice_notes(piece, voice, notes);
+        for (size_t i = 0; i < n; i++) {
+            if (notes[i].onset == bar_index * piece->bar && count < ACCOMP_TEST_VOICES) {
+                out[count++] = notes[i].pitch;
+            }
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        for (size_t k = i + 1; k < count; k++) {
+            if (out[k] < out[i]) {
+                int swap = out[i];
+                out[i] = out[k];
+                out[k] = swap;
+            }
+        }
+    }
+    return count;
+}
+
+/* Her lydian shimmer as a user entry (workshop/tests/fixtures/knowledge-user/voicings.json): C G D F# A on C, fitting the major triad. */
+static const char *const USER_VOICINGS =
+    "{\"schema\":\"ursatz-knowledge\",\"schema_version\":1,\"source\":\"user\",\"entries\":[{\"id\":\"user.voicing.lydian-shimmer\","
+    "\"kind\":\"voicing\",\"name\":\"lydian shimmer\",\"content\":{\"members\":[{\"role\":\"root\",\"semitones\":0},{\"role\":\"fifth\","
+    "\"semitones\":7},{\"role\":\"ninth\",\"semitones\":14},{\"role\":\"eleventh\",\"semitones\":18},{\"role\":\"thirteenth\","
+    "\"semitones\":21}],\"fits\":[\"omt.chord-type.major-triad\"]},\"citations\":[],\"status\":\"active\",\"version\":1}]}";
+
+/*
+ * A block accompaniment voiced by an entry (R-731), in C major 4/4 over a steady melody on G5: the K3 shell of a dominant seventh sounds on
+ * V7 (G B F: the root from C3 up), and her lydian shimmer sounds on IV (F C G B D) but not on I, whose F sharp is outside C major.
+ */
+static void test_block_voicing(void) {
+    static const char *const VOICED[8] = {"I", "IV", "V7", "I", "I", "IV", "V7", "I"};
+    numerals_in_use = VOICED;
+    steady_melody = 79;
+    AccompanimentParams params = accompaniment_params_default();
+    params.knowledge = test_knowledge();
+    params.voicing = knowledge_snapshot_voicing(test_knowledge(), "omt.voicing.shell-dominant");
+    assert(params.voicing != NULL);
+    Piece piece = built_piece(4, 4, true);
+    open_voices(&piece, ask(PLAN_ACCOMPANIMENT_BLOCK, -1), 3);
+    FillOutcome outcome = accompany_with(piece.plan, 1, &params, test_composer_chords());
+    assert(outcome.status == FILL_STATUS_COMPLETE && outcome.steps == 1);
+    fill_outcome_destroy(&outcome);
+    int block[ACCOMP_TEST_VOICES];
+    for (long bar = 2; bar <= 6; bar += 4) {
+        assert(block_at_bar(&piece, bar, block) == 3 && block[0] == 55 && block[1] == 59 && block[2] == 65);
+    }
+    assert(block_at_bar(&piece, 0, block) == 3); /* the chords the voicing does not fit are voiced as without it */
+    plan_destroy(piece.plan);
+
+    KnowledgeUserFile file = {"voicings.json", USER_VOICINGS};
+    KnowledgeSnapshot *user = NULL;
+    char message[256];
+    assert(knowledge_snapshot_build(&file, 1, &user, message, sizeof(message)) == KNOWLEDGE_OK);
+    ComposerChords chords;
+    assert(composer_chords_init(&chords, user, message, sizeof(message)));
+    params.knowledge = user;
+    params.voicing = knowledge_snapshot_voicing(user, "user.voicing.lydian-shimmer");
+    assert(params.voicing != NULL);
+    piece = built_piece(4, 4, true);
+    open_voices(&piece, ask(PLAN_ACCOMPANIMENT_BLOCK, -1), 3);
+    outcome = accompany_with(piece.plan, 1, &params, &chords);
+    assert(outcome.status == FILL_STATUS_COMPLETE && outcome.steps == 1);
+    fill_outcome_destroy(&outcome);
+    for (long bar = 1; bar <= 5; bar += 4) {
+        assert(block_at_bar(&piece, bar, block) == 5 && block[0] == 53 && block[1] == 60 && block[2] == 67 && block[3] == 71 && block[4] == 74);
+    }
+    assert(block_at_bar(&piece, 0, block) == 3); /* I: the F sharp is outside C major, so the chord is voiced as without it */
+    plan_destroy(piece.plan);
+    knowledge_snapshot_destroy(user);
+    numerals_in_use = NUMERALS;
+    steady_melody = 72;
+}
+
 int main(void) {
+    test_block_voicing();
     test_motive_pattern();
     test_motive_pattern_needs_its_motive();
     test_constraint();

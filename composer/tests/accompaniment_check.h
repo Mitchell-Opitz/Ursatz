@@ -10,6 +10,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * What a written accompaniment is held to, worked out here from the plan's lanes and not from the operator: every
@@ -70,7 +71,7 @@ static inline size_t check_accompaniment(const Plan *plan, PlanSpan span, Spelle
     assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, chord_ids, HARMONY_MAX_CHORDS) == chord_count);
     for (size_t i = 0; i < chord_count; i++) {
         unsigned seventh;
-        assert(melody_chord_mask(&key, &chords[i], &masks[i], &seventh));
+        assert(melody_chord_mask(test_composer_chords(), &key, &chords[i], &masks[i], &seventh));
         starts[i] = check_ticks(plan_lane_span_span(plan, chord_ids[i]).start);
     }
     starts[chord_count] = check_ticks(span.start) + check_ticks(span.length);

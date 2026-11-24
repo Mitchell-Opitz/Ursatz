@@ -202,15 +202,17 @@ static void test_options(void) {
     assert(request_parse_key("Bb minor", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 10 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     assert(request_parse_key("F# major", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 6 && harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     assert(!request_parse_key("H major", test_knowledge(), &key));
-    assert(!request_parse_key("D dorian", test_knowledge(), &key));
+    assert(request_parse_key("D dorian", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 2 && key.material == test_material("dorian"));
+    assert(!request_parse_key("D overtone", test_knowledge(), &key));
     assert(!request_parse_key("C harmonic minor", test_knowledge(), &key) && !request_parse_key("D", test_knowledge(), &key));
     assert(request_parse_key("c MINOR", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 0 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     assert(request_parse_key("G natural minor", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 7 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     char refusal[160];
-    assert(request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal) &&
-           strcmp(refusal, "the Composer writes major and minor keys; 'dorian' is not one of them") == 0);
+    assert(!request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal));
+    assert(request_key_refusal("C overtone", test_knowledge(), refusal, sizeof refusal) &&
+           strcmp(refusal, "the Composer writes major, minor and modal keys; 'overtone' is not one of them") == 0);
     assert(request_key_refusal("C harmonic minor", test_knowledge(), refusal, sizeof refusal) &&
-           strcmp(refusal, "the Composer writes major and minor keys; 'harmonic minor' is not one of them") == 0);
+           strcmp(refusal, "the Composer writes major, minor and modal keys; 'harmonic minor' is not one of them") == 0);
     assert(!request_key_refusal("C minor", test_knowledge(), refusal, sizeof refusal) && !request_key_refusal("H major", test_knowledge(), refusal, sizeof refusal) &&
            !request_key_refusal("C nonsense", test_knowledge(), refusal, sizeof refusal));
     PlanMeter meter;
@@ -1202,7 +1204,7 @@ static void test_extras_in_json(void) {
     options.features[0].last = 3;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false, NULL};
     assert(motive_from_json(EXTRAS_JSON, &options, &again, &error) == MOTIVE_OK);
     assert(!again.accompaniment && again.feature_count == 1 && again.chord_count == 1);
     assert(again.chords[0].degree == 4 && strcmp(again.features[0].label, "x") == 0);
@@ -1217,17 +1219,17 @@ static void test_extras_errors(void) {
     MotiveOptions options = base;
     options.has_harmony = true;
     options.harmony_count = 2;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false};
-    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false}; /* at the end of a one-bar motive */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false, NULL};
+    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false, NULL}; /* at the end of a one-bar motive */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "harmony[1]") == 0);
 
     options = base;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false, NULL};
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false}; /* a third inversion needs a seventh */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false, NULL}; /* a third inversion needs a seventh */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
 
     options = base;

@@ -54,7 +54,7 @@ bool standard_tonality_material_degree_at_or_below_semitone(int semitones_above_
 /*
  * The degree (1 to 7) a chromatic semitone above the center is read as in the material, and its alteration from that degree: 0 for a
  * note of the scale. With no context a chromatic note is read as the next lower degree raised, except the lowered readings (-1 on
- * the next degree up): semitone 1 always, and semitones 3, 8 and 10 where the material's third is major and its sixth and seventh
+ * the next degree up): semitone 1 where the material has no step there, and semitones 3, 8 and 10 where the material's third is major and its sixth and seventh
  * are 9 and 11 (the major scale's rule, R-285). False (outputs untouched) for NULL arguments or a material with no steps.
  */
 bool standard_tonality_material_degree_of_semitone(int semitones_above_center, const PitchMaterial *material, int *degree,

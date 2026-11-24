@@ -9,7 +9,7 @@
 
 #define PREFERENCE_SCALE 1000
 
-bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext *out) {
+bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, SkeletonContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
@@ -17,6 +17,7 @@ bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext 
     }
     SkeletonContext context;
     memset(&context, 0, sizeof(context));
+    context.composer_chords = chords;
     context.target = target;
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
@@ -66,9 +67,9 @@ bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext 
         low--;
     }
     context.before_count = at - low;
+    HarmonyKind kind = harmony_kind(chords, &context.key);
     for (size_t i = 0; i < context.before_count; i++) {
-        if (!harmony_read_chord(plan, same_owner[low + i], harmony_key_mode(&context.key), context.metre.cell_length,
-                                &context.before[i])) {
+        if (!harmony_read_chord_for(plan, same_owner[low + i], &kind, context.metre.cell_length, &context.before[i])) {
             return false;
         }
     }
@@ -144,7 +145,14 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
     bool ends = skeleton->remainder_cells == 0 && context->has_cadence;
     /* A skeleton that leaves the span open is a phrase not yet finished: the rest will bring the dominant and the
        tonic, so they are counted in for the phrase model, as chords that need no reason of their own. */
-    size_t virtual_count = ends ? 0 : 2;
+    HarmonyKind kind = harmony_kind(context->composer_chords, &context->key);
+    if (kind.modal != NULL && kind.cadence == NULL) {
+        free(all);
+        verdict->hard = "no cadence to come";
+        return true;
+    }
+    /* In a modal key the cadence to come is its cadence kind's approach and arrival (R-725). */
+    size_t virtual_count = ends ? 0 : (kind.modal != NULL ? kind.cadence->approach_count + 1 : 2);
     size_t total = context->before_count + skeleton->count + virtual_count;
     if (total > HARMONY_MAX_CHORDS) {
         free(all);
@@ -159,21 +167,26 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
         all[context->before_count + i] = skeleton->chords[i];
         exempt[context->before_count + i] = true;
     }
-    if (virtual_count == 2) {
+    if (virtual_count > 0) {
         size_t at = context->before_count + skeleton->count;
-        if (!harmony_make_chord(harmony_key_mode(&context->key), 5, 0, false, false, 1, &all[at]) ||
-            !harmony_make_chord(harmony_key_mode(&context->key), 1, 0, false, false, 1, &all[at + 1])) {
+        bool made = true;
+        for (size_t i = 0; made && i < virtual_count; i++) {
+            int degree = kind.modal == NULL ? (i == 0 ? 5 : 1) : (i + 1 < virtual_count ? kind.cadence->approach_degrees[i] : 1);
+            made = harmony_make_chord_in(&kind, degree, 0, false, false, 1, &all[at + i]);
+            exempt[at + i] = true;
+        }
+        if (!made) {
             free(all);
             verdict->hard = "no cadence to come";
             return true;
         }
-        exempt[at] = true;
-        exempt[at + 1] = true;
     }
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
     HeardPhrase phrase = {all, total, harmony_key_mode(&context->key), context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
-                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
+                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL, NULL, NULL};
+    phrase.composer_chords = context->composer_chords;
+    phrase.modal = kind.modal;
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);
     if (!ok) {
@@ -350,7 +363,7 @@ PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton)
     if (!plan || !skeleton || skeleton->count == 0) {
         return PLAN_ERR_NULL;
     }
-    if (!harmony_skeleton_read(plan, skeleton->context.target, &read) ||
+    if (!harmony_skeleton_read(plan, skeleton->context.target, skeleton->context.composer_chords, &read) ||
         read.metre.cells != skeleton->context.metre.cells || read.metre.first_cell != skeleton->context.metre.first_cell ||
         read.bass_placeholder != skeleton->context.bass_placeholder) {
         return PLAN_ERR_BAD_PAYLOAD;

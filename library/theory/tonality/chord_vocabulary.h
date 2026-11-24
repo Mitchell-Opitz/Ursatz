@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
+#include "theory/tonality/common_practice_materials.h"
 
 #define CHORD_STRUCTURE_MAX_INTERVALS 8
 
@@ -67,6 +68,9 @@ typedef enum {
  * invalid triad.
  */
 bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]);
+
+/* The same, read from the chord types of `materials` (R-728); NULL materials are the fallback above. */
+bool common_practice_triad_intervals_with(const CommonPracticeMaterials *materials, CommonPracticeTriad triad, int out[3]);
 
 /*
  * The candidate that names a sonority this triad: its label and the confidence confidence_numerator / confidence_denominator (a rational in

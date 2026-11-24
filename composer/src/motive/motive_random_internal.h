@@ -65,6 +65,10 @@ typedef struct {
 
 long motive_random_rung_position(long rung);
 bool motive_random_is_chord_step(long position);
+/* Whether every color suffix of the given plan names a type that fits its chord in the key (R-727). */
+bool motive_random_segments_plan_colors_fit(const MotiveRandomOptions *options, const SpelledKey *key);
+/* True when the step of `position` (from the chord's root) is one of a color chord's added members: bit s of `mask` is step s. */
+bool motive_random_is_color_step(unsigned mask, long position);
 bool motive_random_in_range(int pitch);
 
 /* The figure a note makes between the pitch before and the pitch after it, by the semitone rules of the tone roles. */
@@ -180,7 +184,10 @@ typedef struct {
     size_t chord_count;
     int chord_degree[CHORD_MAX];
     long chord_onset[CHORD_MAX]; /* ticks from the motive's start, the pickup included, to where each chord starts */
+    const ChordType *chord_color[CHORD_MAX]; /* the color type of each chord, NULL for a plain triad (R-727) */
+    unsigned chord_color_mask[CHORD_MAX];    /* the steps above its root a chord's color members sit on (bit 0 to 6) */
     int degree[MAX_NOTES];       /* the chord at each note's onset (set_note_chords) */
+    unsigned color_mask[MAX_NOTES]; /* chord_color_mask of the chord at each note's onset */
     bool chord_first[MAX_NOTES]; /* the first note on a chord after the first */
 } Layout;
 
@@ -191,6 +198,8 @@ typedef struct {
     Shape shape;
     SegmentPlan plan;
     bool placed; /* a given plan whose chords are at a bar and beat, not one to a segment */
+    const ChordType *chord_color[CHORD_MAX]; /* the color type of each chord of the plan, drawn or given (NULL: none) */
+    unsigned chord_color_mask[CHORD_MAX];
 } Setup;
 
 Grid motive_random_grid_of(const MotiveRandomPreferences *preferences, const PlanMeter *meter);

@@ -19,6 +19,10 @@ bool motive_sketch_minor(const MotiveSketch *sketch) {
     return sketch != NULL && pitch_material_third(sketch->material) == THIRD_MINOR;
 }
 
+bool motive_sketch_raises_seventh(const MotiveSketch *sketch) {
+    return sketch != NULL && pitch_material_is_natural_minor(sketch->material);
+}
+
 /* The semitones above the tonic of scale step `degree` (0 to 6) of the sketch's scale. */
 static int scale_step_semitone(const MotiveSketch *sketch, int degree) {
     return standard_tonality_material_degree_semitone(sketch->material, degree + 1);
@@ -63,7 +67,7 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b) {
         const MotiveSketchChord *x = &a->chords[i];
         const MotiveSketchChord *y = &b->chords[i];
         if (!msk_eq(x->onset, y->onset) || x->degree != y->degree || x->alteration != y->alteration ||
-            x->inversion != y->inversion || x->seventh != y->seventh) {
+            x->inversion != y->inversion || x->seventh != y->seventh || x->color != y->color) {
             return false;
         }
     }
@@ -270,17 +274,46 @@ int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step) {
     return (int)(step - floor_div(step, 7) * 7) + 1;
 }
 
-size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]) {
+/* A color chord's pitch classes: the type's members on the root, the third and fifth of a tertian type read from the key. */
+static size_t color_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int root_index, int root,
+                                int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX]) {
+    const ChordType *type = chord->color;
+    if (type->member_count == 0 || type->member_count > MOTIVE_SKETCH_CHORD_TONES_MAX) {
+        return 0;
+    }
+    bool quartal = type->construction == CHORD_CONSTRUCTION_QUARTAL;
+    for (size_t i = 0; i < type->member_count; i++) {
+        int semitones = type->members[i].semitones;
+        if (!quartal && type->members[i].role == CHORD_MEMBER_THIRD && chord->alteration == 0) {
+            semitones = scale_step_semitone(sketch, (root_index + 2) % 7) - scale_step_semitone(sketch, root_index);
+        } else if (!quartal && type->members[i].role == CHORD_MEMBER_FIFTH && chord->alteration == 0) {
+            semitones = scale_step_semitone(sketch, (root_index + 4) % 7) - scale_step_semitone(sketch, root_index);
+        }
+        pcs[i] = (sketch->tonic_pc + root + semitones + 240) % 12;
+    }
+    return type->member_count;
+}
+
+size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX]) {
     if (!sketch->has_scale || !chord) {
         return 0;
     }
     int root_index = chord->degree - 1;
     int root = scale_step_semitone(sketch, root_index) + chord->alteration;
+    if (chord->color != NULL && !chord->seventh) {
+        return color_chord_tones(sketch, chord, root_index, root, pcs);
+    }
     size_t count = chord->seventh ? 4 : 3;
     if (chord->alteration != 0) {
         /* an altered chord is a dominant seventh on its root, or its first three tones */
         int offsets[4];
-        standard_tonality_seventh_quality_semitones(STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, offsets);
+        bool from_entry = sketch->dominant_seventh != NULL && sketch->dominant_seventh->member_count == 4;
+        for (size_t i = 0; from_entry && i < 4; i++) {
+            offsets[i] = sketch->dominant_seventh->members[i].semitones;
+        }
+        if (!from_entry) {
+            standard_tonality_seventh_quality_semitones(STANDARD_TONALITY_SEVENTH_MAJOR_MINOR, offsets);
+        }
         for (size_t i = 0; i < count; i++) {
             pcs[i] = (sketch->tonic_pc + root + offsets[i] + 120) % 12;
         }
@@ -289,7 +322,7 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     for (size_t i = 0; i < count; i++) {
         pcs[i] = (sketch->tonic_pc + scale_step_semitone(sketch, (root_index + 2 * (int)i) % 7)) % 12;
     }
-    if (motive_sketch_minor(sketch) && chord->degree == 5) {
+    if (motive_sketch_raises_seventh(sketch) && chord->degree == 5) {
         pcs[1] = (sketch->tonic_pc + 11) % 12;
     }
     return count;
@@ -310,8 +343,8 @@ bool motive_sketch_implied_chord(const MotiveSketch *sketch, MotiveSketchChord *
     Rational best_time = msk_int(0);
     bool found = false;
     for (int k = 0; k < 7; k++) {
-        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
-        int pcs[4];
+        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false, NULL};
+        int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
         size_t count = motive_sketch_chord_tones(sketch, &chord, pcs);
         size_t hits = 0;
         Rational time = msk_int(0);

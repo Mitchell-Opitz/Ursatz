@@ -246,14 +246,29 @@ static void test_lists(void) {
     assert(cJSON_GetArraySize(list("cadences")) == 5);
     assert(cJSON_GetArraySize(list("theme_cadences")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("cadences"), 0)), "PAC") == 0);
-    assert(cJSON_GetArraySize(list("piece_materials")) == 3 && cJSON_GetArraySize(list("materials")) == 2);
-    assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), 0)), "omt.material.major") == 0 &&
-           strcmp(value_of(cJSON_GetArrayItem(list("materials"), 1)), "omt.material.natural-minor") == 0 &&
-           strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 2)), "style") == 0);
+    /* Major, natural minor, then the modal keys from the darkest (R-725); a piece's list ends with "style", a region's has none. */
+    static const char *const MATERIALS[7] = {"omt.material.major",    "omt.material.natural-minor", "omt.material.locrian", "omt.material.phrygian",
+                                             "omt.material.dorian",   "omt.material.mixolydian",    "omt.material.lydian"};
+    assert(cJSON_GetArraySize(list("piece_materials")) == 8 && cJSON_GetArraySize(list("materials")) == 7 &&
+           cJSON_GetArraySize(list("region_materials")) == 7);
+    for (int i = 0; i < 7; i++) {
+        assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), i)), MATERIALS[i]) == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(list("region_materials"), i)), MATERIALS[i]) == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), i)), MATERIALS[i]) == 0);
+    }
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 7)), "style") == 0);
     {
         const cJSON *names = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(list("pitch_class_names"), 1), "names");
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.major")->valuestring, "Db") == 0 &&
                strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.natural-minor")->valuestring, "C#") == 0);
+    }
+    /* The voicings of the snapshot (R-731), in id order, each with the chord types it fits. */
+    {
+        const cJSON *voicings = list("voicings");
+        assert(cJSON_GetArraySize(voicings) == 4 && strcmp(value_of(cJSON_GetArrayItem(voicings, 0)), "omt.voicing.shell-dominant") == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(voicings, 3)), "omt.voicing.shell-minor") == 0);
+        const cJSON *fits = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(voicings, 0), "fits");
+        assert(cJSON_GetArraySize(fits) == 1 && strcmp(cJSON_GetArrayItem(fits, 0)->valuestring, "omt.chord-type.dominant-seventh") == 0);
     }
     const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
     for (int i = 0; i < 4; i++) {
@@ -822,7 +837,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "4.6") == 0);
+    assert(strcmp(composer_api_version(), "4.7") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

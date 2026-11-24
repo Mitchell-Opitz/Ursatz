@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan_lanes.h>
 
 /*
@@ -34,7 +35,7 @@
 
 /* Registers the operator, working around Given material as harmony_phrase_register_given does (harmony_phrase.h).
    FILL_OK, or the registry's error. */
-FillResult harmony_prolong_register_given(FillOperatorRegistry *registry);
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry, const ComposerChords *chords);
 
 /*
  * The checker for this operator's candidates; pass it as FillConfig.checker. It reads the candidate's chords

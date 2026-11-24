@@ -97,6 +97,9 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload, co
             const char *name = harmonic_function_name(payload->harmony.function);
             ok = name && plan_json_add(object, "function", cJSON_CreateString(name));
         }
+        if (ok && payload->harmony.borrowed_from) {
+            ok = plan_json_add(object, "borrowed_from", cJSON_CreateString(payload->harmony.borrowed_from->id));
+        }
         break;
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
@@ -353,7 +356,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
                         PLAN_ROMAN_NUMERAL_MAX - 1);
         }
         snprintf(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX, "%s", numeral->valuestring);
-        return plan_json_read_function(reader, object, path, &payload->harmony);
+        return plan_json_read_function(reader, object, path, &payload->harmony) &&
+               plan_json_read_borrowed_from(reader, object, path, &payload->harmony);
     }
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:

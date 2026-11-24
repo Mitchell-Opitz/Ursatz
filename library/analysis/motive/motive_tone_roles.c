@@ -219,10 +219,10 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
     }
     ToneLineNote notes[MOTIVE_SKETCH_MAX_NOTES];
     ToneLineLabel labels[MOTIVE_SKETCH_MAX_NOTES];
-    const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false};
+    const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false, NULL};
     for (size_t i = 0; i < sketch->note_count; i++) {
         const MotiveSketchChord *chord = mch_chord_at(sketch, sketch->notes[i].onset);
-        int pcs[4];
+        int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
         size_t n = motive_sketch_chord_tones(sketch, chord ? chord : &tonic, pcs);
         notes[i].midi = sketch->notes[i].pitch;
         notes[i].onset = sketch->notes[i].onset;

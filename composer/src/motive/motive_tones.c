@@ -13,7 +13,7 @@
 static const int TRIAD_ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
 
 static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pitch) {
-    int pcs[4];
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
     size_t count = motive_sketch_chord_tones(sketch, chord, pcs);
     for (size_t i = 0; i < count; i++) {
         if (pcs[i] == util_pitch_class(pitch)) {
@@ -32,7 +32,7 @@ bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out) {
 }
 
 static MotiveSketchChord triad(int degree, Rational onset) {
-    MotiveSketchChord chord = {onset, degree, 0, 0, false};
+    MotiveSketchChord chord = {onset, degree, 0, 0, false, NULL};
     return chord;
 }
 
@@ -59,7 +59,7 @@ static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord)
     if (out->count > 0) {
         const MotiveSketchChord *last = &out->chords[out->count - 1];
         if (last->degree == chord->degree && last->alteration == chord->alteration && last->inversion == chord->inversion &&
-            last->seventh == chord->seventh) {
+            last->seventh == chord->seventh && last->color == chord->color) {
             return true;
         }
     }
@@ -73,6 +73,7 @@ static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord)
     slot->alteration = chord->alteration;
     slot->inversion = chord->inversion;
     slot->seventh = chord->seventh;
+    slot->color = chord->color;
     return true;
 }
 

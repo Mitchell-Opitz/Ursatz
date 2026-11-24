@@ -111,7 +111,7 @@ MotiveDevResult motive_relation_develop(const Motive *source, const MotiveRelati
     if (!keep_implied && source->chord_count == 0 && developed.chord_count == 1 && developed.has_scale &&
         msk_is_zero(developed.chords[0].onset) && motive_implied_chord(&developed, &implied) &&
         implied.degree == developed.chords[0].degree && implied.alteration == developed.chords[0].alteration &&
-        implied.inversion == developed.chords[0].inversion && implied.seventh == developed.chords[0].seventh) {
+        implied.inversion == developed.chords[0].inversion && implied.seventh == developed.chords[0].seventh && developed.chords[0].color == NULL) {
         developed.chord_count = 0;
     }
     return motive_overlay_sketch(&developed, source, out) ? MOTIVE_DEV_OK : MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;

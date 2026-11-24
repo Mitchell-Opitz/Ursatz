@@ -797,6 +797,22 @@ static void test_part_length_motif(void) {
     composer_response_destroy(&response);
 }
 
+/* A block accompaniment with a voicing (R-731): the theme composes and echoes "block"; a voicing with another pattern, one that is not a string
+   and one that names no entry are refused at /accompaniment/voicing. */
+static void test_accompaniment_voicing(void) {
+    ComposerResponse response;
+    assert(refuse("accompaniment", "{\"pattern\": \"block\", \"voicing\": \"omt.voicing.shell-dominant\"}", &response) == URSATZ_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document && strcmp(cJSON_GetObjectItemCaseSensitive(document, "accompaniment")->valuestring, "block") == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    expect_refused("accompaniment", "{\"pattern\": \"alberti\", \"voicing\": \"omt.voicing.shell-dominant\"}", URSATZ_ERR_REQUEST,
+                   "/accompaniment/voicing", "needs the accompaniment pattern \"block\"");
+    expect_refused("accompaniment", "{\"pattern\": \"block\", \"voicing\": 3}", URSATZ_ERR_REQUEST, "/accompaniment/voicing", "must be the id of a voicing");
+    expect_refused("accompaniment", "{\"pattern\": \"block\", \"voicing\": \"omt.voicing.no-such\"}", URSATZ_ERR_REQUEST,
+                   "/accompaniment/voicing", "is not a voicing");
+}
+
 static void test_refused(void) {
     /* A motive that names a file in place of its content. */
     expect_refused("motives",
@@ -873,6 +889,7 @@ int main(int argc, char **argv) {
     }
     if (!runs) {
         test_cancel_first();
+        test_accompaniment_voicing();
         test_refused();
         test_motif_too_long();
         test_part_length_motif();

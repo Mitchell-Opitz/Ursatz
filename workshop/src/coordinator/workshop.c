@@ -100,7 +100,7 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
         workshop_data_lock_release(lock);
         return recovery;
     }
-    if (!workshop_knowledge_init()) {
+    if (!workshop_knowledge_init_folder(resolved->data_dir)) {
         workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the knowledge cannot be read");
     }

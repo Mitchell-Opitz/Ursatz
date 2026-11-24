@@ -73,7 +73,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--limit", NULL, CLI_FLAG_VALUE, "<n>", "how many records or results at most"},
     {"--list-ops", NULL, CLI_FLAG_SWITCH, NULL, "print every operation, with its parameters and the forms it applies to"},
     {"--list-schemas", NULL, CLI_FLAG_SWITCH, NULL, "list the schema and sequence names and exit"},
-    {"--material", "--mode", CLI_FLAG_VALUE, "<word>", "major or minor (style, where the style names one)"},
+    {"--material", "--mode", CLI_FLAG_VALUE, "<word>", "major, minor or a church mode (style, where the style names one)"},
     {"--measures", NULL, CLI_FLAG_VALUE, "<first>-<last>", "the measures to show, <first>-<last>, inclusive: as written in the score for analyze --view reading, bars from 1 for show"},
     {"--meter", NULL, CLI_FLAG_VALUE, "<n/m>", "the meter, for example 4/4"},
     {"--midi", NULL, CLI_FLAG_VALUE, "<file>", "write the result as a MIDI file"},

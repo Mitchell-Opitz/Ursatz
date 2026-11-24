@@ -10,8 +10,8 @@ The settings of the segments motive generator ([cli-random-motive.md](../../cli/
 | `pickup_one_in` | 4 | 0 to 64 | A pickup (half a beat or a beat) in one motive of this many; 0 never draws one and draws no random number for it. | `SEGMENT_PICKUP_ONE_IN` |
 | `shapes_one_bar` | `repeat` 3, `contrast` 2 | weighted list | The shape of a one-bar motive: a a' or a b. | `SHAPE_WEIGHTS_ONE_BAR` |
 | `shapes_two_bars` | `repeat` 3, `contrast` 2, `repeat_contrast` 2 | weighted list | The shape of a two-bar motive; `repeat_contrast` (a a' b) only with an even meter. | `SHAPE_WEIGHTS_TWO_BARS` |
-| `plans_two` | `I-V` 3, `I-IV` 1, `I-I` 1 | weighted list | The chords of a two-segment motive. | the weights of `PLANS_TWO` |
-| `plans_three` | `I-V-I` 2, `I-IV-I` 1 | weighted list | The chords of a three-segment motive. | the weights of `PLANS_THREE` |
+| `plans_two` | `I-V` 3, `I-IV` 1, `I-I` 1 | weighted list | The chords of a two-segment motive. In a modal key V is the mode's approach chord and IV its predominant (modes.md). | the weights of `PLANS_TWO` |
+| `plans_three` | `I-V-I` 2, `I-IV-I` 1 | weighted list | The chords of a three-segment motive. In a modal key V and IV read as for `plans_two`. | the weights of `PLANS_THREE` |
 | `features` | `dotted` 1, `leap` 1, `repeat` 1 | weighted list | The distinctive feature of segment a. A feature that cannot fit its cell gives way to the next one with a weight. | `FEATURE_KINDS` (equal) |
 | `leap.low` | 5 | 3 to 12 | The smallest leap, in semitones, a leap feature may be. | `SEGMENT_LEAP_LOW` |
 | `leap.high` | 9 | `leap.low` to 12 | The largest. | `SEGMENT_LEAP_HIGH` |
@@ -37,6 +37,7 @@ The settings of the segments motive generator ([cli-random-motive.md](../../cli/
 | `syncopation_one_in` | 0 | 0 to 64 | A cell, and a segment boundary, gets a syncopation one time in this many; 0 never and draws no random number. Simple meters only (not 6, 9 or 12 beats a bar), never on the motive's last note. Off by default; R-422. | new (R-454) |
 | `syncopation_types` | `off_beat` 1, `tie_beat` 1, `tie_bar` 1, `anticipation` 1 | weighted list | Which figure: an off-beat note held across the beat, a 3+3+2 tie across the beat, the last note before a barline held across it, or a segment's first note arriving early on a chord change. Matters only with `syncopation_one_in`; R-422. | new |
 | `syncopation_levels` | `eighth` 1, `sixteenth` 1 | weighted list | The short note of the figure is a half beat or a quarter beat. Matters only with `syncopation_one_in`; R-422. | new |
+| `color_note` | 4 | 0 to 8 | In a modal key, the first this many tries of a setup keep a motif only when the mode's characteristic step sounds on a beat (a strong beat first). Soft; R-732, [modes.md](modes.md#the-color-note). | new (P69) |
 | `skips_per_motif` | 11 | 0 to 11 | The most intervals of 3 or 4 semitones (a skip) in a motive, counted beside `leaps_per_motif` on every adjacent interval; 11 never rejects. Off by default; R-422. | new (R-455) |
 | `plan` | absent | 1 to 4 chords | A chord plan as written instead of drawn from `plans_two` and `plans_three`: Roman numerals `I` to `VII` in any case, an optional `o` or `°` (ignored), and a place `@bar` or `@bar:beat` (bar 1 or 2, beat 1 to 12; `@2` is `@2:1`). Either no chord has a place (at most 3, one to a segment) or every chord after the first has one, rising; the first is at 1:1 and may be written `@1`. Written back upper case with the place only when set (`"II"`, `"V@1:3"`); not written when absent. A plan that does not fit the meter, bars, shapes or endings allowed is refused by the run at `/preferences/motif/plan`. Off by default; R-422. | new (R-456 to R-461) |
 

@@ -158,6 +158,8 @@ CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySeg
     *found = false;
     int old_tonic = common_practice_key_index_tonic(old_key);
     CommonPracticeKeyMode old_mode = common_practice_key_index_mode(old_key);
+    CommonPracticeWeightedConfig identify_config = common_practice_weighted_config_default();
+    identify_config.materials = materials; /* the chords are read with the snapshot's chord types (R-728); NULL: the fallback */
     unsigned new_collection = natural_collection(new_key, materials);
     for (size_t i = segment_count; i-- > 0;) {
         int measure = measures->segment_measure[i];
@@ -173,7 +175,7 @@ CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySeg
         }
         CommonPracticeWeightedResult result;
         CommonPracticeWeightedStatus identified =
-            common_practice_identify_weighted(segments[i].source, old_tonic, old_mode, NULL, &result);
+            common_practice_identify_weighted(segments[i].source, old_tonic, old_mode, &identify_config, &result);
         if (identified == COMMON_PRACTICE_WEIGHTED_ERR_ALLOC) {
             return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
         }

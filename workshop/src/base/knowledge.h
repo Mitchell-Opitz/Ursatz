@@ -16,6 +16,11 @@
    read. workshop_open calls it; so does a test that uses the services without opening a workshop. */
 bool workshop_knowledge_init(void);
 
+/* As workshop_knowledge_init, with every .json file of the data folder's knowledge folder as a user file, in name order (a folder with none, or none
+   at all, adds nothing; the files are read, never written). False with a message on stderr when a file cannot be read or a user entry is
+   broken: the message names the file, the entry and the field. NULL `data_dir` is workshop_knowledge_init. */
+bool workshop_knowledge_init_folder(const char *data_dir);
+
 /* Frees the snapshot. A no-op when there is none. */
 void workshop_knowledge_shutdown(void);
 

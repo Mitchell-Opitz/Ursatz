@@ -5,6 +5,7 @@
 #include <theory/vocabulary/texture_rules.h>
 
 #include "texture/texture_internal.h"
+#include "util/util.h"
 
 /* The widest a voicing of three notes spans, in semitones, and the narrowest gap between two of its notes. */
 #define VOICING_SPAN 16
@@ -182,12 +183,58 @@ static bool choose_voicing(const int pcs[3], int low, int high, const int *previ
     return true;
 }
 
-/* The three pitch classes a chord is voiced in: its root, third and fifth, or, with a seventh, the seventh for the fifth. */
+/*
+ * The three pitch classes a chord is voiced in: its root, third and fifth, or, with a seventh, the seventh for the fifth. The
+ * diminished tonic of a locrian key is voiced as its root, third and the root again (an octave up): its diminished fifth is not
+ * sounded (R-725).
+ */
 static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
+    if (context->chord_colored[chord]) {
+        memcpy(out, context->chord_voice[chord], 3 * sizeof(int));
+        return;
+    }
     const int *pcs = context->chord_pcs[chord];
     out[0] = pcs[0];
     out[1] = pcs[1];
     out[2] = context->chord_pc_count[chord] > 3 ? pcs[3] : pcs[2];
+    bool tonic = pcs[0] == spelled_key_tonic_pitch_class(&context->key);
+    if (tonic && context->chord_pc_count[chord] == 3 && (pcs[2] - pcs[0] + 12) % 12 == 6) {
+        out[2] = pcs[0];
+    }
+}
+
+/*
+ * The block of a K3 voicing (R-731) on a beat whose chord sounds it: the members on the chord's root, the lowest note the root's from C3
+ * (MIDI 48) up, one note per member, low to high. False when the block would not lie above the bass and below the melody of the beat.
+ */
+static bool voice_block(const AccompContext *context, size_t chord, Rational start, Rational end, int out[ACCOMP_VOICES], size_t *size) {
+    const VoicingEntry *voicing = context->voicing;
+    /* The voicing has its own register: the constraint's low holds, its high does not (a shimmer spans 21 semitones, the default window 19),
+       the melody still closes the block from above. */
+    int low = context->low;
+    int high = 127;
+    for (size_t i = 0; i < context->bass_count; i++) {
+        const AccompLine *line = &context->bass[i];
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch + 1 > low) {
+            low = line->pitch + 1;
+        }
+    }
+    for (size_t i = 0; i < context->melody_count; i++) {
+        const AccompLine *line = &context->melody[i];
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch - 1 < high) {
+            high = line->pitch - 1;
+        }
+    }
+    int bottom = 48 + util_pitch_class(context->chord_pcs[chord][0]);
+    if (voicing == NULL || voicing->member_count > ACCOMP_VOICES || bottom < low ||
+        bottom + voicing->members[voicing->member_count - 1].semitones > high) {
+        return false;
+    }
+    for (size_t m = 0; m < voicing->member_count; m++) {
+        out[m] = bottom + voicing->members[m].semitones;
+    }
+    *size = voicing->member_count;
+    return true;
 }
 
 /* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */
@@ -250,6 +297,12 @@ static size_t statement_ladder(const AccompContext *context, size_t chord, Ratio
         }
     }
     for (int pitch = low; pitch <= high; pitch++) {
+        if (context->chord_colored[chord]) {
+            if ((context->chord_mask[chord] >> (pitch % 12)) & 1u) {
+                ladder[rungs++] = pitch;
+            }
+            continue;
+        }
         for (size_t k = 0; k < context->chord_pc_count[chord]; k++) {
             if (pitch % 12 == context->chord_pcs[chord][k]) {
                 ladder[rungs++] = pitch;
@@ -386,6 +439,13 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         }
         voiced_pcs(context, accomp_chord_at(context, start), pcs);
         beat_window(context, start, out->beat_end[b], &low, &high);
+        if (pattern == PLAN_ACCOMPANIMENT_BLOCK && context->chord_voiced[accomp_chord_at(context, start)] &&
+            voice_block(context, accomp_chord_at(context, start), start, out->beat_end[b], out->voicing[b], &out->voicing_size[b])) {
+            out->voiced[b] = true;
+            previous = out->voicing[b];
+            previous_size = out->voicing_size[b];
+            continue;
+        }
         if (!choose_voicing(pcs, low, high, previous, previous_size, previous ? 0 : FIRST_SLACK, rng, out->voicing[b],
                             &out->voicing_size[b])) {
             return false;

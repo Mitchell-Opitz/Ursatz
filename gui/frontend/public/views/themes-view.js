@@ -580,6 +580,12 @@ export function buildThemeAccompanimentSection(state, itemsOf, options) {
     ),
   );
   const accPattern = themeField(accompaniment, "Pattern", themeSelect(ThemesModel.PATTERNS, state.accompaniment.pattern || "any"));
+  /* A block pattern may sound its chords with a voicing from the vocabulary (R-731); none by default. */
+  const accVoicing = themeField(
+    accompaniment,
+    "Voicing",
+    themeSelect([{ value: "", label: "None" }, ...ThemesModel.VOICINGS], state.accompaniment.voicing || ""),
+  );
   const accPicker = buildThemeMotifPicker({
     role: "accompaniment",
     items: itemsOf,
@@ -592,11 +598,14 @@ export function buildThemeAccompanimentSection(state, itemsOf, options) {
   function syncAccompaniment() {
     state.accompaniment.kind = accKind.value;
     state.accompaniment.pattern = accPattern.value;
+    state.accompaniment.voicing = accPattern.value === "block" ? accVoicing.value : "";
     accPattern.parentElement.hidden = accKind.value !== "pattern";
+    accVoicing.parentElement.hidden = accKind.value !== "pattern" || accPattern.value !== "block";
     accPicker.el.hidden = accKind.value !== "motive";
   }
   accKind.addEventListener("input", syncAccompaniment);
   accPattern.addEventListener("input", syncAccompaniment);
+  accVoicing.addEventListener("input", syncAccompaniment);
   syncAccompaniment();
   section.append(accompaniment, accPicker.el);
   return section;

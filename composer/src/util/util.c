@@ -6,6 +6,7 @@
 
 #include <model/pitch/midi_pitch.h>
 #include <model/pitch/pitch_arithmetic.h>
+#include <theory/tonality/modal_chords.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
@@ -51,7 +52,58 @@ bool composer_material_valid(const PitchMaterial *material) {
 }
 
 bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
-    return materials != NULL && material != NULL && (material == materials->major || material == materials->natural_minor);
+    return materials != NULL && material != NULL &&
+           (material == materials->major || material == materials->natural_minor || pitch_material_is_modal_key(materials, material));
+}
+
+bool composer_material_same_mode(const PitchMaterial *a, const PitchMaterial *b) {
+    if (a == b) {
+        return true;
+    }
+    if (pitch_material_is_modal_key(NULL, a) || pitch_material_is_modal_key(NULL, b)) {
+        return false;
+    }
+    return composer_material_is_minor(a) == composer_material_is_minor(b);
+}
+
+bool composer_key_same_mode(const SpelledKey *a, const SpelledKey *b) {
+    return composer_material_same_mode(a != NULL ? a->material : NULL, b != NULL ? b->material : NULL);
+}
+
+bool composer_material_counts_as_minor(const PitchMaterial *material) {
+    return composer_material_is_minor(material) || pitch_material_is_modal_key(NULL, material);
+}
+
+unsigned composer_key_color_mask(const SpelledKey *key) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    unsigned mask = 0;
+    for (size_t i = 0; material != NULL && i < material->characteristic_count; i++) {
+        int step = pitch_material_step(material, material->characteristic_degrees[i]);
+        if (step >= 0) {
+            mask |= 1u << ((spelled_key_tonic_pitch_class(key) + step) % 12);
+        }
+    }
+    return mask;
+}
+
+const char *composer_key_word(const SpelledKey *key) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    if (material != NULL && pitch_material_is_modal_key(NULL, material)) {
+        return material->key_word != NULL ? material->key_word : material->name;
+    }
+    return composer_key_is_minor(key) ? "minor" : "major";
+}
+
+int composer_material_default_tonic(const PitchMaterial *material) {
+    int rotation = pitch_material_major_rotation(material);
+    if (rotation > 0) {
+        return standard_tonality_natural_degree_semitone(rotation);
+    }
+    return composer_material_is_minor(material) ? 9 : 0;
+}
+
+bool composer_material_raises_seventh(const PitchMaterial *material) {
+    return pitch_material_is_natural_minor(material);
 }
 
 bool composer_key_is_minor(const SpelledKey *key) {
@@ -68,9 +120,12 @@ unsigned util_scale_mask(int tonic_pitch_class, const PitchMaterial *material) {
 
 /* The scale with the raised sixth and seventh beside the natural ones, as counterpoint writes a minor key. */
 unsigned util_scale_mask_melodic(int tonic_pitch_class, const PitchMaterial *material) {
+    if (!composer_material_raises_seventh(material)) {
+        return util_scale_mask(tonic_pitch_class, material);
+    }
     unsigned mask = util_scale_mask_raised_seventh(tonic_pitch_class, material) | util_scale_mask(tonic_pitch_class, material);
     int sixth = pitch_material_step(material, 6);
-    if (composer_material_is_minor(material) && sixth >= 0) {
+    if (sixth >= 0) {
         mask |= 1u << util_pitch_class(tonic_pitch_class + sixth + 1);
     }
     return mask;
@@ -78,6 +133,9 @@ unsigned util_scale_mask_melodic(int tonic_pitch_class, const PitchMaterial *mat
 
 unsigned util_scale_mask_raised_seventh(int tonic_pitch_class, const PitchMaterial *material) {
     unsigned mask = util_scale_mask(tonic_pitch_class, material);
+    if (!composer_material_raises_seventh(material)) {
+        return mask;
+    }
     int seventh = pitch_material_step(material, 7);
     if (seventh >= 0) {
         mask &= ~(1u << util_pitch_class(tonic_pitch_class + seventh));

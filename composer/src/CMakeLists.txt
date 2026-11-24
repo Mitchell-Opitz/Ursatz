@@ -70,6 +70,7 @@ add_library(ursatz_composer_engine STATIC
     harmony/harmony_rhythm.c
     harmony/harmony_request.c
     harmony/harmony_progression.c
+    harmony/harmony_chords.c
     harmony/harmony_hear.c
     harmony/harmony_check.c
     harmony/harmony_phrase.c
@@ -118,6 +119,7 @@ add_library(ursatz_composer_engine STATIC
     preferences/preferences.c
     preferences/preferences_development.c
     preferences/preferences_critic.c
+    preferences/preferences_harmony.c
     check/form_hear.c
     structure/form_record.c
     structure/form_spec.c

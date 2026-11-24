@@ -136,7 +136,7 @@ static size_t check_choices(const Plan *plan, const FillRecord *record, const ch
 static size_t check_refusal(Plan *plan, const Motive *basic, LaneSpanId span, const char *label) {
     assert(plan_lane_span_set_state(plan, span, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     FillOperatorRegistry *registry = fill_registry_create();
-    assert(registry && melody_fill_register(registry, NULL) == FILL_OK);
+    assert(registry && melody_fill_register(registry, NULL, test_composer_chords()) == FILL_OK);
     const FillOperator *operator_ = fill_registry_at(registry, 0);
     FillTarget target = {FILL_TARGET_LANE_SPAN, (size_t)span};
     FillRng rng;

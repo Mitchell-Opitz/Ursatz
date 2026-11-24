@@ -256,7 +256,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
 /* The pitch moved from the other mode of the tonic into `to` (R-499). */
 int return_map_pitch(int tonic, const PitchMaterial *to, int pitch) {
     int degree = util_pitch_class(pitch - tonic);
-    if (composer_material_is_minor(to)) {
+    if (composer_material_counts_as_minor(to)) {
         return degree == 4 || degree == 9 ? pitch - 1 : pitch;
     }
     return degree == 3 || degree == 8 || degree == 10 ? pitch + 1 : pitch;
@@ -281,7 +281,7 @@ bool return_copy_change_mode(ReturnCopy *copy, SpelledKey home, const PitchMater
         for (size_t c = 0; c < span->constraint_count; c++) {
             map_key(&span->constraints[c], to);
             /* The minor phrase model has one predominant: a half-cadence phrase of four bars deals a chord over two bars. */
-            if (composer_material_is_minor(to) && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
+            if (composer_material_counts_as_minor(to) && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
                 span->constraints[c].params.harmony_shape.split_at_bars = false;
             }
         }
@@ -440,7 +440,7 @@ bool return_key_shift(const Plan *source_plan, PlanSpan source, const Plan *targ
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_is_minor(&a[i].key) != composer_key_is_minor(&b[i].key) || (difference >= 0 && difference != step)) {
+            !composer_key_same_mode(&a[i].key, &b[i].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
@@ -462,7 +462,7 @@ bool return_mode_shift_by(const Plan *source_plan, PlanSpan source, const Plan *
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_is_minor(&a[i].key) == composer_key_is_minor(&b[i].key) || composer_key_is_minor(&b[i].key) != composer_key_is_minor(&b[0].key) || (difference >= 0 && difference != step)) {
+            composer_key_same_mode(&a[i].key, &b[i].key) || !composer_key_same_mode(&b[i].key, &b[0].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
@@ -599,7 +599,7 @@ static bool on_cell(Rational time, Rational cell, size_t *index) {
     return true;
 }
 
-bool form_return_melody_fits(const Plan *plan, NodeId section) {
+bool form_return_melody_fits(const Plan *plan, const ComposerChords *tones, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     KeyPiece pieces[MAX_KEY_PIECES];
     size_t piece_count;
@@ -613,7 +613,8 @@ bool form_return_melody_fits(const Plan *plan, NodeId section) {
         return true;
     }
     SpelledKey key = pieces[0].key;
-    if (!harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &chord_count, &metre)) {
+    HarmonyKind kind = harmony_kind(tones, &key);
+    if (!harmony_read_lane_for(plan, span, &kind, chords, &chord_count, &metre)) {
         return false;
     }
     /* The cell each chord starts on. */
@@ -647,7 +648,7 @@ bool form_return_melody_fits(const Plan *plan, NodeId section) {
                 unsigned mask;
                 unsigned seventh;
                 int pitch_class = util_pitch_class(notes->notes[n].midi);
-                fits = cell < starts[chord_count] && melody_chord_mask(&key, &chords[c], &mask, &seventh) &&
+                fits = cell < starts[chord_count] && melody_chord_mask(tones, &key, &chords[c], &mask, &seventh) &&
                        ((mask >> pitch_class) & 1u);
             }
         }
@@ -894,7 +895,7 @@ static bool add_payload(FillCandidateList *out, const char *label, ReturnPayload
 
 static bool return_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    const MelodyFillParams *range = context;
+    const MelodyFillParams *range = composer_context_params(context);
     MelodyFillParams defaults = melody_fill_params_default();
     NodeId source;
     SectionReturnVariation variation;
@@ -964,7 +965,7 @@ static PlanResult return_apply(Plan *plan, FillTarget target, const FillCandidat
     return return_copy_write(plan, target.id, &payload->result, PLAN_NOTE_FROM_RETURN);
 }
 
-FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody) {
+FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody, const ComposerChords *chords) {
     FillOperator operator_;
     if (!registry) {
         return FILL_ERR_NULL;
@@ -981,8 +982,7 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.applies = return_applies;
     operator_.generate = return_generate;
     operator_.apply = return_apply;
-    operator_.context = (void *)melody;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, melody, chords);
 }
 
 /* ------------------------------------------------------------- the checker */

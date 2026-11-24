@@ -35,6 +35,9 @@ typedef enum {
  */
 bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]);
 
+/* The same, read from the chord types of `materials` (R-728); NULL materials are the fallback above. */
+bool common_practice_seventh_intervals_with(const CommonPracticeMaterials *materials, CommonPracticeSeventh seventh, int out[4]);
+
 /* Quality label this framework assigns, e.g. "dominant7", "half-diminished7". */
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh);
 

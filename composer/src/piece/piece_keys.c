@@ -307,7 +307,12 @@ static PieceResult refuse_region(size_t index, size_t *refused, char *message, s
     return PIECE_ERR_BAD_REQUEST;
 }
 
-/* The words of a refusal for a region the Composer does not write: its material, until P69 (R-611). */
+/* Whether a region's material is one the Composer writes: major, natural minor or a church mode, on any tonic (R-611, R-730). */
+static bool region_material_written(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
+    return composer_material_supported(materials, material);
+}
+
+/* The words of a refusal for a region the Composer does not write: its material (R-611). */
 static PieceResult refuse_material(size_t index, const char *section, int center, const PitchMaterial *material, size_t *refused,
                                    char *message, size_t size) {
     /* the center spelled in the refused material (the fewest accidentals in its signature), else by its pitch class */
@@ -318,9 +323,8 @@ static PieceResult refuse_material(size_t index, const char *section, int center
         !pitch_spelling_name(letter, accidental, tonic, sizeof(tonic))) {
         snprintf(tonic, sizeof(tonic), "%s", center >= 0 && center < 12 ? pitch_class_name(center, false) : "?");
     }
-    return refuse_region(index, refused, message, size,
-                         "section '%s' is in %s %s: the Composer writes major and natural minor keys until P69", section, tonic,
-                         material && material->name ? material->name : "no material");
+    return refuse_region(index, refused, message, size, "section '%s' is in %s %s: the Composer writes major, minor and modal keys", section,
+                         tonic, material && material->name ? material->name : "no material");
 }
 
 PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
@@ -355,7 +359,7 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
             if (!material) {
                 return refuse_region(i, refused, message, message_size, "section '%s': no material is named '%s'", section->id, region->material);
             }
-            if (!composer_material_supported(&materials, material)) {
+            if (!region_material_written(&materials, material)) {
                 char tonic[SECTION_TONIC_MAX + 8];
                 snprintf(tonic, sizeof(tonic), "%s major", region->tonic);
                 SpelledKey center;
@@ -403,7 +407,7 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
         if (region_resolve_named(knowledge, region->relation, &from, &reached, why, sizeof(why)) != REGION_RELATION_OK) {
             return refuse_region(i, refused, message, message_size, "section '%s': %s", section->id, why);
         }
-        if (reached.kind != REGION_TONAL_MODAL || !composer_material_supported(&materials, reached.material)) {
+        if (reached.kind != REGION_TONAL_MODAL || !region_material_written(&materials, reached.material)) {
             return refuse_material(i, section->id, reached.center, reached.material, refused, message, message_size);
         }
         entry->key = plan_key_of_pitch_class(reached.center, reached.material);

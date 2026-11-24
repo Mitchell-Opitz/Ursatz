@@ -44,6 +44,38 @@ meter.value = "3/4";
 meter.dispatchEvent({ type: "input" });
 check(editor.state.meter === "3/4", "a changed meter reaches the form state");
 
+/* A block accompaniment takes a voicing from the vocabulary (R-731): the select is there, hidden until a block pattern is asked for, and its
+ * choice reaches the form state. */
+function selectLabelled(text) {
+  for (const section of Object.values(editor.sections)) {
+    for (const label of section.querySelectorAll("label")) {
+      if (label.textContent.trim().startsWith(text)) {
+        return label.querySelector("select");
+      }
+    }
+  }
+  return null;
+}
+const kind = selectLabelled("Accompaniment");
+const pattern = selectLabelled("Pattern");
+const voicing = selectLabelled("Voicing");
+check(kind && pattern && voicing, "the accompaniment section has a Voicing select");
+check(voicing.options.map((o) => o.value).join() === ["", ...ThemesModel.VOICINGS.map((entry) => entry.value)].join() && ThemesModel.VOICINGS.length >= 4, "it offers none and the vocabulary's voicings");
+check(voicing.parentElement.hidden === true, "it is hidden while there is no accompaniment pattern");
+kind.value = "pattern";
+kind.dispatchEvent({ type: "input" });
+pattern.value = "block";
+pattern.dispatchEvent({ type: "input" });
+check(voicing.parentElement.hidden === false, "it shows for a block pattern");
+voicing.value = "omt.voicing.shell-dominant";
+voicing.dispatchEvent({ type: "input" });
+check(editor.state.accompaniment.voicing === "omt.voicing.shell-dominant" && ThemesModel.themeOfBody(ThemesModel.bodyFromForm(editor.state)).accompaniment.voicing === "omt.voicing.shell-dominant", "its choice reaches the form state and the body");
+pattern.value = "alberti";
+pattern.dispatchEvent({ type: "input" });
+check(editor.state.accompaniment.voicing === "" && voicing.parentElement.hidden === true, "another pattern drops the voicing");
+kind.value = "none";
+kind.dispatchEvent({ type: "input" });
+
 await editor.compose({});
 check(statusEl.textContent === "Give a version note." && statusEl.classList.contains("error"), "Compose of a changed form without a version note is refused");
 check(page.commands("item.compose").length === 0, "and sends nothing");

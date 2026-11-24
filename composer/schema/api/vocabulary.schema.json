@@ -42,6 +42,8 @@
     "preference_keys",
     "rules",
     "relations",
+    "region_materials",
+    "voicings",
     "schemas",
     "theme_developments",
     "lanes",
@@ -101,6 +103,20 @@
         "$ref": "#/$defs/relation"
       }
     },
+    "voicings": {
+      "type": "array",
+      "description": "The voicings of the knowledge snapshot (K3, R-731), user entries included, in id order: what an accompaniment of pattern block may sound its chords with, and the chord types each fits.",
+      "items": {
+        "type": "object",
+        "required": ["value", "label", "fits"],
+        "additionalProperties": false,
+        "properties": {
+          "value": { "type": "string" },
+          "label": { "type": "string" },
+          "fits": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
     "theme_form_members": {
       "description": "The members of a theme request that make its form (Composer API 4.4).",
       "type": "array",
@@ -150,6 +166,14 @@
     "piece_materials": {
       "type": "array",
       "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "region_materials": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The materials a piece's region may name (R-611, R-730): the same as materials, with no \"style\" entry.",
       "items": {
         "$ref": "#/$defs/choice"
       }

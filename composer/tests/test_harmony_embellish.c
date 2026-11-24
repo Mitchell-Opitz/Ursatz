@@ -98,9 +98,9 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed, const Harmony
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = harmony_phrase_checker;
-    assert(harmony_phrase_register(registry) == FILL_OK);
+    assert(harmony_phrase_register(registry, test_composer_chords()) == FILL_OK);
     if (embellish) {
-        assert(harmony_embellish_register(registry, params) == FILL_OK);
+        assert(harmony_embellish_register(registry, params, test_composer_chords()) == FILL_OK);
     }
     assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);

@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_HARMONY_MOTIVE_H
 
 #include <ursatz_composer/fill_operator.h>
+#include <ursatz_composer/harmony_chords.h>
 
 /*
  * The harmony operator for a target whose ideas were developed from motives (R-344): the chords the motives stage wrote
@@ -13,6 +14,6 @@
 #define HARMONY_MOTIVE_OPERATOR_NAME "harmony-motive"
 
 /* Registers the operator, working around Given material as harmony_phrase_register_given does. */
-FillResult harmony_motive_register(FillOperatorRegistry *registry);
+FillResult harmony_motive_register(FillOperatorRegistry *registry, const ComposerChords *chords);
 
 #endif

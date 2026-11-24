@@ -1,16 +1,18 @@
 #ifndef URSATZ_ANALYSIS_DIMENSION_DIMENSION_H
 #define URSATZ_ANALYSIS_DIMENSION_DIMENSION_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "model/core/rational.h"
+#include "model/pitch/pitch_material.h"
 #include "theory/vocabulary/contrast_aspect.h"
 
 /*
  * The dimensions of music a span can be measured in, and how far two spans contrast (R-709, target architecture 5.3). A
  * dimension is a name and a measure over a span of notes; the table in dimension.c is the one place that lists them, so a new one
- * (brightness, harmonic tension, dynamics, intensity: later phases) is a row and a function. This stage has register (the mean
- * MIDI pitch) and density (notes per beat). Every value is an exact Rational.
+ * (harmonic tension, dynamics, intensity: later phases) is a row and a function. It has register (the mean MIDI pitch), density (notes
+ * per beat) and brightness (R-730: from 1, locrian, to 7, lydian, read from the notes against a center, see measure_brightness). Every value is an exact Rational.
  *
  * A DimensionSpan is the notes of a span in onset order, each with its onset from the span's start, its duration (whole notes) and
  * its MIDI pitch, the span's length in whole notes and the length of its beat. An empty span, a length or beat that is not positive,
@@ -25,7 +27,7 @@
  *   density   the absolute difference of the notes per beat.
  */
 
-typedef enum { DIMENSION_REGISTER = 0, DIMENSION_DENSITY, DIMENSION_COUNT } Dimension;
+typedef enum { DIMENSION_REGISTER = 0, DIMENSION_DENSITY, DIMENSION_BRIGHTNESS, DIMENSION_COUNT } Dimension;
 
 typedef struct {
     Rational onset;    /* from the start of the span */
@@ -38,6 +40,9 @@ typedef struct {
     size_t count;
     Rational length; /* of the span, in whole notes */
     Rational beat;   /* the length of one beat, in whole notes (1/4 in 4/4, 3/8 in 6/8) */
+    bool has_center;                /* brightness only: the pitch class (0 to 11) the span is measured against */
+    int center;
+    const PitchMaterial *material;  /* brightness only: the span's material, which answers for a degree that does not sound; NULL for none */
 } DimensionSpan;
 
 typedef enum {

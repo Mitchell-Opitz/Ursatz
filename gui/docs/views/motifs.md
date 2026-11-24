@@ -55,7 +55,7 @@ picker (the chosen subjects are linked after the first Save; a link that fails
 shows on the detail page and the motif stays saved), the same editor, Save
 (it sends the note `Created`) and a Random section (below). The form has the role (melodic or accompaniment), the form (full,
 rhythm or contour), the note
-list with its syntax hint, the meter, a Mode select (major or minor), the pickup in exact
+list with its syntax hint, the meter, a Mode select (major, minor and the modal keys, from the vocabulary), the pickup in exact
 beats (`0`, `1` or `1/2`), an optional Base harmony field and a Segments table
 (named note ranges such as head and tail: label of 1 to 8 characters, first
 and last note counted from 1; rows are added and removed in place; Liquidation

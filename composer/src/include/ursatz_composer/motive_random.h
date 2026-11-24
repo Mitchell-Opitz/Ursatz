@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
 #include <ursatz_composer/style.h>
@@ -65,8 +66,10 @@ typedef enum {
  *   pickup_one_in     a pickup (half a beat or a beat) in one motive of this many; 0 never draws one
  *   shapes_one_bar    a a' (repeat), a b (contrast), for a one-bar motive
  *   shapes_two_bars   a a', a b, a a' b (repeat_contrast), for a two-bar motive (the third only with an even meter)
- *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given
- *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given
+ *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given;
+ *                     in a modal key V is the mode's approach chord and IV its predominant (composer_modal_plan_degree)
+ *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given;
+ *                     in a modal key V and IV read as for plans_two
  *   features          the distinctive feature of segment a: dotted figure, leap, repeated note
  *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
  *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
@@ -123,10 +126,16 @@ typedef enum {
  */
 #define MOTIVE_RANDOM_PLAN_MAX 4
 
+/* The longest color suffix with its NUL ("add9", "maj9"). */
+#define MOTIVE_RANDOM_COLOR_SUFFIX_MAX 8
+
 typedef struct {
     int degree;    /* 1 to 7 */
     unsigned bar;  /* 0 when the chord falls on its segment, else 1 or 2, counted from the first downbeat */
     unsigned beat; /* 1 to the bar's beats, when bar is not 0 */
+    /* The chord's color suffix (R-727: "add9", "add6", "69", "9", "maj9", "q3", "q4"), "" for a plain triad; resolved to a type where the
+       motif is drawn, which needs the options' knowledge (a plan with a suffix and none is refused). */
+    char color[MOTIVE_RANDOM_COLOR_SUFFIX_MAX];
 } MotiveRandomPlanChord;
 
 typedef struct {
@@ -148,6 +157,8 @@ typedef struct {
     bool leap_recovery;
     bool pickup_from_accent;
     Rational contrast_fidelity_min;
+    /* motif.color_chords (R-727): how often a drawn plan chord takes a color type of the options' `color` (a ratio n/d; den 0 or 0/d never). */
+    Rational color_chords;
     unsigned long long_on_weak;
     bool final_long;
     bool compound_beats;
@@ -161,6 +172,8 @@ typedef struct {
     unsigned long syncopation_types[4];
     unsigned long syncopation_levels[2];
     unsigned skips_per_motif;
+    /* Color note (P69, R-732): in a modal key, the first this many tries of a setup keep a motif only when a note on a beat is one of the mode's characteristic steps (0 to 8); 0 asks for none, a major or minor key has none. */
+    unsigned color_note;
     size_t plan_count;
     MotiveRandomPlanChord plan[MOTIVE_RANDOM_PLAN_MAX];
 } MotiveRandomPreferences;
@@ -184,6 +197,9 @@ typedef struct {
     unsigned long seed;
     /* The SEGMENTS strategy's settings. NULL for the defaults; not owned. */
     const MotiveRandomPreferences *preferences;
+    /* The types a drawn chord may take (harmony.color.types, R-727), resolved in `knowledge` (with it, a given plan's color suffixes are
+       too); NULL draws no color chord. Not owned. */
+    const ComposerColor *color;
     /*
      * Variety (R-673). 0, the zero value, draws as it always did and reads neither pool nor avoid. Above 0 (at most 20) each motive
      * is chosen among `pool` candidates (2 to 8; at least the candidates a style asks for) for being unlike the avoid motives and

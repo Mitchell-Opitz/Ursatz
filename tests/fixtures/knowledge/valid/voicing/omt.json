@@ -1,0 +1,50 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.voicing.open-triad",
+      "kind": "voicing",
+      "name": "open triad",
+      "content": {
+        "members": [
+          {
+            "role": "root",
+            "semitones": 0
+          },
+          {
+            "role": "third",
+            "semitones": 4
+          },
+          {
+            "role": "fifth",
+            "semitones": 19
+          }
+        ],
+        "fits": [
+          "omt.chord-type.major-triad"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 3,
+          "note": "the three notes of a major triad, spread over two octaves"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "root": "C",
+          "pitches": [
+            "C",
+            "E",
+            "G"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

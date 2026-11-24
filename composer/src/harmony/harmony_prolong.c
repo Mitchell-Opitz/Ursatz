@@ -79,6 +79,23 @@ static const Figure PEDAL_FIGURES[] = {
     {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 2, {V, V7}},
 };
 
+/*
+ * The figures of a modal key (R-725): its dominant is the last approach chord of its cadence kind, written for V here and read as that
+ * degree (make_figure_chord). It has no V6, V65, V43 or viio6, so only the root-position figures remain, with a dominant to tonic
+ * figure of its own.
+ */
+static const Figure MODAL_FIGURES[] = {
+    {ANCHOR_TONIC, ANCHOR_TONIC, 1, {I}},
+    {ANCHOR_TONIC, ANCHOR_TONIC, 3, {I, V, I}},
+    {ANCHOR_TONIC, ANCHOR_TONIC, 3, {I, IV, I}},
+    {ANCHOR_TONIC, ANCHOR_DOMINANT, 2, {I, V}},
+    {ANCHOR_DOMINANT, ANCHOR_TONIC, 2, {V, I}},
+};
+
+static const Figure MODAL_PEDAL_FIGURES[] = {
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 1, {V}},
+};
+
 #undef I64
 #undef V7
 #undef I
@@ -94,9 +111,9 @@ static const Figure PEDAL_FIGURES[] = {
 #define PEDAL_FIGURE_COUNT (sizeof(PEDAL_FIGURES) / sizeof(PEDAL_FIGURES[0]))
 
 static bool prolong_applies(const Plan *plan, FillTarget target, void *context) {
-    (void)context;
     PhraseRequest request;
-    return harmony_is_target(target) && harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request);
+    return harmony_is_target(target) &&
+           harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, composer_context_chords(context), &request);
 }
 
 static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
@@ -108,11 +125,13 @@ static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
            (shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT) == (figure->ends == ANCHOR_DOMINANT);
 }
 
-static bool make_figure_chord(HarmonyMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
+static bool make_figure_chord(const HarmonyKind *kind, const FigureChord *spec, size_t cells, PhraseChord *out) {
     if (spec->leading_tone) {
-        return harmony_make_leading_tone(mode, spec->inversion, cells, out);
+        return harmony_make_leading_tone(kind->mode, spec->inversion, cells, out);
     }
-    return harmony_make_chord(mode, spec->degree, spec->inversion, spec->seventh, false, cells, out);
+    /* The V of a modal key's figure is its dominant, the last approach chord of its cadence. */
+    int degree = spec->degree == 5 && kind->modal != NULL ? harmony_dominant_degree(kind) : spec->degree;
+    return harmony_make_chord_in(kind, degree, spec->inversion, spec->seventh, false, cells, out);
 }
 
 /* One deal of the request's cells to the figure's chords, or false when this deal does not keep to the shape. */
@@ -153,8 +172,9 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
     if (!chords) {
         return false;
     }
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     for (size_t i = 0; i < figure->count; i++) {
-        if (!make_figure_chord(request->mode, &figure->chords[i], cells[i], &chords[i])) {
+        if (!make_figure_chord(&kind, &figure->chords[i], cells[i], &chords[i])) {
             free(chords);
             return false;
         }
@@ -192,6 +212,7 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
         return false;
     }
     PlanSpan range = {before, request->span.length};
+    HarmonyKind kind = harmony_kind_of(request->composer_chords, request->mode, request->modal);
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, ids, HARMONY_MAX_CHORDS);
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
@@ -203,7 +224,7 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
         Rational end;
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || rational_cmp(span.start, position) != 0 ||
             plan_span_end(span, &end) != PLAN_OK ||
-            !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chords[i])) {
+            !harmony_read_chord_for(plan, ids[i], &kind, request->cell_length, &chords[i])) {
             return false;
         }
         cells += chords[i].cells;
@@ -221,13 +242,16 @@ static bool previous_chords(const Plan *plan, const PhraseRequest *request, Phra
 
 static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    (void)context;
     PhraseRequest request;
-    if (!harmony_is_target(target) || !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request)) {
+    if (!harmony_is_target(target) ||
+        !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, composer_context_chords(context), &request)) {
         return false;
     }
-    const Figure *table = request.shape.pedal ? PEDAL_FIGURES : FIGURES;
-    size_t table_count = request.shape.pedal ? PEDAL_FIGURE_COUNT : FIGURE_COUNT;
+    const Figure *table = request.modal != NULL ? (request.shape.pedal ? MODAL_PEDAL_FIGURES : MODAL_FIGURES)
+                                                : (request.shape.pedal ? PEDAL_FIGURES : FIGURES);
+    size_t table_count = request.modal != NULL ? (request.shape.pedal ? sizeof(MODAL_PEDAL_FIGURES) / sizeof(MODAL_PEDAL_FIGURES[0])
+                                                                       : sizeof(MODAL_FIGURES) / sizeof(MODAL_FIGURES[0]))
+                                               : (request.shape.pedal ? PEDAL_FIGURE_COUNT : FIGURE_COUNT);
     size_t wanted[FIGURE_COUNT > PEDAL_FIGURE_COUNT ? FIGURE_COUNT : PEDAL_FIGURE_COUNT];
     size_t wanted_count = 0;
     for (size_t i = 0; i < table_count; i++) {
@@ -302,11 +326,10 @@ static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, 
 }
 
 static PlanResult prolong_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    (void)context;
-    return harmony_progression_apply(plan, target, candidate, harmony_prolong_read_request_given);
+    return harmony_progression_apply(plan, target, candidate, composer_context_chords(context), harmony_prolong_read_request_given);
 }
 
-FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PROLONG_OPERATOR_NAME;
@@ -320,7 +343,7 @@ FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
     operator_.applies = prolong_applies;
     operator_.generate = prolong_generate;
     operator_.apply = prolong_apply;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, NULL, chords);
 }
 
 /* The first cell whose fixed motive chord the progression changes, or the request's cell count when it keeps them all. */
@@ -370,7 +393,9 @@ bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOper
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          !motive_prolongation, NULL, NULL, false, &progression->request.metre};
+                          !motive_prolongation, NULL, NULL, false, &progression->request.metre, NULL, NULL};
+    phrase.composer_chords = progression->request.composer_chords;
+    phrase.modal = progression->request.modal;
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;

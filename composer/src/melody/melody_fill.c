@@ -18,12 +18,13 @@
 #define DEFAULT_CLIMAX_RISE 4
 #define DEFAULT_CLIMAX_SLACK 150
 #define DEFAULT_ATTEMPTS 48 /* melodies tried per call */
+#define DEFAULT_COLOR_NOTE 2 /* the chance of the mode's characteristic step on a strong anchor (R-732) */
 #define DEFAULT_KEEP 6      /* melodies kept; ones that repeat an earlier one are dropped */
 
 #define MELODY_FILL_PARAMS_INIT                                                                                      \
     {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
      DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
-     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0, 0, 0, false}
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0, 0, 0, false, DEFAULT_COLOR_NOTE}
 
 static const char *const HARD_RULE_NAMES[MELODY_RULE_COUNT] = {
     "forbidden-leap",   "forbidden-outline",       "no-crossing",          "parallel-octaves",
@@ -66,9 +67,9 @@ MelodyFillParams melody_fill_params_default(void) {
     return params;
 }
 
-static const MelodyFillParams *params_of(void *context) {
+static const MelodyFillParams *params_of(const void *params) {
     static const MelodyFillParams defaults = MELODY_FILL_PARAMS_INIT;
-    return context ? context : &defaults;
+    return params ? params : &defaults;
 }
 
 static bool same_melody(const MelodyCandidate *a, const MelodyCandidate *b) {
@@ -104,7 +105,6 @@ static void melody_label(const MelodyCandidate *melody, char *label, size_t size
 static bool melody_applies(const Plan *plan, FillTarget target, void *context) {
     MelodyContext *read;
     bool applies;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN) {
         return false;
     }
@@ -112,14 +112,14 @@ static bool melody_applies(const Plan *plan, FillTarget target, void *context) {
     if (!read) {
         return false;
     }
-    applies = melody_context_read(plan, (LaneSpanId)target.id, read);
+    applies = melody_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read);
     free(read);
     return applies;
 }
 
 static bool melody_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    const MelodyFillParams *params = params_of(context);
+    const MelodyFillParams *params = params_of(composer_context_params(context));
     MelodyContext *read = malloc(sizeof(*read));
     MelodyCandidate *kept[MELODY_KEEP_MAX];
     size_t keep = params->keep < MELODY_KEEP_MAX ? params->keep : MELODY_KEEP_MAX;
@@ -129,7 +129,7 @@ static bool melody_generate(const Plan *plan, FillTarget target, FillRng *rng, v
     int shifts[5];
     size_t shift_count = 0;
     /* A span the operator does not read, or a motive that cannot be placed, leaves the span open. */
-    if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, read))) {
+    if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read))) {
         ok = false;
     }
     /* The bars right before the target that share one rhythm, for the rhythm repetition cap (R-479). */
@@ -202,7 +202,6 @@ static PlanResult melody_apply(Plan *plan, FillTarget target, const FillCandidat
     PlanNote *notes;
     PlanLanePayload payload;
     PlanResult result = PLAN_OK;
-    (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !melody || melody->magic != MELODY_PAYLOAD_MAGIC ||
         melody->count == 0) {
         return PLAN_ERR_NULL;
@@ -215,7 +214,7 @@ static PlanResult melody_apply(Plan *plan, FillTarget target, const FillCandidat
         return PLAN_ERR_ALLOC;
     }
     /* The plan must still be what the melody was made for. */
-    if (!melody_context_read(plan, (LaneSpanId)target.id, read) || read->count != melody->context.count ||
+    if (!melody_context_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read) || read->count != melody->context.count ||
         rational_cmp(read->length, melody->context.length) != 0 ||
         rational_cmp(read->pickup, melody->context.pickup) != 0) {
         result = PLAN_ERR_BAD_PAYLOAD;
@@ -277,7 +276,7 @@ bool melody_candidate_realized(const FillCandidate *candidate, LaneSpanId *targe
     return true;
 }
 
-FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFillParams *params) {
+FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFillParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = MELODY_FILL_OPERATOR_NAME;
@@ -291,6 +290,5 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.applies = melody_applies;
     operator_.generate = melody_generate;
     operator_.apply = melody_apply;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

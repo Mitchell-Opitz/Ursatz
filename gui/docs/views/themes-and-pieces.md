@@ -68,7 +68,7 @@ the theme body the backend composes (see [Theme bodies and version files](../../
   for filled bars only; the result lists them as Given chords. A Composer
   refusal naming a bar shows in the status line.
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
-  or a motif with the role accompaniment.
+  or a motif with the role accompaniment. Block adds a Voicing select (R-731).
 - Brief: collections, composer / source / tag filters, subjects, projects,
   single pieces and styles, listed as chips with Remove. An empty brief means
   no style. Four checkboxes ("Use the brief's motive degrees, intervals,
@@ -155,6 +155,7 @@ builders (motif picker, pool, accompaniment and brief in `views/themes-view.js`)
   to be composed first), shows its form and key and sets the section's length
   from the theme; a section whose length differs from the theme's is a
   problem. Region, harmony and the sections of a sized form: piece-sections.md.
+  Materials: major, minor, modal keys; a region's has no style.
 - Basic motive (optional), Pool, Accompaniment (none or a pattern; a piece has
   no accompaniment motif) and Brief (chips, the four motive switches, weight,
   seed, Check with the Analyzer) are the Themes view's.

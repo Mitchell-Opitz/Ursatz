@@ -1,0 +1,62 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.material.dorian",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "dorian",
+      "content": {
+        "steps": [
+          0,
+          2,
+          3,
+          5,
+          7,
+          9,
+          10
+        ],
+        "family": "diatonic",
+        "cadence": "persichetti.vocabulary.dorian-cadence"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "the dorian mode"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    },
+    {
+      "id": "omt.material.mixolydian",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "mixolydian",
+      "content": {
+        "steps": [
+          0,
+          2,
+          4,
+          5,
+          7,
+          9,
+          10
+        ],
+        "family": "diatonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "the mixolydian mode"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}

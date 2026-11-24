@@ -124,6 +124,10 @@ typedef struct {
      */
     bool has_before_register;
     int before_register;
+    /* The chord types the chord masks are read with (R-728); NULL: the fallback tables. */
+    const ComposerChords *composer_chords;
+    /* The pitch classes of the key's characteristic steps on its tonic (R-732); 0 for a key whose mode names none (major, natural minor). */
+    unsigned color_mask;
 } MelodyContext;
 
 #define MELODY_TONE_CHORD (-1)
@@ -200,14 +204,14 @@ size_t melody_chord_at(const MelodyContext *context, Rational position);
  * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
  * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
  */
-bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *out);
+bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, const ComposerChords *chords, MelodyContext *out);
 
 /*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,
  * none of them open, the bass spans must tile it, and a motive_ref constraint must name a motive with a melody.
  * False when the span is not one the melody operator applies to.
  */
-bool melody_context_read(const Plan *plan, LaneSpanId target, MelodyContext *out);
+bool melody_context_read(const Plan *plan, LaneSpanId target, const ComposerChords *chords, MelodyContext *out);
 
 /*
  * The pitch classes a note must be one of: those the chords it sounds through share, so that a note that is

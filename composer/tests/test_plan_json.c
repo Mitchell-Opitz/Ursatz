@@ -365,7 +365,8 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
                a->harmony.has_function == b->harmony.has_function &&
-               (!a->harmony.has_function || a->harmony.function == b->harmony.function);
+               (!a->harmony.has_function || a->harmony.function == b->harmony.function) &&
+               a->harmony.borrowed_from == b->harmony.borrowed_from;
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
     case PLAN_LANE_INNER_VOICE:
@@ -642,6 +643,34 @@ static void test_old_transforms(void) {
     free(bad_step);
     free(base);
     plan_destroy(plan);
+}
+
+/* A borrowed chord keeps its material through the file (R-729); the member is absent for a diatonic chord. */
+static void test_borrowed_harmony(void) {
+    Plan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 2), "form");
+    PlanLanePayload key;
+    memset(&key, 0, sizeof(key));
+    key.region = test_key(0, "major");
+    add_lane(plan, form, PLAN_LANE_REGION, 0, bars(0, 2), &key);
+    PlanLanePayload flat_six = harmony("bVI", HARMONIC_FUNCTION_PREDOMINANT);
+    flat_six.harmony.borrowed_from = test_material("minor");
+    PlanLanePayload tonic = harmony("I", HARMONIC_FUNCTION_TONIC);
+    add_lane(plan, form, PLAN_LANE_HARMONY, 0, bars(0, 1), &flat_six);
+    add_lane(plan, form, PLAN_LANE_HARMONY, 0, bars(1, 1), &tonic);
+    PlanJsonError error;
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
+    assert(text != NULL && strstr(text, "\"borrowed_from\": \"omt.material.natural-minor\"") != NULL);
+    Plan *parsed = NULL;
+    expect_ok(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    LaneSpanId spans[2];
+    assert(plan_lane_find(parsed, PLAN_LANE_HARMONY, 0, bars(0, 2), spans, 2) == 2);
+    assert(plan_lane_span_payload(parsed, spans[0])->harmony.borrowed_from == test_material("minor"));
+    assert(plan_lane_span_payload(parsed, spans[1])->harmony.borrowed_from == NULL);
+    free(text);
+    plan_destroy(plan);
+    plan_destroy(parsed);
 }
 
 static void test_empty_plan(void) {
@@ -1174,8 +1203,8 @@ static void test_relation_refusals(void) {
         {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.subtonic", PLAN_KEY_ANCHOR_HOME,
          "relation 'subtonic' from C major: the triad on degree 7 is not major or minor"},
         {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.no-such-relation", PLAN_KEY_ANCHOR_HOME, "no relation has the id"},
-        {{0, "minor", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.two-steps-brighter", PLAN_KEY_ANCHOR_PREVIOUS,
-         "composes in"},
+        {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.two-steps-brighter", PLAN_KEY_ANCHOR_PREVIOUS,
+         "no diatonic mode has brightness rank 8"},
     };
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         const KeySpanCase spans[] = {cases[i].first, {0, NULL, cases[i].relation, cases[i].anchor, false}};
@@ -1445,6 +1474,7 @@ int main(void) {
     test_round_trip();
     test_old_transforms();
     test_motive_tones();
+    test_borrowed_harmony();
     test_empty_plan();
     test_malformed_input();
     test_plan_files();

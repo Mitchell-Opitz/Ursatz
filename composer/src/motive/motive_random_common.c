@@ -34,6 +34,10 @@ bool motive_random_is_chord_step(long position) {
     return step == TRIAD_STEPS[0] || step == TRIAD_STEPS[1] || step == TRIAD_STEPS[2];
 }
 
+bool motive_random_is_color_step(unsigned mask, long position) {
+    return ((mask >> (unsigned)(((position % 7) + 7) % 7)) & 1u) != 0;
+}
+
 bool motive_random_in_range(int pitch) {
     return pitch >= PITCH_LOW && pitch <= PITCH_HIGH;
 }

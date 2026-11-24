@@ -320,7 +320,9 @@ static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *th
     if (status != URSATZ_OK) {
         return status;
     }
-    return request_read_chords(cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
+    ComposerChords tones;
+    const ComposerChords *chords = composer_chords_init(&tones, setup->knowledge, NULL, 0) ? &tones : NULL;
+    return request_read_chords(chords, cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
                                (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS, &material->chord_count,
                                error);
 }
@@ -337,6 +339,7 @@ typedef struct {
     const char *blend_weights;
     const char *style;
     const char *without[WITHOUT_MAX];
+    const char *voicing_id; /* "accompaniment": {"voicing": ...}, resolved in the snapshot by theme_prepare */
 } ThemeBrief;
 
 /* The members of the brief as the text the options of grow take. */
@@ -407,6 +410,17 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
             text->accompaniment_motive = true;
         }
         text->accompaniment = pattern;
+        const cJSON *voicing_item = cJSON_GetObjectItemCaseSensitive(accompaniment, "voicing");
+        if (voicing_item && !cJSON_IsNull(voicing_item)) {
+            if (!cJSON_IsString(voicing_item)) {
+                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "\"voicing\" must be the id of a voicing");
+            }
+            if (strcmp(pattern, "block") != 0) {
+                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "a voicing needs the accompaniment pattern \"block\", not '%s'",
+                                pattern);
+            }
+            brief->voicing_id = voicing_item->valuestring;
+        }
     }
     if (voicing) {
         if (strcmp(voicing, "satb") == 0) {
@@ -559,6 +573,13 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     if (status == URSATZ_OK) {
         status = read_brief(&state->theme, request, &state->brief, error);
     }
+    if (status == URSATZ_OK && state->brief.voicing_id != NULL) {
+        state->setup.block_voicing = knowledge_snapshot_voicing(state->setup.knowledge, state->brief.voicing_id);
+        if (state->setup.block_voicing == NULL) {
+            status = api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "'%s' is not a voicing; see the vocabulary's voicings",
+                              state->brief.voicing_id);
+        }
+    }
     if (status == URSATZ_OK) {
         status = api_read_output_options(request, outputs, error);
     }
@@ -601,6 +622,8 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->contrast = &state->preferences.contrast;
         setup->functions = &state->preferences.functions;
         setup->critic = &state->preferences.critic;
+        setup->mixture = &state->preferences.harmony.mixture;
+        setup->color = &state->preferences.harmony.color;
         setup->motif = &state->preferences.motif;
     }
 

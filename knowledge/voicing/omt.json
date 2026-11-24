@@ -1,0 +1,11 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {"id": "omt.voicing.shell-dominant", "kind": "voicing", "name": "shell dominant", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "seventh", "semitones": 10}], "fits": ["omt.chord-type.dominant-seventh"]}, "citations": [{"source": "omt", "part": "VI", "chapter": 3, "note": "a dominant seventh voiced as root, third and seventh, the fifth left out"}], "status": "active", "examples": [{"root": "C", "pitches": ["C", "E", "Bb"]}], "version": 1},
+    {"id": "omt.voicing.shell-major", "kind": "voicing", "name": "shell major", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "seventh", "semitones": 11}], "fits": ["omt.chord-type.major-seventh"]}, "citations": [{"source": "omt", "part": "VI", "chapter": 3, "note": "a major seventh voiced as root, third and seventh, the fifth left out"}], "status": "active", "examples": [{"root": "C", "pitches": ["C", "E", "B"]}], "version": 1},
+    {"id": "omt.voicing.shell-minor", "kind": "voicing", "name": "shell minor", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "seventh", "semitones": 10}], "fits": ["omt.chord-type.minor-seventh"]}, "citations": [{"source": "omt", "part": "VI", "chapter": 3, "note": "a minor seventh voiced as root, third and seventh, the fifth left out"}], "status": "active", "examples": [{"root": "C", "pitches": ["C", "Eb", "Bb"]}], "version": 1},
+    {"id": "omt.voicing.shell-dominant-ninth", "kind": "voicing", "name": "shell dominant ninth", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "seventh", "semitones": 10}, {"role": "ninth", "semitones": 14}], "fits": ["omt.chord-type.dominant-seventh"]}, "citations": [{"source": "omt", "part": "VI", "chapter": 3, "note": "a dominant seventh voiced as root, third, seventh and ninth, the fifth left out"}], "status": "active", "examples": [{"root": "C", "pitches": ["C", "E", "Bb", "D"]}], "version": 1}
+  ]
+}

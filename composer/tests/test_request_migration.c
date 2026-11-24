@@ -260,8 +260,8 @@ static void test_both_members_refused(void) {
 static void test_material_words(void) {
     /* A material word the Composer does not compose in is refused under "material"; under "mode" only major and minor are read. */
     cJSON *request = random_request("major");
-    rename_member(request, "mode", "material", "dorian");
-    expect_refused(composer_api_random_motive, request, "/material", "the Composer writes major and minor keys");
+    rename_member(request, "mode", "material", "overtone");
+    expect_refused(composer_api_random_motive, request, "/material", "the Composer writes major, minor and modal keys");
     cJSON_Delete(request);
     request = random_request("major");
     rename_member(request, "mode", "material", "omt.material.no-such-material");
@@ -312,7 +312,7 @@ static void test_motive_document_key(void) {
     }
 
     /* both members, and a material the Composer does not compose in, are refused at the key */
-    static const char *const BAD[][2] = {{"material", "minor"}, {"material", "dorian"}};
+    static const char *const BAD[][2] = {{"material", "minor"}, {"material", "overtone"}};
     for (size_t i = 0; i < 2; i++) {
         cJSON *copy = cJSON_Duplicate(document, true);
         cJSON *key = cJSON_GetObjectItemCaseSensitive(copy, "key");

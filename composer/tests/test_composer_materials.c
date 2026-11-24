@@ -24,15 +24,25 @@ static void test_key_words(void) {
     char message[160];
 
     /* A material the Composer does not compose in is refused, by one check, with the word it was written with. */
-    static const char *const REFUSED[] = {"C dorian", "C harmonic minor", "C melodic minor", "C lydian"};
-    static const char *const WORDS[] = {"dorian", "harmonic minor", "melodic minor", "lydian"};
+    static const char *const REFUSED[] = {"C harmonic minor", "C melodic minor", "C overtone", "C oriental"};
+    static const char *const WORDS[] = {"harmonic minor", "melodic minor", "overtone", "oriental"};
     for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
         memset(message, 0, sizeof(message));
         assert(!request_parse_key(REFUSED[i], knowledge, &key));
         assert(request_key_refusal(REFUSED[i], knowledge, message, sizeof(message)));
         char expected[160];
-        snprintf(expected, sizeof(expected), "the Composer writes major and minor keys; '%s' is not one of them", WORDS[i]);
+        snprintf(expected, sizeof(expected), "the Composer writes major, minor and modal keys; '%s' is not one of them", WORDS[i]);
         assert(strcmp(message, expected) == 0);
+    }
+
+    /* The five church modes are accepted: their key carries the snapshot's material (R-725). */
+    static const char *const MODES[] = {"lydian", "mixolydian", "dorian", "phrygian", "locrian"};
+    for (size_t i = 0; i < sizeof(MODES) / sizeof(MODES[0]); i++) {
+        char text[32];
+        snprintf(text, sizeof(text), "D %s", MODES[i]);
+        assert(request_parse_key(text, knowledge, &key));
+        assert(spelled_key_tonic_pitch_class(&key) == 2 && key.material == test_material(MODES[i]));
+        assert(!request_key_refusal(text, knowledge, message, sizeof(message)));
     }
 
     /* The major and the natural minor are accepted, in any case; the key carries the snapshot's material. */
@@ -95,10 +105,10 @@ static void test_context_required(void) {
     /* A key of a material the Composer does not write is refused at the key, naming the word. */
     memset(&response, 0, sizeof(response));
     assert(composer_api_motive(test_context(),
-                               "{\"input\": {\"text\": \"D4:q F4:q A4:q\"}, \"meter\": \"4/4\", \"key\": \"C dorian\"}", NULL,
+                               "{\"input\": {\"text\": \"D4:q F4:q A4:q\"}, \"meter\": \"4/4\", \"key\": \"C overtone\"}", NULL,
                                &response) == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/key") == 0);
-    assert(strstr(response.error.message, "the Composer writes major and minor keys; 'dorian' is not one of them") != NULL);
+    assert(strstr(response.error.message, "the Composer writes major, minor and modal keys; 'overtone' is not one of them") != NULL);
     composer_response_destroy(&response);
 }
 

@@ -188,17 +188,17 @@ static FillOutcome run(Fixture *fixture, unsigned long seed, bool harmony, bool 
     config.seed = seed;
     config.checker = melody ? melody_fill_checker : harmony_phrase_checker;
     if (harmony) {
-        assert(harmony_phrase_register(registry) == FILL_OK);
+        assert(harmony_phrase_register(registry, test_composer_chords()) == FILL_OK);
     }
     if (bass) {
-        assert(harmony_bass_register(registry, NULL) == FILL_OK);
+        assert(harmony_bass_register(registry, NULL, test_composer_chords()) == FILL_OK);
     }
     if (develop) {
         config.checker = motive_develop_checker;
         assert(motive_develop_register(registry, NULL) == FILL_OK);
     }
     if (melody) {
-        assert(melody_fill_register(registry, melody) == FILL_OK);
+        assert(melody_fill_register(registry, melody, test_composer_chords()) == FILL_OK);
     }
     assert(fill_run(fixture->plan, registry, &config, &outcome, record) == FILL_OK);
     fill_registry_destroy(registry);

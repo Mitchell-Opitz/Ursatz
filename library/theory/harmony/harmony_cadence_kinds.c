@@ -13,6 +13,11 @@ static const HarmonyCadenceKind KINDS[] = {
     {"evaded", "evaded", "EV", CADENCE_TYPE_SUBVERTED, 0, false},
     {"abandoned", "abandoned", "AB", CADENCE_TYPE_UNKNOWN, -1, false},
     {"medial-caesura", "medial caesura", "MC", CADENCE_TYPE_HALF, 1, false},
+    {"dorian-cadence", "dorian cadence", "DOR", CADENCE_TYPE_PERFECT_AUTHENTIC, 4, true},
+    {"mixolydian-cadence", "mixolydian cadence", "MIX", CADENCE_TYPE_PERFECT_AUTHENTIC, 4, true},
+    {"lydian-cadence", "lydian cadence", "LYD", CADENCE_TYPE_PERFECT_AUTHENTIC, 4, true},
+    {"phrygian-cadence", "phrygian cadence", "PHR", CADENCE_TYPE_PERFECT_AUTHENTIC, 4, true},
+    {"locrian-cadence", "locrian cadence", "LOC", CADENCE_TYPE_PERFECT_AUTHENTIC, 4, true},
 };
 
 #define KIND_COUNT (sizeof KINDS / sizeof KINDS[0])

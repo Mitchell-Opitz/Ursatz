@@ -1,0 +1,225 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "persichetti",
+  "entries": [
+    {
+      "id": "persichetti.vocabulary.dorian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "dorian cadence",
+      "aliases": [
+        "DOR"
+      ],
+      "content": {
+        "code": "dorian-cadence",
+        "label": "dorian cadence",
+        "abbreviation": "DOR",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.dorian",
+        "approach": [
+          "IV"
+        ],
+        "arrival": "i"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "VII",
+          "chapter": 11,
+          "note": "the dorian shuttle: the major chord on the fourth step moving to the minor tonic"
+        },
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the primary chords of dorian: the fourth step chord to the tonic closes the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "IV",
+            "i"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "persichetti.vocabulary.mixolydian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "mixolydian cadence",
+      "aliases": [
+        "MIX"
+      ],
+      "content": {
+        "code": "mixolydian-cadence",
+        "label": "mixolydian cadence",
+        "abbreviation": "MIX",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.mixolydian",
+        "approach": [
+          "VII"
+        ],
+        "arrival": "I"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "VII",
+          "chapter": 11,
+          "note": "the subtonic shuttle and the mixolydian cadence: the major chord on the lowered seventh moving to the tonic"
+        },
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the primary chords of mixolydian: the lowered seventh chord to the tonic closes the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "VII",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "persichetti.vocabulary.lydian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "lydian cadence",
+      "aliases": [
+        "LYD"
+      ],
+      "content": {
+        "code": "lydian-cadence",
+        "label": "lydian cadence",
+        "abbreviation": "LYD",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.lydian",
+        "approach": [
+          "II"
+        ],
+        "arrival": "I"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "part": "VII",
+          "chapter": 11,
+          "note": "the lydian shuttle, where the major chord on the second step acts as a dominant of the tonic"
+        },
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the primary chords of lydian: the second step chord to the tonic closes the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "II",
+            "I"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "persichetti.vocabulary.phrygian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "phrygian cadence",
+      "aliases": [
+        "PHR"
+      ],
+      "content": {
+        "code": "phrygian-cadence",
+        "label": "phrygian cadence",
+        "abbreviation": "PHR",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.phrygian",
+        "approach": [
+          "II"
+        ],
+        "arrival": "i"
+      },
+      "citations": [
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the primary chords of phrygian: the major chord on the lowered second to the tonic closes the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "II",
+            "i"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "persichetti.vocabulary.locrian-cadence",
+      "kind": "vocabulary",
+      "subtype": "cadence-kind",
+      "name": "locrian cadence",
+      "aliases": [
+        "LOC"
+      ],
+      "content": {
+        "code": "locrian-cadence",
+        "label": "locrian cadence",
+        "abbreviation": "LOC",
+        "core": "perfect-authentic",
+        "strength": 4,
+        "conclusive": true,
+        "material": "omt.material.locrian",
+        "approach": [
+          "V"
+        ],
+        "arrival": "io"
+      },
+      "citations": [
+        {
+          "source": "persichetti",
+          "chapter": 2,
+          "note": "the chords on the first and fifth steps of locrian: the major chord on the fifth to the diminished tonic closes the mode"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "numerals": [
+            "V",
+            "io"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

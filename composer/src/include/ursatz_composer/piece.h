@@ -9,6 +9,7 @@
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
@@ -133,6 +134,7 @@ typedef struct {
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
     bool has_accompaniment;
     PlanAccompaniment accompaniment; /* read only with has_accompaniment; a layered form has one in any case */
+    const VoicingEntry *accompaniment_voicing; /* the K3 voicing of a block accompaniment (R-731), NULL for none; owned by the snapshot */
     /*
      * Keys (R-069): with modulate the sections' keys are planned from seed (piece_plan_keys): home, or a closely
      * related key reached by a pivot chord, and the cadences across the sections follow (piece_plan_cadences). Without
@@ -271,10 +273,15 @@ PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const For
  */
 PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
                                const SpelledKey *key, char *message, size_t message_size);
+/* The same with the run's ComposerChords (R-729): a borrowed numeral (bVI, iv in C major) is read when `tones` holds the snapshot; NULL reads the key's own chords only. */
+PieceResult piece_give_harmony_in(Plan *plan, const ComposerChords *tones, NodeId section, const SectionHarmony *harmony,
+                                  const PlanMeter *meter, const SpelledKey *key, char *message, size_t message_size);
 
 /* Whether the harmony can be given to a section of this length in this key and meter, tried on a scratch plan; message says why not. */
 bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size);
+bool piece_check_harmony_in(const ComposerChords *tones, const PlanMeter *meter, const SpelledKey *key, Rational length,
+                            const SectionHarmony *harmony, char *message, size_t message_size);
 
 /*
  * The cadences the form document gives, on every section of the request without has_cadence (the document's `cadences`:

@@ -203,7 +203,7 @@ static FillOutcome run_melody(Piece *piece, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = melody_fill_checker;
-    assert(registry && melody_fill_register(registry, NULL) == FILL_OK);
+    assert(registry && melody_fill_register(registry, NULL, test_composer_chords()) == FILL_OK);
     assert(fill_run(piece->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;
@@ -314,7 +314,7 @@ static void test_strong_beats(void) {
         PlanSpan span = {beats(variant ? 1 : 2), beats(6)};
         MelodyContext *context = malloc(sizeof(*context));
         add_melody_target(&piece, span, motive, 0);
-        assert(context && melody_context_read(piece.plan, piece.target, context));
+        assert(context && melody_context_read(piece.plan, piece.target, test_composer_chords(), context));
         assert(melody_on_cell(context, POSITION_ZERO) == (variant == 0));
         /* Beat 3 of the plan is strong either way. */
         assert(melody_on_cell(context, beats(2 - (variant ? 1 : 2))));
@@ -436,7 +436,7 @@ static void test_pickup_bar_long(void) {
     PlanSpan span = {beats(0), beats(12)};
     MelodyContext *context = malloc(sizeof(*context));
     add_melody_target(&piece, span, motive, 32);
-    assert(context && !melody_context_read(piece.plan, piece.target, context));
+    assert(context && !melody_context_read(piece.plan, piece.target, test_composer_chords(), context));
     free(context);
     plan_destroy(piece.plan);
 }
@@ -490,7 +490,7 @@ static FillOutcome accompany(Plan *plan, unsigned long seed) {
     config.checker = accompaniment_checker;
     AccompanimentParams params = accompaniment_params_default();
     params.knowledge = test_knowledge();
-    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
+    assert(registry && accompaniment_register(registry, &params, test_composer_chords()) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;
@@ -605,7 +605,7 @@ static FillOutcome voice(Plan *plan, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = voicing_checker;
-    assert(registry && voicing_register(registry, NULL) == FILL_OK);
+    assert(registry && voicing_register(registry, NULL, test_composer_chords()) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;

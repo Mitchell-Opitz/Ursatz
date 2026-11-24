@@ -34,6 +34,7 @@ typedef struct {
     FigureSourceNote *notes;          /* the returned melody, moved, in order of onset */
     size_t note_count;
     FormSkeleton skeleton;
+    const ComposerChords *composer_chords; /* the chord types the masks are read with (R-728); NULL: the fallback tables */
 } FigureReading;
 
 /* A note of the written melody: from the start of the section. */
@@ -48,7 +49,7 @@ FigureSourceNote *form_figure_read_melody(const Plan *plan, NodeId source, int s
                                           const PitchMaterial *to_material, size_t *count);
 bool form_figure_has_pitch_class(unsigned mask, int pitch);
 /* The section as the figure reads it; NULL when it is not a figurate return or cannot be read. */
-FigureReading *form_figure_read_section(const Plan *plan, NodeId section);
+FigureReading *form_figure_read_section(const Plan *plan, const ComposerChords *chords, NodeId section);
 void form_figure_reading_free(FigureReading *reading);
 bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational *start, Rational *end);
 bool form_figure_find(const Plan *plan, NodeId section, SectionFigure *out);

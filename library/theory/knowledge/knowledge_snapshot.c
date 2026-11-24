@@ -246,6 +246,123 @@ static KnowledgeStatus read_material_links(Slot *slot, const cJSON *entry, const
     return KNOWLEDGE_OK;
 }
 
+bool knowledge_read_numeral(const char *text, int *degree) {
+    if (text == NULL) {
+        return false;
+    }
+    size_t letters = strspn(text, "IViv");
+    if (letters == 0 || (text[letters] != '\0' && (text[letters] != 'o' || text[letters + 1] != '\0'))) {
+        return false;
+    }
+    bool upper = isupper((unsigned char)text[0]) != 0;
+    for (int candidate = 1; candidate <= 7; candidate++) {
+        char spelled[8] = {0};
+        size_t length = 0;
+        if (candidate == 4) {
+            spelled[length++] = 'I';
+            spelled[length++] = 'V';
+        } else {
+            if (candidate >= 5) {
+                spelled[length++] = 'V';
+            }
+            for (int ones = candidate >= 5 ? candidate - 5 : candidate; ones > 0; ones--) {
+                spelled[length++] = 'I';
+            }
+        }
+        bool same = length == letters;
+        for (size_t i = 0; same && i < length; i++) {
+            char letter = upper ? spelled[i] : (char)(spelled[i] + ('a' - 'A'));
+            same = text[i] == letter;
+        }
+        if (same) {
+            *degree = candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* content.<field>: 0 to 7 chord numerals as degrees no higher than the step count, an alteration or a name past VII refused. */
+static KnowledgeStatus read_numerals(const cJSON *content, const char *field, const char *path, const char *id, size_t step_count,
+                                     size_t *count, int degrees[7], char *message, size_t message_size) {
+    const cJSON *list = knowledge_member(content, field);
+    if (list == NULL) {
+        return KNOWLEDGE_OK;
+    }
+    char name[48];
+    snprintf(name, sizeof(name), "content.%s", field);
+    int size = cJSON_IsArray(list) ? cJSON_GetArraySize(list) : -1;
+    if (size < 0 || size > 7) {
+        knowledge_fail(message, message_size, path, id, name, "not an array of 0 to 7 chord numerals");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, list) {
+        int degree = 0;
+        const char *text = knowledge_string_of(item);
+        if (text == NULL || !knowledge_read_numeral(text, &degree)) {
+            knowledge_fail(message, message_size, path, id, name, "not a chord numeral without alteration such as \"ii\" or \"vio\"");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        if ((size_t)degree > step_count) {
+            knowledge_fail(message, message_size, path, id, name, "a numeral names a degree above the material's steps");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        degrees[(*count)++] = degree;
+    }
+    return KNOWLEDGE_OK;
+}
+
+/* The modal fields of a material: primary and avoided chords, characteristic degrees and the cadence kind its mode closes with. */
+static KnowledgeStatus read_material_modal(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    PitchMaterial *material = &slot->material;
+    KnowledgeStatus status = read_numerals(content, "primary_chords", path, id, material->step_count, &material->primary_count,
+                                           material->primary_degrees, message, message_size);
+    if (status == KNOWLEDGE_OK) {
+        status = read_numerals(content, "chords_to_avoid", path, id, material->step_count, &material->avoided_count,
+                               material->avoided_degrees, message, message_size);
+    }
+    if (status != KNOWLEDGE_OK) {
+        return status;
+    }
+    const cJSON *degrees = knowledge_member(content, "characteristic_degrees");
+    if (degrees != NULL) {
+        int size = cJSON_IsArray(degrees) ? cJSON_GetArraySize(degrees) : -1;
+        if (size < 1 || size > 3) {
+            knowledge_fail(message, message_size, path, id, "content.characteristic_degrees", "not an array of 1 to 3 degrees");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        const cJSON *item;
+        cJSON_ArrayForEach(item, degrees) {
+            if (!knowledge_in_range(item, 2, 7) || (size_t)item->valueint > material->step_count) {
+                knowledge_fail(message, message_size, path, id, "content.characteristic_degrees", "not integers from 2 to the number of steps");
+                return KNOWLEDGE_ERR_FIELD;
+            }
+            for (size_t i = 0; i < material->characteristic_count; i++) {
+                if (material->characteristic_degrees[i] == item->valueint) {
+                    knowledge_fail(message, message_size, path, id, "content.characteristic_degrees", "a degree is listed twice");
+                    return KNOWLEDGE_ERR_FIELD;
+                }
+            }
+            material->characteristic_degrees[material->characteristic_count++] = item->valueint;
+        }
+    }
+    const cJSON *cadence = knowledge_member(content, "cadence");
+    if (cadence != NULL) {
+        const char *text = knowledge_string_of(cadence);
+        if (text == NULL || strstr(text, ".vocabulary.") == NULL) {
+            knowledge_fail(message, message_size, path, id, "content.cadence", "not the id of a vocabulary entry");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        material->cadence = knowledge_own(slot, text);
+        if (material->cadence == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+    }
+    return KNOWLEDGE_OK;
+}
+
 /* The details of a K1 unordered material: steps and descending steps (read by the caller's steps), key word, family, brightness. */
 static KnowledgeStatus read_material_details(Slot *slot, const cJSON *entry, const cJSON *content, const char *path, char *message,
                                              size_t message_size) {
@@ -307,10 +424,14 @@ static KnowledgeStatus read_material_details(Slot *slot, const cJSON *entry, con
             material->color_note_count++;
         }
     }
+    KnowledgeStatus modal = read_material_modal(slot, content, path, message, message_size);
+    if (modal != KNOWLEDGE_OK) {
+        return modal;
+    }
     return read_material_links(slot, entry, path, message, message_size);
 }
 
-static bool chord_role(const char *text, ChordMemberRole *role) {
+bool knowledge_chord_role(const char *text, ChordMemberRole *role) {
     static const struct {
         const char *name;
         ChordMemberRole role;
@@ -347,12 +468,23 @@ static KnowledgeStatus read_chord_type(Slot *slot, const cJSON *entry, const cha
         knowledge_fail(message, message_size, path, id, "content.members", "not 1 to 8 members");
         return KNOWLEDGE_ERR_FIELD;
     }
+    const cJSON *construction = knowledge_member(content, "construction");
+    if (construction != NULL) {
+        static const char *const CONSTRUCTIONS[] = {"tertian", "quartal", "secundal", "added-note", "polychord", "compound", "cluster", "power"};
+        int index = knowledge_word_index(knowledge_string_of(construction), CONSTRUCTIONS, 8);
+        if (index < 0) {
+            knowledge_fail(message, message_size, path, id, "content.construction",
+                           "not tertian, quartal, secundal, added-note, polychord, compound, cluster or power");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        slot->chord_type.construction = (ChordConstruction)index;
+    }
     const cJSON *item;
     cJSON_ArrayForEach(item, members) {
         const char *role_text = cJSON_IsObject(item) ? knowledge_string_of(knowledge_member(item, "role")) : NULL;
         const cJSON *semitones = cJSON_IsObject(item) ? knowledge_member(item, "semitones") : NULL;
         ChordMemberRole role = CHORD_MEMBER_ROOT;
-        if (role_text == NULL || !chord_role(role_text, &role)) {
+        if (role_text == NULL || !knowledge_chord_role(role_text, &role)) {
             knowledge_fail(message, message_size, path, id, "content.members", "a member has no known role");
             return KNOWLEDGE_ERR_FIELD;
         }
@@ -779,6 +911,11 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
         slot->chord_type.name = slot->entry.name;
         status = read_chord_type(slot, entry, path, message, message_size);
         slot->has_chord_type = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "voicing") == 0) {
+        slot->voicing.id = slot->entry.id;
+        slot->voicing.name = slot->entry.name;
+        status = knowledge_voicing_read(slot, entry, path, message, message_size);
+        slot->has_voicing = status == KNOWLEDGE_OK;
     } else if (strcmp(kind, "relation") == 0) {
         slot->relation.id = slot->entry.id;
         slot->relation.name = slot->entry.name;
@@ -1013,7 +1150,26 @@ static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message,
             knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.category", "no texture entry has that code");
             return KNOWLEDGE_ERR_FIELD;
         }
-        KnowledgeStatus linked = knowledge_form_link(snapshot, slot, message, message_size);
+        if (slot->has_vocabulary && slot->vocabulary.subtype == VOCABULARY_CADENCE_KIND && slot->cadence_material_target != NULL) {
+            VocabularyCadence *cadence = &slot->vocabulary.cadence;
+            cadence->material = linked_material(snapshot, slot->cadence_material_target, "material", problem, sizeof(problem));
+            if (cadence->material == NULL) {
+                knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.material", problem);
+                return KNOWLEDGE_ERR_FIELD;
+            }
+            bool within = (size_t)cadence->arrival_degree <= cadence->material->step_count;
+            for (size_t a = 0; a < cadence->approach_count; a++) {
+                within = within && (size_t)cadence->approach_degrees[a] <= cadence->material->step_count;
+            }
+            if (!within) {
+                knowledge_fail(message, message_size, slot->path, slot->entry.id, "content.approach", "a numeral names a degree above the material's steps");
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+        KnowledgeStatus linked = knowledge_voicing_link(snapshot, slot, message, message_size);
+        if (linked == KNOWLEDGE_OK) {
+            linked = knowledge_form_link(snapshot, slot, message, message_size);
+        }
         if (linked != KNOWLEDGE_OK) {
             return linked;
         }
@@ -1181,6 +1337,45 @@ const PitchMaterial *knowledge_snapshot_material_named(const KnowledgeSnapshot *
 const ChordType *knowledge_snapshot_chord_type(const KnowledgeSnapshot *snapshot, const char *id) {
     const Slot *slot = knowledge_find_slot(snapshot, id);
     return slot != NULL && slot->has_chord_type ? &slot->chord_type : NULL;
+}
+
+size_t knowledge_snapshot_chord_type_count(const KnowledgeSnapshot *snapshot) {
+    size_t count = 0;
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        count += snapshot->slots[i].has_chord_type ? 1 : 0;
+    }
+    return count;
+}
+
+const ChordType *knowledge_snapshot_chord_type_at(const KnowledgeSnapshot *snapshot, size_t index) {
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        if (snapshot->slots[i].has_chord_type && index-- == 0) {
+            return &snapshot->slots[i].chord_type;
+        }
+    }
+    return NULL;
+}
+
+const VoicingEntry *knowledge_snapshot_voicing(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = knowledge_find_slot(snapshot, id);
+    return slot != NULL && slot->has_voicing ? &slot->voicing : NULL;
+}
+
+size_t knowledge_snapshot_voicing_count(const KnowledgeSnapshot *snapshot) {
+    size_t count = 0;
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        count += snapshot->slots[i].has_voicing ? 1 : 0;
+    }
+    return count;
+}
+
+const VoicingEntry *knowledge_snapshot_voicing_at(const KnowledgeSnapshot *snapshot, size_t index) {
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        if (snapshot->slots[i].has_voicing && index-- == 0) {
+            return &snapshot->slots[i].voicing;
+        }
+    }
+    return NULL;
 }
 
 const ChordType *knowledge_snapshot_chord_type_of(const KnowledgeSnapshot *snapshot, unsigned mask_above_root) {

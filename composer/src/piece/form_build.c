@@ -569,7 +569,9 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
             break;
         }
         const SpelledKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->region;
-        result = piece_give_harmony(plan, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
+        ComposerChords tones;
+        const ComposerChords *chords = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
+        result = piece_give_harmony_in(plan, chords, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
     }
     /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {

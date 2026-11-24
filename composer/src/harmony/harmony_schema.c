@@ -23,8 +23,8 @@ HarmonySchemaParams harmony_schema_params_default(void) {
     return params;
 }
 
-static HarmonySchemaParams params_of(void *context) {
-    return context ? *(const HarmonySchemaParams *)context : harmony_schema_params_default();
+static HarmonySchemaParams params_of(const void *params) {
+    return params ? *(const HarmonySchemaParams *)params : harmony_schema_params_default();
 }
 
 /* --- from the framework's stages to chords ------------------------------ */
@@ -61,9 +61,9 @@ static bool read_figures(const char *figures, bool *seventh, int *inversion) {
 }
 
 /* Whether the chord's bass member is what the framework's stage asks for, by the framework's own matching. */
-static bool bass_accepts(const SpelledKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
+static bool bass_accepts(const ComposerChords *tones, const SpelledKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
     int pc;
-    if (!harmony_chord_bass_pc(key, chord, &pc)) {
+    if (!harmony_chord_bass_pc(tones, key, chord, &pc)) {
         return false;
     }
     PitchSpelling *pitch = harmony_spell_pitch(key, harmony_member_degree(harmony_key_mode(key), chord), 48 + pc);
@@ -76,7 +76,7 @@ static bool bass_accepts(const SpelledKey *key, const PhraseChord *chord, const 
 }
 
 /* The chord of one stage, one cell long, or false when the data does not make one consistent chord. */
-static bool derive_stage(const SpelledKey *key, const GalantStage *stage, PhraseChord *out) {
+static bool derive_stage(const ComposerChords *tones, const SpelledKey *key, const GalantStage *stage, PhraseChord *out) {
     HarmonyMode mode = harmony_key_mode(key);
     bool seventh;
     int inversion;
@@ -86,7 +86,7 @@ static bool derive_stage(const SpelledKey *key, const GalantStage *stage, Phrase
     if (strcmp(stage->numeral, "Cad.") == 0) {
         /* The cadential 6/4. */
         return inversion == 2 && harmony_make_chord(mode, 1, 2, false, true, 1, out) &&
-               bass_accepts(key, out, &stage->bass);
+               bass_accepts(tones, key, out, &stage->bass);
     }
     const char *slash = strchr(stage->numeral, '/');
     if (slash) {
@@ -112,7 +112,7 @@ static bool derive_stage(const SpelledKey *key, const GalantStage *stage, Phrase
         out->function = HARMONIC_FUNCTION_DOMINANT;
         out->has_function = true;
         out->cells = 1;
-        return bass_accepts(key, out, &stage->bass);
+        return bass_accepts(tones, key, out, &stage->bass);
     }
     int degree = standard_tonality_roman_numeral_degree_of(stage->numeral, strlen(stage->numeral));
     if (degree == 0) {
@@ -122,7 +122,7 @@ static bool derive_stage(const SpelledKey *key, const GalantStage *stage, Phrase
     bool leading = mode == HARMONY_MODE_MINOR && strcmp(stage->numeral, "vii") == 0;
     bool made = leading ? (!seventh && harmony_make_leading_tone(mode, inversion, 1, out))
                         : harmony_make_chord(mode, degree, inversion, seventh, false, 1, out);
-    return made && bass_accepts(key, out, &stage->bass);
+    return made && bass_accepts(tones, key, out, &stage->bass);
 }
 
 /* The modulating schemas change key, which is planned elsewhere. */
@@ -130,12 +130,12 @@ static bool modulates(GalantSchemaId id) {
     return id == GALANT_SCHEMA_MODULATING_PRINNER || id == GALANT_SCHEMA_MODULATING_PRINNER_WITH_DOMINANT;
 }
 
-static bool derive_schema(const SpelledKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
+static bool derive_schema(const ComposerChords *tones, const SpelledKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
     if (modulates(prototype->id) || prototype->stage_count == 0 || prototype->stage_count > GALANT_MAX_STAGES) {
         return false;
     }
     for (size_t i = 0; i < prototype->stage_count; i++) {
-        if (prototype->stages[i].numeral_dominant != NULL || !derive_stage(key, &prototype->stages[i], &chords[i])) {
+        if (prototype->stages[i].numeral_dominant != NULL || !derive_stage(tones, key, &prototype->stages[i], &chords[i])) {
             return false;
         }
     }
@@ -158,7 +158,7 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id) {
 bool harmony_schema_chords(const SpelledKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
-    if (!key || !prototype || !derive_schema(key, prototype, chords)) {
+    if (!key || !prototype || !derive_schema(NULL, key, prototype, chords)) {
         return false;
     }
     for (size_t i = 0; i < prototype->stage_count; i++) {
@@ -172,7 +172,7 @@ bool harmony_schema_available(GalantSchemaId id, const PitchMaterial *material) 
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
     SpelledKey key = plan_key_of_pitch_class(0, material);
-    return prototype && derive_schema(&key, prototype, chords);
+    return prototype && derive_schema(NULL, &key, prototype, chords); /* only the bass pitch class is read: no table, no snapshot */
 }
 
 /* --- from stages to cells ----------------------------------------------- */
@@ -217,9 +217,9 @@ static bool layout_schema(const SkeletonContext *context, const GalantPrototype 
 
 static bool schema_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
-    (void)context;
-    return target.kind == FILL_TARGET_LANE_SPAN && harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) &&
-           read.metre.cells_per_bar == 2;
+    return target.kind == FILL_TARGET_LANE_SPAN &&
+           harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) &&
+           composer_chords_modal(composer_context_chords(context), &read.key) == NULL && read.metre.cells_per_bar == 2;
 }
 
 static unsigned role_of(SchemaFunction function) {
@@ -252,10 +252,12 @@ static bool role_fits(unsigned role, const SkeletonContext *context, size_t rema
 
 static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    HarmonySchemaParams params_value = params_of(context);
+    HarmonySchemaParams params_value = params_of(composer_context_params(context));
     const HarmonySchemaParams *params = &params_value;
     SkeletonContext read;
-    if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_skeleton_read(plan, (LaneSpanId)target.id, &read)) {
+    if (target.kind != FILL_TARGET_LANE_SPAN ||
+        !harmony_skeleton_read(plan, (LaneSpanId)target.id, composer_context_chords(context), &read) ||
+        composer_chords_modal(composer_context_chords(context), &read.key) != NULL) {
         return false;
     }
     SkeletonCandidate *skeleton = malloc(sizeof(*skeleton));
@@ -273,7 +275,7 @@ static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, v
         skeleton->schema = id;
         skeleton->context = read;
         size_t total;
-        if (!derive_schema(&read.key, prototype, skeleton->chords) ||
+        if (!derive_schema(read.composer_chords, &read.key, prototype, skeleton->chords) ||
             !layout_schema(&read, prototype, skeleton->chords, &total) || total > read.metre.cells) {
             continue;
         }
@@ -319,7 +321,7 @@ PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const Fi
     return harmony_skeleton_apply(plan, skeleton);
 }
 
-FillResult harmony_schema_register(FillOperatorRegistry *registry, const HarmonySchemaParams *params) {
+FillResult harmony_schema_register(FillOperatorRegistry *registry, const HarmonySchemaParams *params, const ComposerChords *chords) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_SCHEMA_OPERATOR_NAME;
@@ -333,6 +335,5 @@ FillResult harmony_schema_register(FillOperatorRegistry *registry, const Harmony
     operator_.applies = schema_applies;
     operator_.generate = schema_generate;
     operator_.apply = harmony_skeleton_apply_target;
-    operator_.context = (void *)params;
-    return fill_registry_register(registry, &operator_);
+    return composer_register_operator(registry, &operator_, params, chords);
 }

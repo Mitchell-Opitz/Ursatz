@@ -244,6 +244,12 @@ UrsatzStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edi
                                        PieceMade *piece, PieceResult *result, UrsatzError *error);
 cJSON *api_piece_time_json(Rational time);
 void api_piece_planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t size, bool *flats);
+
+/*
+ * The brightness (R-730) of the section's melody, bass and inner voices against the tonic and material of the key lane at its start:
+ * {"numerator", "denominator"}, or JSON null for a section with no notes or no key there. A new object, or NULL for no memory.
+ */
+cJSON *api_piece_brightness_json(const Plan *plan, NodeId section);
 size_t api_piece_collect_rows(const PieceSpec *request, const PieceVersion *version, ApiPieceRow *rows);
 double api_piece_span_beats(const PieceSpec *request, Rational length);
 /* Adds start_text, end_text and length_text (API 4.2) to the loop region {"start", "end"}; false when it has no times. */

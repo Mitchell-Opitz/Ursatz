@@ -176,6 +176,12 @@
           "type": "boolean",
           "description": "The idea that ends a cadence ends on one note held from its last downbeat to its end, on the cadence's tone (R-712). Off by default."
         },
+        "color_note": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "In a modal key, how likely a strong or long melody note is to take one of the mode's characteristic steps when its chord has one: color_note draws in color_note + 1 take it (R-732). 0 never; major and minor keys have none. Default 2."
+        },
         "waive": {
           "type": "array",
           "uniqueItems": true,
@@ -714,14 +720,25 @@
           "maximum": 11,
           "description": "The most skips (intervals of 3 or 4 semitones) in a motif; 11 never rejects, the default."
         },
+        "color_note": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "In a modal key, the first this many tries of a setup keep a motif only when a note on a beat is one of the mode's characteristic steps (R-732). 0 asks for none; major and minor keys have none. Default 4."
+        },
+        "color_chords": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$",
+          "description": "n/d with 0 <= n <= d and d from 1 to 16. How often a chord of the motif's plan takes a color type of harmony.color.types that fits it (a major triad of the key; add9, add6, six-nine, the ninths; R-727). 0/1 draws none, the default."
+        },
         "plan": {
           "type": "array",
           "minItems": 1,
           "maxItems": 4,
-          "description": "A given chord plan: Roman numerals I to VII in any case, an optional o or degree sign, an optional place @bar or @bar:beat (bar 1 or 2, beat 1 to 12). Either no chord has a place (at most 3 chords) or every chord after the first has one, rising. Absent by default: the plan is drawn.",
+          "description": "A given chord plan: Roman numerals I to VII in any case, an optional o or degree sign or color suffix (add9, add6, 69, 9, maj9: the chord must be a major triad of the key), an optional place @bar or @bar:beat (bar 1 or 2, beat 1 to 12). Either no chord has a place (at most 3 chords) or every chord after the first has one, rising. Absent by default: the plan is drawn.",
           "items": {
             "type": "string",
-            "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|\u00b0)?(@[12](:([1-9]|1[0-2]))?)?$"
+            "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|\u00b0|add9|add6|69|9|maj9)?(@[12](:([1-9]|1[0-2]))?)?$"
           }
         }
       }
@@ -1007,6 +1024,61 @@
               "minimum": 0,
               "maximum": 20,
               "description": "A range wider than a tenth. Weight 0 to 20; default 1."
+            }
+          }
+        }
+      }
+    },
+    "harmony": {
+      "type": "object",
+      "description": "The settings of the phrase model's chords (docs/preferences.md).",
+      "additionalProperties": false,
+      "properties": {
+        "mixture": {
+          "type": "object",
+          "description": "Modal mixture (R-729): how often a predominant chord of the phrase model is borrowed from another mode. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "share": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$",
+              "description": "The chance a predominant chord is borrowed, a ratio n/d from 0/1 to 1/1 (d up to 16). Default 0/1: nothing is borrowed."
+            },
+            "from": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 31
+              },
+              "description": "The relation words, in order, whose modes a chord is borrowed from: the first whose triad on the degree differs from the key's and is not avoided. Default parallel, one step darker, one step brighter."
+            }
+          }
+        },
+        "color": {
+          "type": "object",
+          "description": "Color chords (R-727): how often a chord of the phrase model sounds the members of a chord type (an added ninth, a six-nine, a ninth chord, a quartal chord) while every check reads the basic chord. Off by default.",
+          "additionalProperties": false,
+          "properties": {
+            "share": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$",
+              "description": "The chance a chord gets a color type, a ratio n/d from 0/1 to 1/1 (d up to 16). Default 0/1: no chord is colored."
+            },
+            "types": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 12,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 47
+              },
+              "description": "The K2 chord type ids a color type is drawn from, among those that fit the chord. Default the ten persichetti types."
             }
           }
         }

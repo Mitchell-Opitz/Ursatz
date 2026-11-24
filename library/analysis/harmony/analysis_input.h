@@ -6,6 +6,7 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/harmony/harmony_chord.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_segment.h"
 #include "theory/vocabulary/applied_chord_kind.h"
@@ -70,6 +71,8 @@ typedef struct {
     double uncertainty;
     bool has_beat_length;
     Duration beat_length;
+    /* The chord types the segment's intervals follow (R-728; borrowed). NULL: the fallback tables. */
+    const CommonPracticeMaterials *materials;
 } HarmonySegmentInput;
 
 

@@ -154,20 +154,23 @@ typedef struct {
 
 static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, const ChordSpec *spec, Scored *out) {
     HarmonyMode mode = harmony_mode_of_material(motive->material);
+    /* A modal key's chords are stacked from its material (R-725): its seventh chords and leading-tone chord are not candidates. */
+    HarmonyKind kind = {mode, pitch_material_is_modal_key(NULL, motive->material) ? motive->material : NULL, NULL, NULL};
     PhraseChord chord;
     if (spec->leading_tone) {
-        if (mode != HARMONY_MODE_MINOR || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
+        if (mode != HARMONY_MODE_MINOR || kind.modal != NULL || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
             return false;
         }
-    } else if (!harmony_make_chord(mode, spec->degree, 0, spec->seventh, false, 1, &chord)) {
+    } else if (!harmony_make_chord_in(&kind, spec->degree, 0, spec->seventh, false, 1, &chord)) {
         return false;
     }
     int intervals[4];
     size_t interval_count;
-    if (!harmony_diatonic_intervals(mode, &chord.chord, intervals, &interval_count)) {
+    int root;
+    /* A Motive carries no snapshot: its chord tones are read from the fallback tables (R-728), which are the entries' own semitones. */
+    if (!composer_chord_intervals(NULL, mode, kind.modal, &chord.chord, &root, intervals, &interval_count)) {
         return false;
     }
-    int root = spec->leading_tone ? 11 : harmony_applied_scale_semitone(mode, spec->degree);
     bool member[12] = {false};
     for (size_t k = 0; k < interval_count; k++) {
         member[(motive->tonic_pc + root + intervals[k]) % 12] = true;
@@ -325,8 +328,8 @@ static void key_text(const SpelledKey *key, char *out, size_t size) {
     /* The minor key's tonic is named as a minor key is written (key_tonic_name_minor, R-582: Eb minor, not D# minor). */
     int tonic = spelled_key_tonic_pitch_class(key);
     snprintf(out, size, "%s %s",
-             composer_key_is_minor(key) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
-             composer_key_is_minor(key) ? "minor" : "major");
+             composer_key_is_minor(key) && !pitch_material_is_modal_key(NULL, key->material) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
+             composer_key_word(key));
 }
 
 static const char *key_source_name(MotiveSketchKeySource source) {

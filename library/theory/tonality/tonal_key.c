@@ -70,7 +70,7 @@ static void locate(const int *steps, size_t count, int inside, int *degree, int 
 }
 
 /* A chromatic semitone with no context is read as the next degree lowered where the two spellings are
- * a semitone from the neighbors on both sides (R-285): semitone 1 in every material, and where the third is major and the sixth and
+ * a semitone from the neighbors on both sides (R-285): semitone 1 where the material has no step there, and where the third is major and the sixth and
  * seventh are 9 and 11 (the major scale) also 3, 8 and 10. The sharp readings that stay are the raised fourth, and the natural
  * minor's #3, #6 and #7. */
 static bool semitone_reads_lowered(const PitchMaterial *material, int inside) {
@@ -95,7 +95,8 @@ bool standard_tonality_material_degree_of_semitone(int semitones_above_center, c
     if (!standard_tonality_material_degree_at_or_below_semitone(semitones_above_center, material, degree, alteration)) {
         return false;
     }
-    if (semitone_reads_lowered(material, floor_mod(semitones_above_center, PITCH_SEMITONES_PER_OCTAVE))) {
+    /* A step of the material is its own degree (phrygian's and locrian's second is semitone 1); only a chromatic semitone reads lowered. */
+    if (*alteration != 0 && semitone_reads_lowered(material, floor_mod(semitones_above_center, PITCH_SEMITONES_PER_OCTAVE))) {
         *degree += 1;
         *alteration = -1;
     }

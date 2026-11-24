@@ -249,6 +249,7 @@ void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowReques
         request->chords = material->chord_count > 0 ? material->chords : NULL;
         request->chord_count = material->chord_count;
     }
+    request->knowledge = setup->knowledge;
 }
 
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
@@ -281,6 +282,9 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.context.motif = setup->motif;
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;
+    config.mixture = setup->mixture;
+    config.color = setup->color;
+    config.block_voicing = setup->block_voicing;
     config.style = setup->style;
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;

@@ -29,6 +29,7 @@ ratings/critiques/<item id>.json                   the critic's judgments of the
 projects/<prj>/settings.json                       the project's settings, overrides and switches
 projects/<prj>/items/<id>/settings.json            the item's
 projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version (ursatz-settings-snapshot)
+knowledge/*.json                                   the user's own knowledge entries (ids user.*): read when the workshop opens, never written
 cache/                                             motive-link-cache.json, renders/<item>/v<n>/, index/: rebuilt, never the source of truth
 ```
 

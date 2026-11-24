@@ -101,7 +101,7 @@ static bool starts_in_home_key(const Plan *plan, const GrowThemeRequest *request
     }
     const SpelledKey *home = &plan_lane_span_payload(plan, spans[0])->region;
     return spelled_key_tonic_pitch_class(home) == spelled_key_tonic_pitch_class(&request->key) &&
-           composer_key_is_minor(home) == composer_key_is_minor(&request->key);
+           composer_key_same_mode(home, &request->key);
 }
 
 /* The kind of spec the candidate loop draws (grow_generate_specs). */

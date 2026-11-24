@@ -7,6 +7,7 @@
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "material/form_figure_internal.h"
+#include "test_knowledge.h"
 #include "structure/plan_util.h"
 #include "util/util.h"
 
@@ -21,7 +22,7 @@ bool harmony_check_lane_without_cadence(const Plan *plan, PlanSpan span, Harmony
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -49,7 +50,7 @@ bool harmony_check_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, Caden
         return false;
     }
     mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false, &metre, NULL, NULL};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -70,7 +71,7 @@ bool harmony_hear_lane_cadences(const Plan *plan, PlanSpan span, HarmonyMode mod
         found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre, NULL, NULL};
     SegmentSet *set = harmony_segments_create_heard(&phrase, soprano);
     if (!set) {
         return false;
@@ -129,7 +130,7 @@ bool melody_check_lane(const Plan *plan, PlanSpan span, SpelledKey key, const Me
         found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, HARMONY_MAX_CHORDS);
         ok = found > 0 && found <= HARMONY_MAX_CHORDS &&
              plan_span_end(span, &phrase_end) == PLAN_OK &&
-             melody_phrase_read(plan, plan_lane_span_owner(plan, ids[0]), span, key, &melody->context);
+             melody_phrase_read(plan, plan_lane_span_owner(plan, ids[0]), span, key, test_composer_chords(), &melody->context);
     }
     if (melody) {
         melody->params = params ? *params : melody_fill_params_default();
@@ -231,7 +232,7 @@ static bool is_scale_step(const SpelledKey *key, int from, int to) {
 
 bool form_figure_check(const Plan *plan, NodeId section, char *reason, size_t size) {
     SectionFigure figure;
-    FigureReading *reading = plan && form_figure_find(plan, section, &figure) ? form_figure_read_section(plan, section) : NULL;
+    FigureReading *reading = plan && form_figure_find(plan, section, &figure) ? form_figure_read_section(plan, test_composer_chords(), section) : NULL;
     size_t own_count = 0;
     FigureSourceNote *own = reading ? form_figure_read_melody(plan, section, 0, false, 0, NULL, &own_count) : NULL;
     if (!reading || !own) {

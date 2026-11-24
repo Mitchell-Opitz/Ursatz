@@ -42,6 +42,11 @@ static void refuse(char *message, size_t size, const char *format, ...) {
 
 PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
                                const SpelledKey *key, char *message, size_t message_size) {
+    return piece_give_harmony_in(plan, NULL, section, harmony, meter, key, message, message_size);
+}
+
+PieceResult piece_give_harmony_in(Plan *plan, const ComposerChords *tones, NodeId section, const SectionHarmony *harmony,
+                                  const PlanMeter *meter, const SpelledKey *key, char *message, size_t message_size) {
     if (!plan || !harmony || !meter || !key) {
         return PIECE_ERR_NULL;
     }
@@ -59,7 +64,7 @@ PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony 
             refuse(message, message_size, "a progression is 1 to %d numerals in a meter the harmony stage writes", NUMERALS_MAX);
             return PIECE_ERR_BAD_REQUEST;
         }
-        given = plan_give_progression(plan, section, 0, numerals, count, harmony->cells ? harmony->cells : cells_per_bar);
+        given = plan_give_progression_in(plan, tones, section, 0, numerals, count, harmony->cells ? harmony->cells : cells_per_bar);
         break;
     }
     case SECTION_HARMONY_SCHEMA: {
@@ -103,14 +108,14 @@ PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony 
         long length = rational_div(span.length, bar_length, &bars) == RATIONAL_OK && bars.den == 1 ? (long)bars.num : 0;
         UrsatzError error;
         memset(&error, 0, sizeof(error));
-        UrsatzStatus read = request_read_chords(list, "/chords", "the section", 1, meter, key, length, chords, numerals, CHORDS_MAX, &count,
+        UrsatzStatus read = request_read_chords(tones, list, "/chords", "the section", 1, meter, key, length, chords, numerals, CHORDS_MAX, &count,
                                                   &error);
         cJSON_Delete(list);
         if (read != URSATZ_OK) {
             refuse(message, message_size, "%s", error.message);
             return PIECE_ERR_BAD_REQUEST;
         }
-        given = plan_give_chords(plan, section, chords, count);
+        given = plan_give_chords_in(plan, tones, section, chords, count);
         break;
     }
     }
@@ -123,6 +128,11 @@ PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony 
 
 bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size) {
+    return piece_check_harmony_in(NULL, meter, key, length, harmony, message, message_size);
+}
+
+bool piece_check_harmony_in(const ComposerChords *tones, const PlanMeter *meter, const SpelledKey *key, Rational length,
+                            const SectionHarmony *harmony, char *message, size_t message_size) {
     if (harmony->kind == SECTION_HARMONY_NONE) {
         return true;
     }
@@ -149,7 +159,7 @@ bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational
     memset(&payload, 0, sizeof(payload));
     payload.region = *key;
     ok = ok && plan_add_lane_span(plan, form, PLAN_LANE_REGION, 0, span, &payload, &lane) == PLAN_OK;
-    PieceResult result = ok ? piece_give_harmony(plan, section, harmony, meter, key, message, message_size) : PIECE_ERR_ALLOC;
+    PieceResult result = ok ? piece_give_harmony_in(plan, tones, section, harmony, meter, key, message, message_size) : PIECE_ERR_ALLOC;
     plan_destroy(plan);
     return result == PIECE_OK;
 }

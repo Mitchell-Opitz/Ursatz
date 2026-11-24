@@ -127,7 +127,7 @@ bool request_key_refusal(const char *text, const KnowledgeSnapshot *knowledge, c
     if (!material || composer_material_supported(&materials, material)) {
         return false;
     }
-    snprintf(message, size, "the Composer writes major and minor keys; '%s' is not one of them", word);
+    snprintf(message, size, "the Composer writes major, minor and modal keys; '%s' is not one of them", word);
     return true;
 }
 

@@ -210,6 +210,28 @@ static void test_at_or_below(void) {
     assert(!standard_tonality_material_degree_at_or_below_semitone(0, material_of(99), &degree, &alteration));
 }
 
+/* Every step of the church modes reads as its own degree, unaltered: phrygian's and locrian's second is semitone 1 (P69). */
+static void test_mode_steps(void) {
+    static const char *const MODES[] = {"omt.material.lydian", "omt.material.mixolydian", "omt.material.dorian", "omt.material.phrygian",
+                                        "omt.material.locrian"};
+    for (size_t m = 0; m < sizeof(MODES) / sizeof(MODES[0]); m++) {
+        const PitchMaterial *material = knowledge_snapshot_material(test_knowledge(), MODES[m]);
+        assert(material != NULL && material->step_count == 7);
+        for (int degree = 1; degree <= 7; degree++) {
+            int got = 0;
+            int alteration = 9;
+            assert(standard_tonality_material_degree_of_semitone(material->steps[degree - 1], material, &got, &alteration));
+            assert(got == degree && alteration == 0);
+        }
+    }
+    /* Phrygian's raised second (D over C) reads as the second raised, as in any material whose second is a semitone. */
+    const PitchMaterial *phrygian = knowledge_snapshot_material(test_knowledge(), "omt.material.phrygian");
+    int degree = 0;
+    int alteration = 0;
+    assert(standard_tonality_material_degree_of_semitone(2, phrygian, &degree, &alteration));
+    assert(degree == 2 && alteration == 1);
+}
+
 int main(void) {
     test_scale_notes();
     test_chromatic_notes();
@@ -218,6 +240,7 @@ int main(void) {
     test_every_offset_in_major_and_minor();
     test_invalid();
     test_at_or_below();
+    test_mode_steps();
     printf("standard-tonality degree of semitone tests passed\n");
     return 0;
 }

@@ -543,6 +543,10 @@
               },
               "bass": {
                 "type": "string"
+              },
+              "borrowed_from": {
+                "type": "string",
+                "description": "The id of the material a borrowed chord is taken from (R-729); present only for a borrowed chord."
               }
             },
             "additionalProperties": false

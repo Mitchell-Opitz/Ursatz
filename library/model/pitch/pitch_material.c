@@ -47,6 +47,31 @@ int pitch_material_third(const PitchMaterial *material) {
     return pitch_material_step(material, THIRD_DEGREE);
 }
 
+static const int MAJOR_STEPS[7] = {0, 2, 4, 5, 7, 9, 11};
+
+int pitch_material_major_rotation(const PitchMaterial *material) {
+    if (material == NULL || material->step_count != 7) {
+        return 0;
+    }
+    for (int rotation = 1; rotation <= 7; rotation++) {
+        bool same = true;
+        for (int i = 0; same && i < 7; i++) {
+            int step = (MAJOR_STEPS[(rotation - 1 + i) % 7] - MAJOR_STEPS[rotation - 1] + SEMITONES_PER_OCTAVE) % SEMITONES_PER_OCTAVE;
+            same = step == material->steps[i];
+        }
+        if (same) {
+            return rotation;
+        }
+    }
+    return 0;
+}
+
+#define NATURAL_MINOR_BRIGHTNESS_RANK 3
+
+bool pitch_material_is_natural_minor(const PitchMaterial *material) {
+    return pitch_material_is_diatonic(material) && material->has_brightness && material->brightness_rank == NATURAL_MINOR_BRIGHTNESS_RANK;
+}
+
 bool pitch_material_is_diatonic(const PitchMaterial *material) {
     return material != NULL && material->family != NULL && strcmp(material->family, "diatonic") == 0 &&
            material->step_count == DIATONIC_STEPS;

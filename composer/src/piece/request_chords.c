@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <theory/harmony/harmony_chord.h>
+#include <theory/tonality/roman_numeral_grammar.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 
@@ -22,7 +23,7 @@ static UrsatzStatus fail(UrsatzError *error, const char *path, const char *forma
 }
 
 /* The chords a request gives, and what a list of them is read as: see request_chords.h. */
-UrsatzStatus request_read_chords(const cJSON *list, const char *base, const char *what, long first_bar, const PlanMeter *meter,
+UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list, const char *base, const char *what, long first_bar, const PlanMeter *meter,
                                    const SpelledKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
                                    size_t *chord_count, UrsatzError *error) {
     if (!list || cJSON_IsNull(list)) {
@@ -66,7 +67,7 @@ UrsatzStatus request_read_chords(const cJSON *list, const char *base, const char
         MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
         size_t count = 0;
         MotiveError motive_error;
-        if (motive_harmony_parse(text, meter, parsed, &count, &motive_error) != MOTIVE_OK) {
+        if (motive_harmony_parse_in(tones != NULL ? tones->knowledge : NULL, text, meter, parsed, &count, &motive_error) != MOTIVE_OK) {
             return fail(error, path, "chords bar %ld: '%s' at %s: %s", bar, text,
                             motive_error.location, motive_error.message);
         }
@@ -107,18 +108,41 @@ UrsatzStatus request_read_chords(const cJSON *list, const char *base, const char
             if (rational_cmp(chord->onset, bar_length) >= 0) {
                 return fail(error, path, "chords bar %ld: a chord starts inside the bar", bar);
             }
-            if (chord->alteration != 0) {
-                return fail(error, path,
-                                "chords bar %ld: altered chords are not given; write a diatonic numeral", bar);
-            }
-            HarmonyChord harmony;
-            memset(&harmony, 0, sizeof(harmony));
-            harmony.degree = chord->degree;
-            harmony.inversion = chord->inversion;
-            harmony.seventh = chord->seventh;
             size_t at = *chord_count;
-            if (!harmony_roman_format(harmony_key_mode(key), &harmony, numerals[at])) {
-                return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);
+            if (chord->alteration != 0) {
+                /* A borrowed chord (R-729): the altered numeral is a major triad ("bVI", "bII": the chord text has no case), read in the
+                   key by the nearest mode that holds it. */
+                HarmonyKind kind = harmony_kind(tones, key);
+                HarmonyChord borrowed;
+                char altered[PLAN_ROMAN_NUMERAL_MAX];
+                StandardTonalityNumeralText numeral;
+                memset(&numeral, 0, sizeof(numeral));
+                numeral.alteration = chord->alteration;
+                numeral.degree = chord->degree;
+                numeral.inversion = chord->inversion;
+                numeral.quality = STANDARD_TONALITY_NUMERAL_MAJOR;
+                if (tones == NULL || chord->seventh || !standard_tonality_numeral_format(&numeral, altered, sizeof(altered)) ||
+                    !harmony_roman_parse_in(&kind, altered, &borrowed) || !harmony_roman_format_in(&kind, &borrowed, numerals[at])) {
+                    return fail(error, path, tones == NULL ? "chords bar %ld: altered chords are not given; write a diatonic numeral"
+                                                           : "chords bar %ld: that altered chord is not in a mode on the key's tonic",
+                                bar);
+                }
+            } else {
+                HarmonyChord harmony;
+                memset(&harmony, 0, sizeof(harmony));
+                harmony.degree = chord->degree;
+                harmony.inversion = chord->inversion;
+                harmony.seventh = chord->seventh;
+                HarmonyKind plain = harmony_kind(tones, key);
+                if (chord->color != NULL && (tones == NULL || chord->inversion != 0 || chord->seventh ||
+                                             !composer_color_fits(tones, harmony_key_mode(key), plain.modal, &harmony, chord->color))) {
+                    return fail(error, path, "chords bar %ld: that color chord does not fit the key (a color type goes on a triad of the key whose third and fifth are its own)", bar);
+                }
+                harmony.color = chord->color;
+                if (!(chord->color != NULL ? harmony_roman_format_in(&plain, &harmony, numerals[at])
+                                           : harmony_roman_format(harmony_key_mode(key), &harmony, numerals[at]))) {
+                    return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);
+                }
             }
             if (c + 1 < count) {
                 end = parsed[c + 1].onset;

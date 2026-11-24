@@ -396,11 +396,11 @@ static void check_given_fits(const Plan *plan, ScenarioKind kind) {
             if (lane == PLAN_LANE_MELODY) {
                 unsigned mask;
                 unsigned seventh;
-                assert(melody_chord_mask(&key, &chord, &mask, &seventh));
+                assert(melody_chord_mask(test_composer_chords(), &key, &chord, &mask, &seventh));
                 assert((mask >> (notes->notes[n].midi % 12)) & 1u);
             } else if (rational_cmp(plan_lane_span_span(plan, chords[0]).start, onset) == 0) {
                 int pc;
-                assert(harmony_chord_bass_pc(&key, &chord, &pc));
+                assert(harmony_chord_bass_pc(test_composer_chords(), &key, &chord, &pc));
                 assert(pc == notes->notes[n].midi % 12);
             }
         }

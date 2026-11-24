@@ -128,7 +128,7 @@ bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational
            rational_add(*start, reading->cell_length, end) == RATIONAL_OK;
 }
 
-FigureReading *form_figure_read_section(const Plan *plan, NodeId section) {
+FigureReading *form_figure_read_section(const Plan *plan, const ComposerChords *chords, NodeId section) {
     ReturnRef ret;
     int shift;
     if (!plan || !return_target(plan, section, &ret) || ret.variation != SECTION_RETURN_FIGURATE) {
@@ -138,10 +138,15 @@ FigureReading *form_figure_read_section(const Plan *plan, NodeId section) {
     if (!reading) {
         return NULL;
     }
+    reading->composer_chords = chords;
     PlanSpan span = plan_node_span(plan, section);
     PhraseMetre *metre = &reading->metre;
-    if (!section_key(plan, span, &reading->key) ||
-        !harmony_read_lane(plan, span, harmony_key_mode(&reading->key), reading->chords, &reading->chord_count, metre) ||
+    if (!section_key(plan, span, &reading->key)) {
+        form_figure_reading_free(reading);
+        return NULL;
+    }
+    HarmonyKind kind = harmony_kind(chords, &reading->key);
+    if (!harmony_read_lane_for(plan, span, &kind, reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
         metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
         metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX) {
@@ -186,7 +191,7 @@ FigureReading *form_figure_read_section(const Plan *plan, NodeId section) {
         ok = form_figure_cell_bounds(reading, k, &start, &end) && rational_div(start, metre->cell_length, &in_harmony) == RATIONAL_OK &&
              rational_floor(in_harmony, &harmony_index) == RATIONAL_OK && harmony_index >= 0 &&
              (size_t)harmony_index < metre->cells &&
-             melody_chord_mask(&reading->key, &reading->chords[chord_of[harmony_index]], &reading->mask[k], &seventh);
+             melody_chord_mask(reading->composer_chords, &reading->key, &reading->chords[chord_of[harmony_index]], &reading->mask[k], &seventh);
         if (!ok) {
             break;
         }
@@ -226,8 +231,8 @@ FigureReading *form_figure_read_section(const Plan *plan, NodeId section) {
     return reading;
 }
 
-bool form_figure_skeleton(const Plan *plan, NodeId section, FormSkeleton *out) {
-    FigureReading *reading = out ? form_figure_read_section(plan, section) : NULL;
+bool form_figure_skeleton(const Plan *plan, const ComposerChords *chords, NodeId section, FormSkeleton *out) {
+    FigureReading *reading = out ? form_figure_read_section(plan, chords, section) : NULL;
     if (!reading) {
         return false;
     }
@@ -297,7 +302,7 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
 static unsigned scale_pitch_classes(const SpelledKey *key, unsigned chord_mask) {
     int tonic = spelled_key_tonic_pitch_class(key);
-    if (!composer_key_is_minor(key)) {
+    if (!composer_material_raises_seventh(key->material)) {
         return util_scale_mask(tonic, key->material);
     }
     bool raised = (chord_mask >> ((tonic + 11) % 12)) & 1u;
@@ -510,13 +515,13 @@ static bool write_spans(Plan *plan, NodeId section, const FigureNote *list, size
     return ok && written == count;
 }
 
-bool form_figure_write(Plan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng) {
+bool form_figure_write(Plan *plan, const ComposerChords *chords, NodeId section, const MelodyFillParams *range, FillRng *rng) {
     MelodyFillParams defaults = melody_fill_params_default();
     SectionFigure figure;
     if (!plan || !rng || !form_figure_find(plan, section, &figure)) {
         return false;
     }
-    FigureReading *reading = form_figure_read_section(plan, section);
+    FigureReading *reading = form_figure_read_section(plan, chords, section);
     if (!reading) {
         return false;
     }

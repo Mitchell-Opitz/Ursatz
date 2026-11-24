@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include <theory/harmony/harmonic_function.h>
@@ -80,6 +81,10 @@ bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out) {
 
 /* The closely related key of `from` that is the key `to`. */
 static bool related_key_of(SpelledKey from, SpelledKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
+    /* The closely related keys are those of major and minor: a modal key changes key in a later phase (R-725). */
+    if (pitch_material_is_modal_key(NULL, from.material) || pitch_material_is_modal_key(NULL, to.material)) {
+        return false;
+    }
     *home = composer_key_is_minor(&from) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     int semitone = util_pitch_class(spelled_key_tonic_pitch_class(&to) - spelled_key_tonic_pitch_class(&from));
     HarmonyMode mode = composer_key_is_minor(&to) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
@@ -160,6 +165,30 @@ bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan s
         return false;
     }
     *out = harmony_key_mode(&key);
+    return true;
+}
+
+bool harmony_cadence_allowed(const ComposerChords *chords, const SpelledKey *key, CadenceType cadence, char *message, size_t size) {
+    const PitchMaterial *modal = composer_chords_modal(chords, key);
+    if (modal == NULL || (cadence != CADENCE_TYPE_DECEPTIVE && cadence != CADENCE_TYPE_PLAGAL)) {
+        return true;
+    }
+    if (message != NULL && size > 0) {
+        char name[48];
+        util_key_name(spelled_key_tonic_pitch_class(key), modal, name, sizeof(name));
+        snprintf(message, size, "the %s cadence is the only one written in %s; DC and PC need a dominant", modal->key_word != NULL ? modal->key_word : modal->name, name);
+    }
+    return false;
+}
+
+bool harmony_find_kind(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, const ComposerChords *chords, HarmonyMode *mode,
+                       const PitchMaterial **modal) {
+    SpelledKey key;
+    if (!harmony_find_key(plan, id, owner, span, &key)) {
+        return false;
+    }
+    *mode = harmony_key_mode(&key);
+    *modal = composer_chords_modal(chords, &key);
     return true;
 }
 
@@ -387,13 +416,14 @@ size_t harmony_metre_last_cell(const PhraseMetre *metre) {
 }
 
 static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation, bool around_given,
-                         PhraseRequest *out) {
+                         const ComposerChords *chords, PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
     }
     PhraseRequest request;
     PhraseMetre metre;
     memset(&request, 0, sizeof(request));
+    request.composer_chords = chords;
     request.target = target;
     request.owner = plan_lane_span_owner(plan, target);
     request.span = plan_lane_span_span(plan, target);
@@ -440,6 +470,10 @@ static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation,
         return false;
     }
     request.mode = harmony_key_mode(&request.key);
+    request.modal = composer_chords_modal(chords, &request.key);
+    if (!harmony_cadence_allowed(chords, &request.key, request.cadence, NULL, 0)) {
+        return false;
+    }
     if (request.has_shape && request.shape.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
         /* A pivot opens a phrase model on a key change; a prolongation does not open one. */
         request.pivot = true;
@@ -464,16 +498,16 @@ static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation,
     return true;
 }
 
-bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, false, false, out);
+bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, false, false, chords, out);
 }
 
-bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, false, true, out);
+bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, false, true, chords, out);
 }
 
-bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, true, true, out);
+bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, const ComposerChords *chords, PhraseRequest *out) {
+    return read_request(plan, target, true, true, chords, out);
 }
 
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out) {

@@ -49,4 +49,8 @@ cJSON *preferences_write_development(const ComposerPreferences *preferences);
 bool preferences_read_critic(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
 cJSON *preferences_write_critic(const ComposerPreferences *preferences);
 
+/* The harmony group: reads the object into preferences (refusing with the path under "harmony"), and writes the group. */
+bool preferences_read_harmony(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
+cJSON *preferences_write_harmony(const ComposerPreferences *preferences);
+
 #endif

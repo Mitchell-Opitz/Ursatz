@@ -163,9 +163,6 @@ static int check_options(Options *options) {
     if (!options->material_text) {
         options->material_text = "major";
     }
-    if (strcmp(options->material_text, "major") != 0 && strcmp(options->material_text, "minor") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--material must be major or minor, not '%s'", options->material_text);
-    }
     options->meter_given = options->meter_text != NULL;
     if (!options->meter_text) {
         options->meter_text = "4/4";
@@ -445,7 +442,7 @@ static bool add_sample(cJSON *request, unsigned long seed, const cJSON *preferen
 
 /* The motif as the `motive` command reads it: the motive document {"motive", "analysis"} the API answers with, in key C. */
 static int read_motif_file(const Options *options, cJSON **document) {
-    char key[16];
+    char key[48];
     snprintf(key, sizeof key, "C %s", options->material_text);
     MotiveInput input;
     memset(&input, 0, sizeof input);

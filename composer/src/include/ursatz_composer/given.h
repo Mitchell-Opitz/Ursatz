@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <plan/plan_lanes.h>
+#include <ursatz_composer/harmony_chords.h>
 #include <plan/plan.h>
 
 /*
@@ -56,6 +57,8 @@ GivenResult plan_give_melody(Plan *plan, NodeId section, size_t bar, const PlanN
  */
 GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
+GivenResult plan_give_progression_in(Plan *plan, const ComposerChords *chords, NodeId section, size_t bar, const char *const *numerals,
+                                     size_t count, size_t cells_per_chord);
 
 /* One chord at an exact place: onset from the section's start, length to its end. */
 typedef struct {
@@ -71,6 +74,13 @@ typedef struct {
  * plan as it was.
  */
 GivenResult plan_give_chords(Plan *plan, NodeId section, const GivenChord *chords, size_t count);
+
+/*
+ * The same with the run's ComposerChords (R-729): a numeral that is not the key's own (bVI, iv in C major; IV in C minor) is read as a
+ * borrowed chord, the plan's payload naming the material, when `chords` holds the snapshot. NULL is the plain forms above, which read
+ * the key's own chords only.
+ */
+GivenResult plan_give_chords_in(Plan *plan, const ComposerChords *chords, NodeId section, const GivenChord *given, size_t count);
 
 /*
  * The length of a harmony cell in the meter, in whole notes: the grid the harmony and bass operators write chords on (a

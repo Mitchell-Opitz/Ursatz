@@ -7,8 +7,8 @@
 
 /* The chord masks and the melodic rule count the melody, the accompaniment and the counterpoint read through the harmony. */
 
-bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
-    int intervals[4];
+bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
+    int intervals[COMPOSER_CHORD_TONES_MAX];
     size_t count;
     int root;
     if (chord->applied) {
@@ -16,24 +16,20 @@ bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned
             return false;
         }
         root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
-    } else {
-        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, &count)) {
+        if (root < 0) {
             return false;
         }
-        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = composer_key_is_minor(key) && chord->chord.leading_tone
-                   ? 11
-                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
-    }
-    if (root < 0) {
+        root = (spelled_key_tonic_pitch_class(key) + root) % 12;
+    } else if (!composer_chord_tones(chords, key, &chord->chord, &root, intervals, &count)) {
         return false;
     }
     *mask = 0;
     *seventh = 0;
     for (size_t k = 0; k < count; k++) {
-        unsigned bit = 1u << ((spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
+        unsigned bit = 1u << ((root + intervals[k]) % 12);
         *mask |= bit;
-        if (k == 3) {
+        /* The seventh is the fourth tone of a seventh chord, or the member a color type names as one. */
+        if (chord->applied || chord->chord.color == NULL ? k == 3 : chord->chord.color->members[k].role == CHORD_MEMBER_SEVENTH) {
             *seventh = bit;
         }
     }
