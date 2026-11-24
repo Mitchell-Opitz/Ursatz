@@ -111,6 +111,7 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
         out->syncopation_levels[i] = 1;
     }
     out->skips_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
+    out->color_note = 4;
 }
 
 /*
@@ -297,6 +298,21 @@ bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences
     return !(only_open && (last == 4 || last == 6));
 }
 
+/* Whether a note on a beat of the motif sounds one of the characteristic steps of the key's mode (R-732). */
+static bool color_on_beat(const Motive *motive, const SpelledKey *key) {
+    unsigned mask = composer_key_color_mask(key);
+    PlanMeter meter = motive_meter(motive);
+    Rational pickup = motive_pickup(motive);
+    for (size_t i = 0; i < motive->note_count; i++) {
+        Rational at = motive_time_minus(motive->notes[i].onset, pickup);
+        bool on_beat = at.den != 0 && (at.num * (long)meter.beat_unit) % (long)at.den == 0;
+        if (on_beat && ((mask >> util_pitch_class(motive_pitch(motive, i))) & 1u)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                                       bool *found) {
     Setup setup;
@@ -336,6 +352,10 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
             return false;
         }
         if (fault == NULL) {
+            /* In a modal key the first tries want its characteristic step on a beat; later ones keep any motif. */
+            if ((unsigned)attempt < preferences->color_note && composer_key_color_mask(key) != 0 && !color_on_beat(out, key)) {
+                continue;
+            }
             *found = true;
             return true;
         }

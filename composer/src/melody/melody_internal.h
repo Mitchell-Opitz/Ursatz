@@ -194,9 +194,6 @@ static inline bool melody_has_generated(const MelodyCandidate *melody) {
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);
 
-/* The pitch classes of the characteristic steps of a key's mode on its tonic; 0 for a key whose material names none. */
-unsigned melody_color_mask(const SpelledKey *key);
-
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
 

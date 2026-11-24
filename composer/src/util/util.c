@@ -74,6 +74,18 @@ bool composer_material_counts_as_minor(const PitchMaterial *material) {
     return composer_material_is_minor(material) || pitch_material_is_modal_key(NULL, material);
 }
 
+unsigned composer_key_color_mask(const SpelledKey *key) {
+    const PitchMaterial *material = key != NULL ? key->material : NULL;
+    unsigned mask = 0;
+    for (size_t i = 0; material != NULL && i < material->characteristic_count; i++) {
+        int step = pitch_material_step(material, material->characteristic_degrees[i]);
+        if (step >= 0) {
+            mask |= 1u << ((spelled_key_tonic_pitch_class(key) + step) % 12);
+        }
+    }
+    return mask;
+}
+
 const char *composer_key_word(const SpelledKey *key) {
     const PitchMaterial *material = key != NULL ? key->material : NULL;
     if (material != NULL && pitch_material_is_modal_key(NULL, material)) {

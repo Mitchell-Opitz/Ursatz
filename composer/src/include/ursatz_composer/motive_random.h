@@ -161,6 +161,8 @@ typedef struct {
     unsigned long syncopation_types[4];
     unsigned long syncopation_levels[2];
     unsigned skips_per_motif;
+    /* Color note (P69, R-732): in a modal key, the first this many tries of a setup keep a motif only when a note on a beat is one of the mode's characteristic steps (0 to 8); 0 asks for none, a major or minor key has none. */
+    unsigned color_note;
     size_t plan_count;
     MotiveRandomPlanChord plan[MOTIVE_RANDOM_PLAN_MAX];
 } MotiveRandomPreferences;

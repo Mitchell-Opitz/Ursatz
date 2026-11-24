@@ -82,6 +82,9 @@ bool composer_key_same_mode(const SpelledKey *a, const SpelledKey *b);
 /* Whether a counting by mode (the predominants a mode has, the cells a phrase needs) reads the material as minor: a minor third, or any modal key (a run of one). */
 bool composer_material_counts_as_minor(const PitchMaterial *material);
 
+/* The pitch classes (12 bits) of the characteristic steps of the key's mode on its tonic (R-732); 0 for a key whose material names none (major, natural minor) and for NULL. */
+unsigned composer_key_color_mask(const SpelledKey *key);
+
 /* The word after the tonic of the key's name: "major", "minor", or the church mode ("dorian"). */
 const char *composer_key_word(const SpelledKey *key);
 
