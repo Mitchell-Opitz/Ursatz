@@ -13,6 +13,7 @@
 
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
+#include "support/test_modal_theme.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
 
@@ -35,19 +36,9 @@ typedef struct {
 } Mode;
 
 /* seed: the first of listen's draws (--seed 500 onward) that grows a theme in the mode */
-static const Mode MODES[] = {{"dorian", 2, 500}, {"mixolydian", 7, 500}, {"lydian", 5, 500}, {"phrygian", 4, 502}, {"locrian", 11, 502}, {"minor", 9, 0}, {"major", 0, 0}};
+static const Mode MODES[] = {{"dorian", 2, 500}, {"mixolydian", 7, 500}, {"lydian", 5, 500}, {"phrygian", 4, 506}, {"locrian", 11, 500}, {"minor", 9, 0}, {"major", 0, 0}};
 #define MODE_COUNT (sizeof(MODES) / sizeof(MODES[0]))
 #define CHURCH_MODES 5
-
-static cJSON *fixture_json(const char *name) {
-    char path[512];
-    snprintf(path, sizeof(path), "%s/%s", COMPOSER_FIXTURE_DIR, name);
-    char *text = test_must_read_file(path, NULL);
-    cJSON *json = cJSON_Parse(text);
-    free(text);
-    assert(json);
-    return json;
-}
 
 static void test_random_motive_tonics(void) {
     for (size_t m = 0; m < MODE_COUNT; m++) {
@@ -63,78 +54,6 @@ static void test_random_motive_tonics(void) {
         cJSON_Delete(document);
         composer_response_destroy(&response);
     }
-}
-
-/* The response of one entry call as a document; the test stops for a refusal. */
-static cJSON *call_json(UrsatzStatus (*entry)(const ComposerContext *, const char *, const UrsatzJob *, ComposerResponse *), const char *request,
-                        ComposerResponse *response) {
-    memset(response, 0, sizeof(*response));
-    UrsatzStatus status = entry(test_context(), request, NULL, response);
-    if (status != URSATZ_OK || !response->json) {
-        composer_response_destroy(response);
-        return NULL;
-    }
-    return cJSON_Parse(response->json);
-}
-
-/*
- * Composes a theme in C <mode> as `listen` does: the random motive of the seed, analyzed, as the basic idea of a sentence of 8
- * bars, grown from the same seed. False when no theme could be grown.
- */
-static bool compose_theme(const char *word, unsigned seed, Plan **plan) {
-    char text[512];
-    ComposerResponse response;
-    snprintf(text, sizeof(text), "{\"material\": \"%s\", \"meter\": \"4/4\", \"strategy\": \"segments\", \"count\": 1, \"seed\": \"%u\"}", word, seed);
-    cJSON *drawn = call_json(composer_api_random_motive, text, &response);
-    assert(drawn);
-    composer_response_destroy(&response);
-    cJSON *motive = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(drawn, "motives"), 0), "motive");
-    assert(motive);
-    cJSON *analyze = cJSON_CreateObject();
-    cJSON *input = cJSON_AddObjectToObject(analyze, "input");
-    char *motive_text = cJSON_PrintUnformatted(motive);
-    assert(cJSON_AddStringToObject(input, "format", "json") && cJSON_AddStringToObject(input, "text", motive_text));
-    cJSON_free(motive_text);
-    char *analyze_text = cJSON_PrintUnformatted(analyze);
-    cJSON *document = call_json(composer_api_motive, analyze_text, &response);
-    free(analyze_text);
-    cJSON_Delete(analyze);
-    assert(document);
-    composer_response_destroy(&response);
-    const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
-    const cJSON *entry_motive = cJSON_GetObjectItemCaseSensitive(document, "motive");
-
-    cJSON *request = fixture_json("theme/one-motive.json");
-    cJSON_ReplaceItemInObject(request, "key", cJSON_CreateString("C"));
-    cJSON_DeleteItemFromObject(request, "mode");
-    cJSON_AddStringToObject(request, "material", word);
-    cJSON_AddStringToObject(request, "development", "balanced");
-    char number[16];
-    snprintf(number, sizeof(number), "%u", seed);
-    cJSON_AddStringToObject(request, "seed", number);
-    cJSON_AddStringToObject(request, "suggest", "1");
-    cJSON *entry = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "motives"), 0);
-    cJSON_ReplaceItemInObject(entry, "degrees", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(analysis, "degrees_text"), true));
-    cJSON_ReplaceItemInObject(entry, "pickup", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(analysis, "pickup"), true));
-    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(entry_motive, "harmony");
-    cJSON_ReplaceItemInObject(entry, "harmony", cJSON_IsString(harmony) && harmony->valuestring[0] ? cJSON_Duplicate(harmony, true) : cJSON_CreateNull());
-    const cJSON *features = cJSON_GetObjectItemCaseSensitive(entry_motive, "features");
-    cJSON_ReplaceItemInObject(entry, "features", cJSON_IsArray(features) ? cJSON_Duplicate(features, true) : cJSON_CreateArray());
-    cJSON_Delete(document);
-    cJSON_Delete(drawn);
-
-    char *theme_text = cJSON_PrintUnformatted(request);
-    cJSON_Delete(request);
-    memset(&response, 0, sizeof(response));
-    UrsatzStatus status = composer_api_theme(test_context(), theme_text, NULL, &response);
-    free(theme_text);
-    bool composed = status == URSATZ_OK && response.plan_json != NULL;
-    if (composed) {
-        PlanJsonError error;
-        assert(plan_from_json(test_knowledge(), response.plan_json, composer_plan_read_hooks(), plan, &error) == PLAN_OK);
-    }
-    composer_response_destroy(&response);
-    return composed;
 }
 
 static void test_themes(void) {
