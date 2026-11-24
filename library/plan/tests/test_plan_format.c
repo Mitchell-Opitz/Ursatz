@@ -261,6 +261,50 @@ static void test_other_region_kind_is_refused(void) {
     free(text);
 }
 
+/* A borrowed chord (R-729) names the material it is taken from; the member is written only when set, read back by id, and an unknown id is refused. */
+static void test_borrowed_chord(void) {
+    Plan *plan = plan_create();
+    NodeId form;
+    LaneSpanId borrowed;
+    LaneSpanId plain;
+    assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, span_of(0, 2), "form", &form) == PLAN_OK);
+    PlanLanePayload payload;
+    memset(&payload, 0, sizeof(payload));
+    snprintf(payload.harmony.roman_numeral, sizeof(payload.harmony.roman_numeral), "%s", "iv");
+    payload.harmony.has_function = true;
+    payload.harmony.function = HARMONIC_FUNCTION_PREDOMINANT;
+    payload.harmony.borrowed_from = test_materials()->natural_minor;
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_HARMONY, 0, span_of(0, 1), &payload, &borrowed) == PLAN_OK);
+    memset(&payload, 0, sizeof(payload));
+    snprintf(payload.harmony.roman_numeral, sizeof(payload.harmony.roman_numeral), "%s", "I");
+    assert(plan_add_lane_span(plan, form, PLAN_LANE_HARMONY, 0, span_of(1, 1), &payload, &plain) == PLAN_OK);
+    char *text = write_plan(plan);
+    const char *member = strstr(text, "\"borrowed_from\": \"omt.material.natural-minor\"");
+    assert(member != NULL && strstr(member + 1, "\"borrowed_from\"") == NULL);
+    Plan *read = read_plan(text);
+    assert(plan_lane_span_payload(read, borrowed)->harmony.borrowed_from == test_materials()->natural_minor);
+    assert(plan_lane_span_payload(read, plain)->harmony.borrowed_from == NULL);
+    plan_destroy(read);
+
+    /* An unknown material and a value that is no id are refused at the member. */
+    const char *id = "omt.material.natural-minor";
+    size_t head = (size_t)(member - text) + strlen("\"borrowed_from\": \"");
+    char *edited = malloc(strlen(text) + 32);
+    assert(edited != NULL);
+    snprintf(edited, strlen(text) + 32, "%.*somt.material.no-such%s", (int)head, text, text + head + strlen(id));
+    Plan *refused = (Plan *)1;
+    PlanJsonError error;
+    assert(plan_from_json(test_knowledge(), edited, NULL, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strcmp(error.message, "no material has this id") == 0 && strstr(error.path, "borrowed_from") != NULL);
+    snprintf(edited, strlen(text) + 32, "%.*s\"borrowed_from\": 5%s", (int)(head - strlen("\"borrowed_from\": \"")), text, text + head + strlen(id) + 1);
+    refused = (Plan *)1;
+    assert(plan_from_json(test_knowledge(), edited, NULL, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.path, "borrowed_from") != NULL);
+    free(edited);
+    free(text);
+    plan_destroy(plan);
+}
+
 static void test_derivation(void) {
     LaneSpanId first;
     LaneSpanId second;
@@ -341,6 +385,7 @@ int main(void) {
     test_format_five_fixtures();
     test_regions();
     test_other_region_kind_is_refused();
+    test_borrowed_chord();
     test_derivation();
     test_metadata();
     printf("test_plan_format: ok\n");
