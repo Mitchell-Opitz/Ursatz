@@ -255,6 +255,14 @@ static void test_lists(void) {
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.major")->valuestring, "Db") == 0 &&
                strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.natural-minor")->valuestring, "C#") == 0);
     }
+    /* The voicings of the snapshot (R-731), in id order, each with the chord types it fits. */
+    {
+        const cJSON *voicings = list("voicings");
+        assert(cJSON_GetArraySize(voicings) == 4 && strcmp(value_of(cJSON_GetArrayItem(voicings, 0)), "omt.voicing.shell-dominant") == 0 &&
+               strcmp(value_of(cJSON_GetArrayItem(voicings, 3)), "omt.voicing.shell-minor") == 0);
+        const cJSON *fits = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(voicings, 0), "fits");
+        assert(cJSON_GetArraySize(fits) == 1 && strcmp(cJSON_GetArrayItem(fits, 0)->valuestring, "omt.chord-type.dominant-seventh") == 0);
+    }
     const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
     for (int i = 0; i < 4; i++) {
         const cJSON *offered = cJSON_GetObjectItemCaseSensitive(pickups, value_of(cJSON_GetArrayItem(meters, i)));

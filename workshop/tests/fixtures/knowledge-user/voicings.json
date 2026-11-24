@@ -1,0 +1,9 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "user",
+  "entries": [
+    {"id": "user.voicing.lydian-shimmer", "kind": "voicing", "name": "lydian shimmer", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "fifth", "semitones": 7}, {"role": "ninth", "semitones": 14}, {"role": "eleventh", "semitones": 18}, {"role": "thirteenth", "semitones": 21}], "fits": ["omt.chord-type.major-triad"]}, "citations": [], "status": "active", "examples": [{"root": "C", "pitches": ["C", "G", "D", "F#", "A"]}], "version": 1},
+    {"id": "user.voicing.minor-fifths", "kind": "voicing", "name": "minor in fifths", "content": {"members": [{"role": "root", "semitones": 0}, {"role": "fifth", "semitones": 7}, {"role": "ninth", "semitones": 14}, {"role": "third", "semitones": 15}], "fits": ["omt.chord-type.minor-triad"]}, "citations": [], "status": "active", "examples": [{"root": "C", "pitches": ["C", "G", "D", "Eb"]}], "version": 1}
+  ]
+}

@@ -1,6 +1,8 @@
 # The workshop's tests: opening, settings and the data folder lock (P63 B4), and the services (P63 B5). Each runs in its own working
 # directory.
 ursatz_test(workshop_open LIBS ursatz_workshop)
+ursatz_test(workshop_user_knowledge SOURCES test_user_knowledge.c LIBS ursatz_workshop_internal
+    DEFINITIONS URSATZ_USER_KNOWLEDGE_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/knowledge-user/voicings.json")
 ursatz_test(workshop_config LIBS ursatz_workshop)
 ursatz_test(workshop_lock LIBS ursatz_workshop)
 
