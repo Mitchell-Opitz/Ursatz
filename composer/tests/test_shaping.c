@@ -189,9 +189,9 @@ static void test_monotony(void) {
 }
 
 static void test_root_progressions(void) {
-    HarmonyChord i = {1, 0, false, false, false, false, NULL};
-    HarmonyChord iv = {4, 0, false, false, false, false, NULL};
-    HarmonyChord v = {5, 0, false, false, false, false, NULL};
+    HarmonyChord i = {1, 0, false, false, false, false, NULL, NULL};
+    HarmonyChord iv = {4, 0, false, false, false, false, NULL, NULL};
+    HarmonyChord v = {5, 0, false, false, false, false, NULL, NULL};
     const HarmonyChord weak[4] = {i, v, i, v};
     const HarmonyChord strong[4] = {i, iv, v, i};
     const HarmonyChord one_change[3] = {i, i, v};

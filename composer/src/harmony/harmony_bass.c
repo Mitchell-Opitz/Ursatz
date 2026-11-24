@@ -38,7 +38,7 @@ static unsigned chance_of(unsigned value) {
 }
 
 bool harmony_chord_bass_pc(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int *pc) {
-    int intervals[4];
+    int intervals[COMPOSER_CHORD_TONES_MAX];
     size_t count;
     int root;
     int member;
@@ -53,7 +53,10 @@ bool harmony_chord_bass_pc(const ComposerChords *chords, const SpelledKey *key, 
         }
         root = (spelled_key_tonic_pitch_class(key) + root) % 12;
     } else {
-        if (!composer_chord_tones(chords, key, &chord->chord, &root, intervals, &count)) {
+        /* The bass stands on the basic chord: a color chord's added notes are not bass notes. */
+        HarmonyChord basic = chord->chord;
+        basic.color = NULL;
+        if (!composer_chord_tones(chords, key, &basic, &root, intervals, &count)) {
             return false;
         }
         member = chord->chord.inversion;

@@ -188,6 +188,10 @@ static bool choose_voicing(const int pcs[3], int low, int high, const int *previ
  * sounded (R-725).
  */
 static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
+    if (context->chord_colored[chord]) {
+        memcpy(out, context->chord_voice[chord], 3 * sizeof(int));
+        return;
+    }
     const int *pcs = context->chord_pcs[chord];
     out[0] = pcs[0];
     out[1] = pcs[1];
@@ -258,6 +262,12 @@ static size_t statement_ladder(const AccompContext *context, size_t chord, Ratio
         }
     }
     for (int pitch = low; pitch <= high; pitch++) {
+        if (context->chord_colored[chord]) {
+            if ((context->chord_mask[chord] >> (pitch % 12)) & 1u) {
+                ladder[rungs++] = pitch;
+            }
+            continue;
+        }
         for (size_t k = 0; k < context->chord_pc_count[chord]; k++) {
             if (pitch % 12 == context->chord_pcs[chord][k]) {
                 ladder[rungs++] = pitch;

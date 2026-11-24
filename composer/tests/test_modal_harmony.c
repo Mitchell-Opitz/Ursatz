@@ -184,7 +184,7 @@ static size_t check_phrase(const Plan *plan, PlanSpan span, const SpelledKey *ke
         const PlanHarmony *harmony = &plan_lane_span_payload(plan, ids[i])->harmony;
         HarmonyChord chord;
         int root_pc;
-        int intervals[4];
+        int intervals[COMPOSER_CHORD_TONES_MAX];
         size_t interval_count;
         assert(plan_lane_span_state(plan, ids[i]) == PLAN_STATE_REALIZED);
         assert(harmony_roman_parse_in(&kind, harmony->roman_numeral, &chord));

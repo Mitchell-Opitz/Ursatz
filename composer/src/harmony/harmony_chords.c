@@ -219,13 +219,26 @@ bool composer_chord_intervals(const ComposerChords *chords, HarmonyMode mode, co
     return true;
 }
 
-bool composer_chord_tones(const ComposerChords *chords, const SpelledKey *key, const HarmonyChord *chord, int *root_pc, int intervals[4],
-                          size_t *count) {
+bool composer_chord_tones(const ComposerChords *chords, const SpelledKey *key, const HarmonyChord *chord, int *root_pc,
+                          int intervals[COMPOSER_CHORD_TONES_MAX], size_t *count) {
     int root;
-    if (key == NULL || root_pc == NULL ||
-        !composer_chord_intervals(chords, harmony_key_mode(key), composer_chords_modal(chords, key), chord, &root, intervals, count)) {
+    int basic[4];
+    size_t basic_count;
+    if (key == NULL || root_pc == NULL || intervals == NULL || count == NULL ||
+        !composer_chord_intervals(chords, harmony_key_mode(key), composer_chords_modal(chords, key), chord, &root, basic, &basic_count)) {
         return false;
     }
     *root_pc = (spelled_key_tonic_pitch_class(key) + root) % 12;
+    if (chord->color != NULL && chord->color->member_count <= COMPOSER_CHORD_TONES_MAX) {
+        for (size_t i = 0; i < chord->color->member_count; i++) {
+            intervals[i] = chord->color->members[i].semitones;
+        }
+        *count = chord->color->member_count;
+        return true;
+    }
+    for (size_t i = 0; i < basic_count; i++) {
+        intervals[i] = basic[i];
+    }
+    *count = basic_count;
     return true;
 }

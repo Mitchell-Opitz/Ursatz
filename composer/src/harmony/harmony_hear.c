@@ -193,6 +193,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
            stands in its place. */
         HarmonyChord basic = chord->chord;
         basic.borrowed_from = NULL;
+        basic.color = NULL;
         bool intervals_ok = chord->applied ? harmony_applied_intervals(&chord->applied_chord, input->intervals,
                                                                &input->interval_count)
                                            : composer_chord_intervals(phrase->composer_chords, mode, phrase->modal, &basic,

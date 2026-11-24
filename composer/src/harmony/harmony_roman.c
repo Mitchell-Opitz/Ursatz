@@ -121,7 +121,7 @@ static bool numeral_of_borrowed(const HarmonyKind *kind, const HarmonyChord *cho
     }
 }
 
-bool harmony_roman_format_in(const HarmonyKind *kind, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+static bool format_basic_in(const HarmonyKind *kind, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (kind != NULL && chord != NULL && out != NULL && chord->borrowed_from != NULL) {
         StandardTonalityNumeralText borrowed;
         return harmony_chord_valid(chord) && numeral_of_borrowed(kind, chord, &borrowed) && format_numeral(&borrowed, out);
@@ -139,7 +139,7 @@ static bool parse_diatonic_in(const HarmonyKind *kind, const char *roman, Harmon
     }
     StandardTonalityNumeralText numeral;
     StandardTonalityNumeralText expected;
-    if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 || numeral.has_target ||
+    if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 || numeral.has_target || numeral.color != NULL ||
         standard_tonality_numeral_quality_is_seventh(numeral.quality)) {
         return false;
     }
@@ -202,8 +202,53 @@ static bool parse_borrowed(const HarmonyKind *kind, const char *roman, HarmonyCh
     return true;
 }
 
-bool harmony_roman_parse_in(const HarmonyKind *kind, const char *roman, HarmonyChord *out) {
+static bool parse_basic_in(const HarmonyKind *kind, const char *roman, HarmonyChord *out) {
     return parse_diatonic_in(kind, roman, out) || parse_borrowed(kind, roman, out);
+}
+
+/*
+ * A color chord (R-727): the basic triad's numeral with the suffix of its chord type (Iadd9, IV69, V9, Imaj9, ii9, Vq3). The suffix
+ * and the triad's quality name the type (standard_tonality_numeral_color_type), so a type that does not go with the triad has no
+ * numeral. The chord a color numeral reads is the basic chord with `color` set.
+ */
+bool harmony_roman_format_in(const HarmonyKind *kind, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    if (chord == NULL || chord->color == NULL) {
+        return format_basic_in(kind, chord, out);
+    }
+    HarmonyChord basic = *chord;
+    StandardTonalityNumeralText numeral;
+    const ChordType *named;
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    basic.color = NULL;
+    numeral.color = NULL;
+    const char *suffix = standard_tonality_color_suffix(chord->color);
+    if (kind == NULL || kind->chords == NULL || suffix == NULL || !format_basic_in(kind, &basic, text) || !standard_tonality_numeral_parse(text, &numeral)) {
+        return false;
+    }
+    numeral.color = suffix;
+    return standard_tonality_numeral_color_type(kind->chords->knowledge, &numeral, &named) && named == chord->color && format_numeral(&numeral, out);
+}
+
+bool harmony_roman_parse_in(const HarmonyKind *kind, const char *roman, HarmonyChord *out) {
+    StandardTonalityNumeralText numeral;
+    if (kind == NULL || roman == NULL || out == NULL || !standard_tonality_numeral_parse(roman, &numeral) || numeral.color == NULL) {
+        return parse_basic_in(kind, roman, out);
+    }
+    const ChordType *type;
+    char plain[PLAN_ROMAN_NUMERAL_MAX];
+    HarmonyChord chord;
+    StandardTonalityNumeralText basic = numeral;
+    basic.color = NULL;
+    if (kind->chords == NULL || !standard_tonality_numeral_color_type(kind->chords->knowledge, &numeral, &type) ||
+        !standard_tonality_numeral_format(&basic, plain, sizeof(plain)) || !parse_basic_in(kind, plain, &chord)) {
+        return false;
+    }
+    chord.color = type;
+    if (!harmony_chord_valid(&chord)) {
+        return false;
+    }
+    *out = chord;
+    return true;
 }
 
 bool harmony_function_in(const HarmonyKind *kind, const HarmonyChord *chord, HarmonicFunction *out) {
@@ -258,7 +303,7 @@ static bool quality_is_diminished_seventh(StandardTonalityNumeralQuality quality
 bool harmony_roman_parse(HarmonyMode mode, const char *roman, HarmonyChord *out) {
     StandardTonalityNumeralText numeral;
     if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 ||
-        numeral.has_target) {
+        numeral.has_target || numeral.color != NULL) {
         return false;
     }
     HarmonyChord chord;

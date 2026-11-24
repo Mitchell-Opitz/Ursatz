@@ -69,7 +69,7 @@ static void test_themes(void) {
         for (size_t i = 0; i < count; i++) {
             HarmonyChord chord;
             int root_pc;
-            int intervals[4];
+            int intervals[COMPOSER_CHORD_TONES_MAX];
             size_t interval_count;
             const char *roman = plan_lane_span_payload(plan, ids[i])->harmony.roman_numeral;
             assert(harmony_roman_parse_in(&kind, roman, &chord));

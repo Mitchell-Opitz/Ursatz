@@ -31,7 +31,7 @@
 
 static void expect_tones(const SpelledKey *key, const HarmonyChord *chord, int root_pc, int third, int fifth) {
     int root;
-    int intervals[4];
+    int intervals[COMPOSER_CHORD_TONES_MAX];
     size_t count;
     assert(composer_chord_tones(test_composer_chords(), key, chord, &root, intervals, &count));
     assert(count == 3 && root == root_pc && intervals[0] == 0 && intervals[1] == third && intervals[2] == fifth);
@@ -116,7 +116,7 @@ static size_t count_borrowed(const Plan *plan) {
             /* The plan's material is the one the numeral names, a predominant chord, and every tone of it is in that mode. */
             assert(chord.borrowed_from == harmony->borrowed_from && harmony->has_function && harmony->function == HARMONIC_FUNCTION_PREDOMINANT);
             int root;
-            int intervals[4];
+            int intervals[COMPOSER_CHORD_TONES_MAX];
             size_t tones;
             assert(composer_chord_tones(test_composer_chords(), &key, &chord, &root, intervals, &tones));
             for (size_t k = 0; k < tones; k++) {

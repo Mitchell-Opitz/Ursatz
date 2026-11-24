@@ -74,6 +74,33 @@ bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, con
     return true;
 }
 
+/*
+ * The three pitch classes a color chord (R-727) is voiced in, above its bass: its third, its added tone or seventh and its ninth, the
+ * fifth left out (OMT VI ch. 3); a quartal chord its upper members. A type with fewer upper members gives the root for the rest.
+ * *colored is false (the voicing is the basic chord's) for any other chord.
+ */
+void accomp_color_voice(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int out[3], bool *colored) {
+    int root;
+    int intervals[COMPOSER_CHORD_TONES_MAX];
+    size_t count;
+    *colored = false;
+    if (chord->applied || chord->chord.color == NULL || !composer_chord_tones(chords, key, &chord->chord, &root, intervals, &count) || count < 2) {
+        return;
+    }
+    const ChordType *type = chord->chord.color;
+    bool quartal = type->construction == CHORD_CONSTRUCTION_QUARTAL;
+    size_t found = 0;
+    for (size_t k = 1; k < count && found < 3; k++) {
+        if (quartal || type->members[k].role != CHORD_MEMBER_FIFTH) {
+            out[found++] = (root + intervals[k]) % 12;
+        }
+    }
+    for (; found < 3; found++) {
+        out[found] = root;
+    }
+    *colored = true;
+}
+
 /* The span of voice (2 or 3) that is to be written with the target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out) {
     LaneSpanId ids[2];
@@ -218,6 +245,7 @@ bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *comp
             !position_is_positive(chord_length)) {
             return false;
         }
+        accomp_color_voice(out->composer_chords, &out->key, &chords[i], out->chord_voice[i], &out->chord_colored[i]);
         out->chord_start[i] = at;
         at = position_add(at, chord_length);
         cells += chords[i].cells;

@@ -50,6 +50,8 @@ typedef struct {
     Rational chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the length */
     int chord_pcs[HARMONY_MAX_CHORDS][4];     /* root, third, fifth and seventh, as pitch classes */
     size_t chord_pc_count[HARMONY_MAX_CHORDS];
+    bool chord_colored[HARMONY_MAX_CHORDS];  /* a color chord (R-727): the voicing is chord_voice, the tones of the type */
+    int chord_voice[HARMONY_MAX_CHORDS][3];  /* its three voiced pitch classes: third, added tone or seventh, ninth (no fifth); a quartal chord's upper members */
     unsigned chord_mask[HARMONY_MAX_CHORDS];
     AccompLine bass[ACCOMP_MAX_LINE];
     size_t bass_count;
@@ -97,6 +99,7 @@ bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *chor
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
 bool accomp_chord_tones(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
+void accomp_color_voice(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, int out[3], bool *colored);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out);
 

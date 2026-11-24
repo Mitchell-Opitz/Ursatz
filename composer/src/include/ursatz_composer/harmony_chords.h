@@ -95,9 +95,15 @@ const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords,
 bool composer_chord_intervals(const ComposerChords *chords, HarmonyMode mode, const PitchMaterial *modal, const HarmonyChord *chord,
                               int *root_semitones, int intervals[4], size_t *count);
 
-/* The same for a key: *root_pc is the root's pitch class (0 to 11). */
-bool composer_chord_tones(const ComposerChords *chords, const SpelledKey *key, const HarmonyChord *chord, int *root_pc, int intervals[4],
-                          size_t *count);
+#define COMPOSER_CHORD_TONES_MAX 5
+
+/*
+ * The same for a key: *root_pc is the root's pitch class (0 to 11). What sounds: a color chord (R-727) gives the members of its chord
+ * type above the root as the entry has them (a ninth at 14), up to COMPOSER_CHORD_TONES_MAX; every other chord its basic tones, as
+ * composer_chord_intervals. A check reads composer_chord_intervals, the basic chord.
+ */
+bool composer_chord_tones(const ComposerChords *chords, const SpelledKey *key, const HarmonyChord *chord, int *root_pc,
+                          int intervals[COMPOSER_CHORD_TONES_MAX], size_t *count);
 
 /*
  * What a chord-reading operator keeps as its FillOperator context: its own params (NULL for the defaults, or a flag) and the

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
 
 /*
@@ -39,6 +40,10 @@
  *
  * A borrowed chord (R-729) is the triad on `degree` of another material on the key's tonic: `borrowed_from` is that material (NULL for
  * a diatonic chord), snapshot-owned. It is a plain triad: no seventh, leading tone, half-diminished mark or cadential flag.
+ *
+ * A color chord (R-727) is a basic triad that sounds the members of a K2 chord type instead (`color`: an added ninth, a six-nine, a
+ * ninth chord, a quartal chord), NULL for none, snapshot-owned. The chord is still the basic triad everywhere it is judged (the phrase
+ * model, the cadence, the recognizer); only what sounds is the type's members. It is a plain triad too: no seventh or leading tone.
  */
 
 typedef enum {
@@ -55,6 +60,7 @@ typedef struct {
     bool cadential;
     bool half_diminished;
     const PitchMaterial *borrowed_from;
+    const ChordType *color;
 } HarmonyChord;
 
 /* True for the two modes above; false for any other value. */

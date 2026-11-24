@@ -436,3 +436,20 @@ bool standard_tonality_numeral_color_type(const KnowledgeSnapshot *snapshot, con
     *type = found;
     return true;
 }
+
+const char *standard_tonality_color_suffix(const ChordType *type) {
+    static const struct {
+        const char *id;
+        const char *suffix;
+    } SUFFIXES[] = {{"persichetti.chord-type.add9", "add9"},         {"persichetti.chord-type.minor-add9", "add9"},
+                    {"persichetti.chord-type.add6", "add6"},         {"persichetti.chord-type.minor-add6", "add6"},
+                    {"persichetti.chord-type.six-nine", "69"},       {"persichetti.chord-type.dominant-ninth", "9"},
+                    {"persichetti.chord-type.minor-ninth", "9"},     {"persichetti.chord-type.major-ninth", "maj9"},
+                    {"persichetti.chord-type.quartal-three", "q3"},  {"persichetti.chord-type.quartal-four", "q4"}};
+    for (size_t i = 0; type != NULL && type->id != NULL && i < sizeof(SUFFIXES) / sizeof(SUFFIXES[0]); i++) {
+        if (strcmp(type->id, SUFFIXES[i].id) == 0) {
+            return SUFFIXES[i].suffix;
+        }
+    }
+    return NULL;
+}

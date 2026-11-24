@@ -80,6 +80,9 @@ typedef struct {
  */
 bool standard_tonality_numeral_color_type(const KnowledgeSnapshot *snapshot, const StandardTonalityNumeralText *numeral, const ChordType **type);
 
+/* The suffix of a color chord type ("add9" for add9 and minor-add9, "9" for dominant-ninth and minor-ninth, "q4" for quartal-four); NULL for a type that has none. */
+const char *standard_tonality_color_suffix(const ChordType *type);
+
 /* Spelling of the marks and figures a formatted numeral uses. */
 typedef enum {
     STANDARD_TONALITY_NUMERAL_STYLE_CANONICAL = 0, /* viio65, viiø65 */

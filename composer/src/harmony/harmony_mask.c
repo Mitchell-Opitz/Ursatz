@@ -8,7 +8,7 @@
 /* The chord masks and the melodic rule count the melody, the accompaniment and the counterpoint read through the harmony. */
 
 bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
-    int intervals[4];
+    int intervals[COMPOSER_CHORD_TONES_MAX];
     size_t count;
     int root;
     if (chord->applied) {
@@ -28,7 +28,8 @@ bool melody_chord_mask(const ComposerChords *chords, const SpelledKey *key, cons
     for (size_t k = 0; k < count; k++) {
         unsigned bit = 1u << ((root + intervals[k]) % 12);
         *mask |= bit;
-        if (k == 3) {
+        /* The seventh is the fourth tone of a seventh chord, or the member a color type names as one. */
+        if (chord->applied || chord->chord.color == NULL ? k == 3 : chord->chord.color->members[k].role == CHORD_MEMBER_SEVENTH) {
             *seventh = bit;
         }
     }
