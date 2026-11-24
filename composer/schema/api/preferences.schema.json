@@ -176,6 +176,12 @@
           "type": "boolean",
           "description": "The idea that ends a cadence ends on one note held from its last downbeat to its end, on the cadence's tone (R-712). Off by default."
         },
+        "color_note": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "In a modal key, how likely a strong or long melody note is to take one of the mode's characteristic steps when its chord has one: color_note draws in color_note + 1 take it (R-732). 0 never; major and minor keys have none. Default 2."
+        },
         "waive": {
           "type": "array",
           "uniqueItems": true,
@@ -713,6 +719,12 @@
           "minimum": 0,
           "maximum": 11,
           "description": "The most skips (intervals of 3 or 4 semitones) in a motif; 11 never rejects, the default."
+        },
+        "color_note": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "In a modal key, the first this many tries of a setup keep a motif only when a note on a beat is one of the mode's characteristic steps (R-732). 0 asks for none; major and minor keys have none. Default 4."
         },
         "plan": {
           "type": "array",

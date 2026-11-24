@@ -24,6 +24,8 @@
 #define LEAPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX
 #define SYNCOPATION_ONE_IN_MAX COMPOSER_PREFERENCES_SYNCOPATION_ONE_IN_MAX
 #define SKIPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_SKIPS_PER_MOTIF_MAX
+#define COLOR_NOTE_MAX 20      /* melody.color_note, R-732 */
+#define MOTIF_COLOR_NOTE_MAX 8 /* motif.color_note, R-732 */
 #define PLAN_MAX COMPOSER_PREFERENCES_PLAN_MAX
 #define PLAN_BEAT_MAX COMPOSER_PREFERENCES_PLAN_BEAT_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
@@ -356,6 +358,8 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
         } else if (strcmp(key, "cadence_long") == 0) {
             ok = cJSON_IsBool(item) ? (melody->cadence_long = cJSON_IsTrue(item), true)
                                     : refuse_melody(refusal, key, "must be true or false");
+        } else if (strcmp(key, "color_note") == 0) {
+            ok = read_unsigned(item, key, 0, COLOR_NOTE_MAX, &melody->color_note, refusal);
         } else if (strcmp(key, "waive") == 0) {
             ok = read_rule_list(item, false, &melody->waive, refusal);
         } else if (strcmp(key, "reverse") == 0) {
@@ -720,6 +724,10 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             if (!preferences_read_unsigned_in(item, "motif", key, 0, SKIPS_PER_MOTIF_MAX, &motif->skips_per_motif, refusal)) {
                 return false;
             }
+        } else if (strcmp(key, "color_note") == 0) {
+            if (!preferences_read_unsigned_in(item, "motif", key, 0, MOTIF_COLOR_NOTE_MAX, &motif->color_note, refusal)) {
+                return false;
+            }
         } else if (strcmp(key, "plan") == 0) {
             if (!read_plan(item, motif, refusal)) {
                 return false;
@@ -845,7 +853,8 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
          preferences_add_number(closure, "first", melody->closure_first) &&
          preferences_add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
          preferences_add_number(group, "leaps", melody->leap_weight) && preferences_add_number(group, "register", melody->register_weight) &&
-         cJSON_AddBoolToObject(group, "cadence_long", melody->cadence_long) != NULL;
+         cJSON_AddBoolToObject(group, "cadence_long", melody->cadence_long) != NULL &&
+         preferences_add_number(group, "color_note", melody->color_note);
     cJSON *waive = ok ? cJSON_AddArrayToObject(group, "waive") : NULL;
     for (unsigned i = 0; waive && i < MELODY_RULE_COUNT; i++) {
         if (melody->waive & (1u << i)) {
@@ -953,7 +962,8 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     for (size_t i = 0; ok && i < MOTIF_LIST_L3_COUNT; i++) {
         ok = add_weighted_list(group, &MOTIF_LISTS_L3[i], motif);
     }
-    ok = ok && preferences_add_number(group, "skips_per_motif", motif->skips_per_motif) && write_plan(group, motif);
+    ok = ok && preferences_add_number(group, "skips_per_motif", motif->skips_per_motif) &&
+         preferences_add_number(group, "color_note", motif->color_note) && write_plan(group, motif);
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -1039,6 +1049,7 @@ static const ComposerPreferenceKey KEYS[] = {
     {"melody.leaps", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"melody.register", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"melody.cadence_long", COMPOSER_KEY_BOOLEAN, 0, 0, true, NULL},
+    {"melody.color_note", COMPOSER_KEY_INTEGER, 0, COLOR_NOTE_MAX, false, NULL},
     {"melody.waive", COMPOSER_KEY_WORDS, 0, 0, true, WORDS_WAIVE},
     {"melody.reverse", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_REVERSE},
     {"motif.bars.one", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
@@ -1114,6 +1125,7 @@ static const ComposerPreferenceKey KEYS[] = {
     {"motif.syncopation_levels.eighth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"motif.syncopation_levels.sixteenth", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"motif.skips_per_motif", COMPOSER_KEY_INTEGER, 0, SKIPS_PER_MOTIF_MAX, true, NULL},
+    {"motif.color_note", COMPOSER_KEY_INTEGER, 0, MOTIF_COLOR_NOTE_MAX, false, NULL},
     {"motif.plan", COMPOSER_KEY_PLAN, 0, 0, true, NULL},
     {"development.fidelity_minimum.melody.presentation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},
     {"development.fidelity_minimum.melody.continuation", COMPOSER_KEY_RATIO, 0, FIDELITY_DENOMINATOR_MAX, true, NULL},

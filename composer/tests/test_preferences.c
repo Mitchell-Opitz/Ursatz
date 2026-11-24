@@ -16,7 +16,7 @@ static const char *DEFAULT_MELODY =
     "\"climax_rise\":4,\"climax_slack\":150,\"second_nearest_chord_tone\":\"1/3\",\"attempts\":48,\"keep\":6,"
     "\"plain_shaping\":false,\"weights\":{\"melodic\":1,\"against_bass\":1,\"tendency\":1,\"climax\":1,\"contour\":1,"
     "\"ending_reduction\":1,\"waves\":1,\"central_range\":1,\"monotony\":1,\"seam\":1},"
-    "\"closure\":{\"final\":0,\"first\":0},\"rhythm_repeat_bars\":0,\"leaps\":0,\"register\":0,\"cadence_long\":false,\"waive\":[],\"reverse\":[]}";
+    "\"closure\":{\"final\":0,\"first\":0},\"rhythm_repeat_bars\":0,\"leaps\":0,\"register\":0,\"cadence_long\":false,\"color_note\":2,\"waive\":[],\"reverse\":[]}";
 
 static const char *DEFAULT_MOTIF =
     "{\"bars\":{\"one\":1,\"two\":1},\"pickup_one_in\":4,\"shapes_one_bar\":{\"repeat\":3,\"contrast\":2},"
@@ -36,7 +36,7 @@ static const char *DEFAULT_MOTIF =
     "\"long_nct_beats\":{\"downbeat\":1,\"middle\":1,\"other\":1},"
     "\"long_nct_lengths\":{\"beat\":1,\"dotted_beat\":1,\"two_beats\":1},\"syncopation_one_in\":0,"
     "\"syncopation_types\":{\"off_beat\":1,\"tie_beat\":1,\"tie_bar\":1,\"anticipation\":1},"
-    "\"syncopation_levels\":{\"eighth\":1,\"sixteenth\":1},\"skips_per_motif\":11}";
+    "\"syncopation_levels\":{\"eighth\":1,\"sixteenth\":1},\"skips_per_motif\":11,\"color_note\":4}";
 
 static const char *DEFAULT_DEVELOPMENT =
     "{\"fidelity_minimum\":{"
@@ -130,6 +130,12 @@ static void defaults_round_trip(void) {
     char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
     composer_preferences_default(&defaults);
     assert(test_preferences_are_default(&defaults));
+    /* The color note settings (R-732): 2 draws in 3 for the melody, 4 tries for the motif. */
+    assert(defaults.melody.color_note == 2 && defaults.motif.color_note == 4);
+    assert(read_text("{\"melody\":{\"color_note\":0},\"motif\":{\"color_note\":8}}", &read, path, message) && read.melody.color_note == 0 &&
+           read.motif.color_note == 8);
+    assert(read_text("{\"melody\":{\"color_note\":20},\"motif\":{\"color_note\":0}}", &read, path, message) && read.melody.color_note == 20 &&
+           read.motif.color_note == 0);
 
     cJSON *document = composer_preferences_write(&defaults);
     assert(document);
@@ -442,6 +448,8 @@ static void limits_are_refused(void) {
     refused("{\"development\":{\"fidelity_minimum\":{\"theme\":5}}}", "/development/fidelity_minimum/theme");
     refused("{\"motif\":{\"syncopation_one_in\":65}}", "/motif/syncopation_one_in");
     refused("{\"motif\":{\"skips_per_motif\":12}}", "/motif/skips_per_motif");
+    refused("{\"motif\":{\"color_note\":9}}", "/motif/color_note");
+    refused("{\"melody\":{\"color_note\":21}}", "/melody/color_note");
     refused("{\"motif\":{\"syncopation_types\":{\"off_beat\":0,\"tie_beat\":0,\"tie_bar\":0,\"anticipation\":0}}}",
             "/motif/syncopation_types");
     refused("{\"motif\":{\"syncopation_types\":{\"slide\":1}}}", "/motif/syncopation_types/slide");
@@ -517,7 +525,7 @@ static void key_and_rule_tables(void) {
     size_t at = 0;
     for (size_t i = 0; i < key_count; i++) {
         if (strcmp(keys[i].key, "motif.plan") == 0) {
-            assert(keys[i].type == COMPOSER_KEY_PLAN && keys[i].hard && i > 0 && strcmp(keys[i - 1].key, "motif.skips_per_motif") == 0);
+            assert(keys[i].type == COMPOSER_KEY_PLAN && keys[i].hard && i > 0 && strcmp(keys[i - 1].key, "motif.color_note") == 0);
             continue;
         }
         assert(at < leaf_count && strcmp(keys[i].key, leaves[at]) == 0);
