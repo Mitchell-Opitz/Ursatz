@@ -68,31 +68,45 @@ static DimensionResult measure_density(const DimensionSpan *span, Rational *out)
  * Brightness (R-730): 1 plus, for each of the degrees 2 to 7, the share of its sounding duration in its raised form (the degree sounds as
  * either of two pitch classes above the center: 2: 1 or 2, 3: 3 or 4, 4: 5 or 6, 5: 6 or 7, 6: 8 or 9, 7: 10 or 11; the larger is the raised
  * one) or, when it does not sound, 1 if the span's material has the raised form, 0 if it has only the lowered, 1/2 with no material. A
- * diatonic mode whose notes all sound measures its rank: locrian 1 to lydian 7. A span without a center is refused.
+ * diatonic mode whose notes all sound measures its rank: locrian 1 to lydian 7 (pitch class 6, which is both the raised 4th and the lowered 5th,
+ * is the raised 4th when the natural 5th sounds or the natural 4th does not, else the lowered 5th). A span without a center is refused.
  */
 static DimensionResult measure_brightness(const DimensionSpan *span, Rational *out) {
     static const int LOWERED[6] = {1, 3, 5, 6, 8, 10};
     if (!span->has_center || span->center < 0 || span->center > 11) {
         return DIMENSION_ERR_INVALID_INPUT;
     }
+    /* The sounding duration of each pitch class above the center. */
+    Rational length[12];
+    for (int pc = 0; pc < 12; pc++) {
+        length[pc] = ZERO;
+    }
+    for (size_t i = 0; i < span->count; i++) {
+        int pc = ((span->notes[i].pitch - span->center) % 12 + 12) % 12;
+        DimensionResult added = from_rational(rational_add(length[pc], span->notes[i].duration, &length[pc]));
+        if (added != DIMENSION_OK) {
+            return added;
+        }
+    }
+    /* Pitch class 6 is both the raised 4th and the lowered 5th. It is the raised 4th when the natural 5th sounds (lydian) or the natural
+       4th does not; with the natural 4th and no natural 5th it is the lowered 5th (locrian). Each mode then measures its rank. */
+    bool six_is_raised_fourth = rational_cmp(length[7], ZERO) > 0 || rational_cmp(length[5], ZERO) <= 0;
     Rational sum = ONE;
     for (int degree = 0; degree < 6; degree++) {
         int lowered = LOWERED[degree];
         int raised = lowered + 1;
-        Rational raised_length = ZERO;
-        Rational sounding = ZERO;
-        for (size_t i = 0; i < span->count; i++) {
-            int pitch_class = ((span->notes[i].pitch - span->center) % 12 + 12) % 12;
-            if (pitch_class != lowered && pitch_class != raised) {
-                continue;
-            }
-            DimensionResult added = from_rational(rational_add(sounding, span->notes[i].duration, &sounding));
-            if (added == DIMENSION_OK && pitch_class == raised) {
-                added = from_rational(rational_add(raised_length, span->notes[i].duration, &raised_length));
-            }
-            if (added != DIMENSION_OK) {
-                return added;
-            }
+        Rational lowered_length = length[lowered];
+        Rational raised_length = length[raised];
+        if (lowered == 5 && !six_is_raised_fourth) {
+            raised_length = ZERO;
+        }
+        if (lowered == 6 && six_is_raised_fourth) {
+            lowered_length = ZERO;
+        }
+        Rational sounding;
+        DimensionResult added = from_rational(rational_add(lowered_length, raised_length, &sounding));
+        if (added != DIMENSION_OK) {
+            return added;
         }
         Rational share;
         if (rational_cmp(sounding, ZERO) > 0) {
