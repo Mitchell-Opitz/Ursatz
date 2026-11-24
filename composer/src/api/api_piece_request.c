@@ -761,6 +761,17 @@ static UrsatzStatus check_overlay_regions(PieceSpec *request, const char *base, 
  * A theme given to a section must be in the section's material (R-610): a C natural minor theme is not given to a C locrian region.
  * Refused at the section's fill, naming both keys.
  */
+/* "C natural minor": the key's tonic and the name of its material. */
+static void key_in_material(const SpelledKey *key, char *out, size_t size) {
+    char name[48];
+    util_key_name(spelled_key_tonic_pitch_class(key), key->material, name, sizeof(name));
+    char *space = strchr(name, ' ');
+    if (space) {
+        *space = '\0';
+    }
+    snprintf(out, size, "%s %s", name, key->material && key->material->name ? key->material->name : "no material");
+}
+
 static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, UrsatzError *error) {
     PieceRequest *piece = &request->request;
     const FormSpecSize *size = request->form->request_sections ? NULL : form_spec_size(request->form, piece->bars, piece->count);
@@ -804,8 +815,8 @@ static UrsatzStatus check_theme_fills(PieceSpec *request, const char *base, Ursa
             char theme_name[48];
             char section_name[48];
             char path[200];
-            util_key_name(spelled_key_tonic_pitch_class(theme_key), theme_key->material, theme_name, sizeof(theme_name));
-            util_key_name(spelled_key_tonic_pitch_class(&section_key), section_key.material, section_name, sizeof(section_name));
+            key_in_material(theme_key, theme_name, sizeof(theme_name));
+            key_in_material(&section_key, section_name, sizeof(section_name));
             snprintf(path, sizeof path, "%.150s/sections/%zu/fill", base, i);
             return api_fail(error, URSATZ_ERR_REQUEST, path, "the theme is in %s, the section in %s", theme_name, section_name);
         }
