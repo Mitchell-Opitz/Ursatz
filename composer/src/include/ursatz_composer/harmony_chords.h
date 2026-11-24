@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <model/core/rational.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <theory/harmony/harmony_chord.h>
 #include <theory/knowledge/vocabulary_entry.h>
@@ -18,9 +19,26 @@
  * lent to every operator that reads a chord's tones; it must outlive the operators registered with it. A NULL pointer in place of
  * one means the fallback tables of the library (the call holds no snapshot).
  */
+/*
+ * The mixture settings (R-729): the chance a predominant chord of the phrase model is borrowed, and the relation words, in order, whose
+ * materials it is borrowed from. share 0 (the default) draws nothing, so no output moves.
+ */
+#define COMPOSER_MIXTURE_FROM_MAX 6
+#define COMPOSER_MIXTURE_WORD_MAX 32
+
+typedef struct {
+    Rational share; /* 0/1 to 1/1 */
+    size_t from_count;
+    char from[COMPOSER_MIXTURE_FROM_MAX][COMPOSER_MIXTURE_WORD_MAX];
+} ComposerMixture;
+
+/* share 0/1, from "parallel", "one step darker", "one step brighter". */
+void composer_mixture_default(ComposerMixture *out);
+
 typedef struct {
     const KnowledgeSnapshot *knowledge;
     CommonPracticeMaterials materials;
+    ComposerMixture mixture; /* the run's mixture settings: the defaults unless the run sets them */
 } ComposerChords;
 
 /* Resolves the materials from `knowledge`. False for a NULL argument or a snapshot without them, with `message` naming the id. */
@@ -52,11 +70,12 @@ const PitchMaterial *composer_chords_key_material(const ComposerChords *chords, 
  * The materials a chord may be borrowed from in a key of `key_material` (R-729), nearest first, into out[COMPOSER_MIXTURE_MAX]: the
  * materials of the relation words `from` (resolved on a tonal region of the material: "parallel", "one step darker", ...) in order,
  * NULL for the defaults (parallel, one step darker, one step brighter), then every other diatonic material of the snapshot in
- * brightness order from the key's (darker before brighter at a tie). The key's own material is never listed and none twice. A word that
- * resolves to nothing for this material is skipped. Returns the count (0 without a snapshot or a material with no brightness).
+ * brightness order from the key's (darker before brighter at a tie; with `only_from` the list stops after the words). The key's own
+ * material is never listed and none twice. A word that resolves to nothing for this material is skipped. Returns the count (0 without a
+ * snapshot or a material with no brightness).
  */
 size_t composer_chords_mixture_materials(const ComposerChords *chords, const PitchMaterial *key_material, const char *const *from,
-                                         size_t from_count, const PitchMaterial **out);
+                                         size_t from_count, bool only_from, const PitchMaterial **out);
 
 /*
  * The material a borrowed numeral is taken from: the first of composer_chords_mixture_materials (default order) whose triad on `degree`

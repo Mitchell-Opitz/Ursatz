@@ -1,12 +1,25 @@
 #include <ursatz_composer/harmony_chords.h>
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <theory/harmony/harmony_applied.h>
 #include <theory/tonality/brightness.h>
 #include <theory/tonality/region_relation.h>
 
 #include "harmony/harmony_internal.h"
+
+void composer_mixture_default(ComposerMixture *out) {
+    static const char *const WORDS[] = {"parallel", "one step darker", "one step brighter"};
+    memset(out, 0, sizeof(*out));
+    out->share.num = 0;
+    out->share.den = 1;
+    out->from_count = sizeof(WORDS) / sizeof(WORDS[0]);
+    for (size_t i = 0; i < out->from_count; i++) {
+        snprintf(out->from[i], COMPOSER_MIXTURE_WORD_MAX, "%s", WORDS[i]);
+    }
+}
 
 bool composer_chords_init(ComposerChords *chords, const KnowledgeSnapshot *knowledge, char *message, size_t message_size) {
     if (chords == NULL || knowledge == NULL) {
@@ -16,7 +29,9 @@ bool composer_chords_init(ComposerChords *chords, const KnowledgeSnapshot *knowl
         return false;
     }
     ComposerChords built;
+    memset(&built, 0, sizeof(built));
     built.knowledge = knowledge;
+    composer_mixture_default(&built.mixture);
     if (!common_practice_materials_resolve(knowledge, &built.materials, message, message_size)) {
         return false;
     }
@@ -117,7 +132,7 @@ static size_t mixture_add(const PitchMaterial *key_material, const PitchMaterial
 }
 
 size_t composer_chords_mixture_materials(const ComposerChords *chords, const PitchMaterial *key_material, const char *const *from,
-                                         size_t from_count, const PitchMaterial **out) {
+                                         size_t from_count, bool only_from, const PitchMaterial **out) {
     if (chords == NULL || chords->knowledge == NULL || key_material == NULL || out == NULL || !key_material->has_brightness) {
         return 0;
     }
@@ -134,7 +149,7 @@ size_t composer_chords_mixture_materials(const ComposerChords *chords, const Pit
             count = mixture_add(key_material, reached.material, out, count);
         }
     }
-    for (int distance = 1; distance <= 6; distance++) {
+    for (int distance = 1; !only_from && distance <= 6; distance++) {
         for (int sign = -1; sign <= 1; sign += 2) {
             count = mixture_add(key_material, brightness_shift(chords->knowledge, key_material, sign * distance, NULL, 0), out, count);
         }
@@ -145,7 +160,7 @@ size_t composer_chords_mixture_materials(const ComposerChords *chords, const Pit
 const PitchMaterial *composer_chords_borrow_source(const ComposerChords *chords, const PitchMaterial *key_material, int degree,
                                                    int root_semitones, StandardTonalityTriadQuality quality) {
     const PitchMaterial *candidates[COMPOSER_MIXTURE_MAX];
-    size_t count = composer_chords_mixture_materials(chords, key_material, NULL, 0, candidates);
+    size_t count = composer_chords_mixture_materials(chords, key_material, NULL, 0, false, candidates);
     for (size_t i = 0; i < count; i++) {
         int root;
         StandardTonalityTriadQuality found;

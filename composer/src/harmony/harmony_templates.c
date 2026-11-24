@@ -75,7 +75,7 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
 
 /* The marked chord is a plain root-position triad or seventh on this degree. */
 static bool is_plain(const PhraseChord *chord, int degree) {
-    return !chord->applied && chord->chord.degree == degree && chord->chord.inversion == 0;
+    return !chord->applied && chord->chord.borrowed_from == NULL && chord->chord.degree == degree && chord->chord.inversion == 0;
 }
 
 static void with_cells(const PhraseChord *chord, size_t cells, PhraseChord *out) {

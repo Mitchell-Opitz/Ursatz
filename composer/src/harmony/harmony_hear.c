@@ -189,9 +189,13 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
         snprintf(set->key_refs[i], sizeof(set->key_refs[i]), phrase->chord_keys ? "key%u" : HEARD_KEY_REF,
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
         int root_semitones;
+        /* The recognizer hears the key's own chord on a borrowed chord's degree: mixture (R-729) is judged by function, the chord that
+           stands in its place. */
+        HarmonyChord basic = chord->chord;
+        basic.borrowed_from = NULL;
         bool intervals_ok = chord->applied ? harmony_applied_intervals(&chord->applied_chord, input->intervals,
                                                                &input->interval_count)
-                                           : composer_chord_intervals(phrase->composer_chords, mode, phrase->modal, &chord->chord,
+                                           : composer_chord_intervals(phrase->composer_chords, mode, phrase->modal, &basic,
                                                                       &root_semitones, input->intervals, &input->interval_count);
         if (!intervals_ok || !times_create(phrase, first_cell, chord->cells, &set->times[i])) {
             harmony_segments_destroy(set);

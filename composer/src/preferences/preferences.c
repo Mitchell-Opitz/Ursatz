@@ -70,6 +70,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
     out->candidates.pool = 4;
     critic_settings_default(&out->critic);
+    composer_mixture_default(&out->harmony.mixture);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -801,6 +802,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             if (!preferences_read_critic(item, out, &refusal)) {
                 return false;
             }
+        } else if (strcmp(item->string, "harmony") == 0) {
+            if (!preferences_read_harmony(item, out, &refusal)) {
+                return false;
+            }
         } else {
             return preferences_refuse(&refusal, item->string, "unknown member");
         }
@@ -1003,6 +1008,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *harmony = preferences_write_harmony(preferences);
+    if (!harmony || !cJSON_AddItemToObject(document, "harmony", harmony)) {
+        cJSON_Delete(harmony);
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -1013,6 +1024,7 @@ static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-o
                                           "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
 static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
                                                    "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
+static const char *const WORDS_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter", "two steps darker", "two steps brighter", NULL};
 static const char *const WORDS_REVERSE[] = {"melodic",  "against_bass", "tendency", "climax",   "contour", "ending_reduction", "waves",
                                             "central_range", "monotony", "seam",    "closure", "leaps",   "register", NULL};
 
@@ -1163,7 +1175,9 @@ static const ComposerPreferenceKey KEYS[] = {
     {"critic.weights.stray_syncopation", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.one_rhythm", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
-    {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL}};
+    {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
+    {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {

@@ -991,6 +991,9 @@ static PieceResult run_once(Plan *plan, const ComposeConfig *config, unsigned ch
         run.motives.materials = &run.materials;
     }
     run.has_chords = composer_chords_init(&run.chords, config->knowledge, NULL, 0);
+    if (run.has_chords && config->mixture != NULL) {
+        run.chords.mixture = *config->mixture;
+    }
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
     run.motives.pool = config->pool;

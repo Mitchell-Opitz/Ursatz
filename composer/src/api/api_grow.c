@@ -281,6 +281,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.context.motif = setup->motif;
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;
+    config.mixture = setup->mixture;
     config.style = setup->style;
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;

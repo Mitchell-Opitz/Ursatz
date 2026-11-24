@@ -119,6 +119,7 @@ add_library(ursatz_composer_engine STATIC
     preferences/preferences.c
     preferences/preferences_development.c
     preferences/preferences_critic.c
+    preferences/preferences_harmony.c
     check/form_hear.c
     structure/form_record.c
     structure/form_spec.c

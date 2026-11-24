@@ -18,6 +18,7 @@
 typedef struct {
     int degree;
     bool seventh;
+    const PitchMaterial *borrowed; /* the material a borrowed chord is taken from (R-729), NULL for a diatonic chord */
 } ChordSpec;
 
 /* The predominants that may stand before V, in the order they are played. IV goes before ii, never after. */
@@ -35,12 +36,17 @@ static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 static bool make_from(const HarmonyKind *kind, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
-    /* A modal key has no leading tone and keeps out the chord its mode avoids (R-725). */
-    if (kind->modal != NULL && (chord.leading_tone || pitch_material_avoids(kind->modal, chord.degree))) {
+    /* A modal key has no leading tone and keeps out the chord its mode avoids (R-725); a borrowed chord keeps out the one its source
+       mode avoids. */
+    const PitchMaterial *avoiding = chord.borrowed_from != NULL ? chord.borrowed_from : kind->modal;
+    if ((avoiding != NULL && pitch_material_avoids(avoiding, chord.degree)) || (kind->modal != NULL && chord.leading_tone)) {
         return false;
     }
+    /* A borrowed chord has the function of the key's own chord on its degree: it stands in its place (R-729). */
+    HarmonyChord functional = chord;
+    functional.borrowed_from = NULL;
     /* A modal key without its cadence kind at hand (a Motive holds no snapshot) has the chord without a function. */
-    bool has_function = harmony_function_in(kind, &chord, &function);
+    bool has_function = harmony_function_in(kind, &functional, &function);
     if (!harmony_chord_valid(&chord) || (!has_function && !(kind->modal != NULL && kind->cadence == NULL)) ||
         !harmony_roman_format_in(kind, &chord, out->roman)) {
         return false;
@@ -80,7 +86,71 @@ bool harmony_make_leading_tone(HarmonyMode mode, int inversion, size_t cells, Ph
 }
 
 static bool make_chord(const HarmonyKind *kind, ChordSpec spec, size_t cells, PhraseChord *out) {
-    return harmony_make_chord_in(kind, spec.degree, 0, spec.seventh, false, cells, out);
+    HarmonyChord chord;
+    memset(&chord, 0, sizeof(chord));
+    chord.degree = spec.degree;
+    chord.seventh = spec.seventh;
+    chord.borrowed_from = spec.borrowed;
+    return make_from(kind, chord, cells, out);
+}
+
+/*
+ * Whether the triad on `degree` of `source` can stand in for the key's own chord there (R-729): its triad differs from the key's, it is
+ * major, minor or diminished, the source does not avoid it, and its numeral is writable (a root within a semitone of the key's step).
+ */
+static bool borrowable(const HarmonyKind *kind, const PitchMaterial *source, int degree) {
+    HarmonyChord plain;
+    HarmonyChord borrowed;
+    int plain_root;
+    int borrowed_root;
+    int plain_intervals[4];
+    int borrowed_intervals[4];
+    size_t plain_count;
+    size_t borrowed_count;
+    PhraseChord probe;
+    memset(&plain, 0, sizeof(plain));
+    plain.degree = degree;
+    borrowed = plain;
+    borrowed.borrowed_from = source;
+    return !pitch_material_avoids(source, degree) &&
+           composer_chord_intervals(kind->chords, kind->mode, kind->modal, &plain, &plain_root, plain_intervals, &plain_count) &&
+           composer_chord_intervals(kind->chords, kind->mode, kind->modal, &borrowed, &borrowed_root, borrowed_intervals, &borrowed_count) &&
+           (plain_root != borrowed_root || memcmp(plain_intervals, borrowed_intervals, 3 * sizeof(int)) != 0) &&
+           make_chord(kind, (ChordSpec){degree, false, source}, 1, &probe);
+}
+
+/*
+ * Mixture (R-729): with share above 0, each predominant chord of the run (before[first] to before[first + count - 1]) draws once, and
+ * under the share becomes the triad on its degree of the first material of `from` that can stand there; a later predominant of the run
+ * takes the material the run already borrows from when it can. The tonic and the approach chords are never borrowed. With share 0
+ * nothing is drawn.
+ */
+static void borrow_predominants(const HarmonyKind *kind, FillRng *rng, ChordSpec *before, size_t first, size_t count) {
+    const ComposerMixture *mixture = kind->chords != NULL ? &kind->chords->mixture : NULL;
+    if (mixture == NULL || mixture->share.num <= 0 || mixture->share.den <= 0 || count == 0) {
+        return;
+    }
+    const char *words[COMPOSER_MIXTURE_FROM_MAX];
+    const PitchMaterial *sources[COMPOSER_MIXTURE_MAX];
+    for (size_t i = 0; i < mixture->from_count; i++) {
+        words[i] = mixture->from[i];
+    }
+    size_t source_count = composer_chords_mixture_materials(kind->chords, composer_chords_key_material(kind->chords, kind->mode, kind->modal),
+                                                            words, mixture->from_count, true, sources);
+    const PitchMaterial *held = NULL;
+    for (size_t i = first; i < first + count; i++) {
+        if ((long long)fill_rng_below(rng, (size_t)mixture->share.den) >= mixture->share.num) {
+            continue;
+        }
+        const PitchMaterial *pick = held != NULL && borrowable(kind, held, before[i].degree) ? held : NULL;
+        for (size_t m = 0; pick == NULL && m < source_count; m++) {
+            pick = borrowable(kind, sources[m], before[i].degree) ? sources[m] : NULL;
+        }
+        if (pick != NULL) {
+            before[i].borrowed = pick;
+            held = pick;
+        }
+    }
 }
 
 void harmony_progression_destroy(void *payload) {
@@ -169,7 +239,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         return false;
     }
 
-    ChordSpec opening = {pivot > 0 ? pivot : 1, false};
+    ChordSpec opening = {pivot > 0 ? pivot : 1, false, NULL};
     PhraseChord probe;
     bool pivot_predominant = pivot > 0 && make_chord(&kind, opening, 1, &probe) &&
                              probe.has_function && probe.function == HARMONIC_FUNCTION_PREDOMINANT;
@@ -224,26 +294,28 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         before[before_count++] = opening;
     }
     if (confirm) {
-        before[before_count++] = (ChordSpec){5, true};
-        before[before_count++] = (ChordSpec){1, false};
+        before[before_count++] = (ChordSpec){5, true, NULL};
+        before[before_count++] = (ChordSpec){1, false, NULL};
     }
+    size_t run_first = before_count;
     for (size_t i = 0; run && i < run->count; i++) {
-        before[before_count++] = (ChordSpec){run->degrees[i], false};
+        before[before_count++] = (ChordSpec){run->degrees[i], false, NULL};
     }
+    borrow_predominants(&kind, rng, before, run_first, before_count - run_first);
     size_t dominant = before_count;
     if (kind.modal != NULL) {
         for (size_t a = 0; a < dominants; a++) {
-            before[before_count++] = (ChordSpec){kind.cadence->approach_degrees[a], false};
+            before[before_count++] = (ChordSpec){kind.cadence->approach_degrees[a], false, NULL};
         }
     } else if (!half) {
-        before[before_count++] = (ChordSpec){5, seventh};
+        before[before_count++] = (ChordSpec){5, seventh, NULL};
     }
     if (plagal) {
-        before[before_count++] = (ChordSpec){1, false};
-        before[before_count++] = (ChordSpec){4, false};
+        before[before_count++] = (ChordSpec){1, false, NULL};
+        before[before_count++] = (ChordSpec){4, false, NULL};
     }
-    ChordSpec last = half ? (ChordSpec){kind.modal != NULL ? kind.cadence->approach_degrees[approach - 1] : 5, seventh}
-                          : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
+    ChordSpec last = half ? (ChordSpec){kind.modal != NULL ? kind.cadence->approach_degrees[approach - 1] : 5, seventh, NULL}
+                          : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false, NULL};
 
     size_t cells[MAX_BEFORE_FINAL];
     for (size_t i = 0; i < before_count; i++) {

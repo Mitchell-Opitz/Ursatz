@@ -601,6 +601,7 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->contrast = &state->preferences.contrast;
         setup->functions = &state->preferences.functions;
         setup->critic = &state->preferences.critic;
+        setup->mixture = &state->preferences.harmony.mixture;
         setup->motif = &state->preferences.motif;
     }
 

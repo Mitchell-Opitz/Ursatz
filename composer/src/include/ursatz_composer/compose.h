@@ -94,6 +94,7 @@ typedef struct {
     unsigned long seed;
     GrowContext context;            /* its continuation is carried unchanged; a piece's theme sections stay at zero */
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
+    const ComposerMixture *mixture; /* the mixture settings of the phrase model's chords (R-729); NULL for the defaults; must outlive compose_run */
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
     Rational style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */

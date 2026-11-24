@@ -10,7 +10,12 @@ static bool read_numeral(const Plan *plan, LaneSpanId id, const HarmonyKind *kin
     out->roman[PLAN_ROMAN_NUMERAL_MAX - 1] = '\0';
     out->function = harmony->function;
     out->has_function = harmony->has_function;
-    if (!harmony_roman_parse_in(kind, out->roman, &out->chord)) {
+    if (harmony_roman_parse_in(kind, out->roman, &out->chord)) {
+        /* The plan names the material a borrowed chord is taken from; the numeral alone reads the nearest that has it. */
+        if (out->chord.borrowed_from != NULL && harmony->borrowed_from != NULL) {
+            out->chord.borrowed_from = harmony->borrowed_from;
+        }
+    } else {
         out->applied = true;
         /* A modal key has no applied chord (R-725). */
         if (kind->modal != NULL ||

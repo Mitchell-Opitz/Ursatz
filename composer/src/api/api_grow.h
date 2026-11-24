@@ -113,6 +113,7 @@ typedef struct {
     bool suggested;                          /* "suggest" was given: the text output numbers the themes */
     const GrowFidelityTable *fidelity;       /* NULL for the defaults; not owned */
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
+    const ComposerMixture *mixture;          /* the harmony group's mixture settings; NULL for the defaults; not owned */
     const UrsatzJob *job;
     const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
     const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */

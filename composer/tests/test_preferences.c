@@ -52,6 +52,7 @@ static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
 static const char *DEFAULT_CRITIC =
     "{\"rank\":false,\"candidates\":4,\"keep_rejected\":8,\"reverse\":[],\"weights\":{\"rhythmic_monotony\":1,\"contrast_distance\":1,"
     "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1}}";
+static const char *DEFAULT_HARMONY = "{\"mixture\":{\"share\":\"0/1\",\"from\":[\"parallel\",\"one step darker\",\"one step brighter\"]}}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -154,11 +155,14 @@ static void defaults_round_trip(void) {
     text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "critic"));
     assert(text && strcmp(text, DEFAULT_CRITIC) == 0);
     cJSON_free(text);
-    /* The whole document is the five groups, in this order. */
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "harmony"));
+    assert(text && strcmp(text, DEFAULT_HARMONY) == 0);
+    cJSON_free(text);
+    /* The whole document is the six groups, in this order. */
     text = cJSON_PrintUnformatted(document);
     char whole[8192];
-    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s}", DEFAULT_MELODY,
-             DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC);
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s,\"harmony\":%s}",
+             DEFAULT_MELODY, DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC, DEFAULT_HARMONY);
     assert(text && strcmp(text, whole) == 0);
     cJSON_free(text);
 
