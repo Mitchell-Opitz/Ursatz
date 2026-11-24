@@ -54,6 +54,15 @@ The seventh is raised to a leading tone in the natural minor only (`composer_mat
 
 A locrian key's tonic is voiced in the accompaniment as its root, third and the root an octave up: its diminished fifth is not sounded.
 
+## The color note
+
+Each church mode has characteristic steps (`characteristic_degrees` of its material entry): lydian the #4, mixolydian the b7, dorian the natural 6, phrygian the b2, locrian the b2 and b5 (R-732). Two settings ask for them where they are heard, and do nothing in a major or minor key:
+
+- `motif.color_note` (0 to 8, default 4): a random motif in a modal key is kept only when one of its notes on a beat is a characteristic step: a strong beat (the first of a bar, or the third of four) for the first half of the tries, any beat for the rest, up to `color_note` tries of a setup; later tries keep any motif. 0 asks for none.
+- `melody.color_note` (0 to 20, default 2): a melody note the operator places on a strong beat or held for a cell, that is neither the first nor the last of its idea, takes the characteristic step among its chord tones nearest the ideal pitch when a draw of `color_note + 1` falls below `color_note`. 0 never takes it and draws nothing; the notes of a developed motif are not placed by this operator, so it moves only a few notes of a theme.
+
+Measured at P69 B5 over twenty sentences of each mode from seed 500: the sixth on a strong beat in 13 of 17 dorian themes; lydian 9 of 18, phrygian 1 of 7 (7 of 20 compose). The melody operator's share is small; the characteristic step on a strong beat comes mostly with the motif.
+
 ## What a modal key does not write
 
 - Applied chords, dominant options, predominant forms and the prolongation figures with V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws the figures on the tonic, IV and the root-position dominant (the approach chord of the mode's cadence).
