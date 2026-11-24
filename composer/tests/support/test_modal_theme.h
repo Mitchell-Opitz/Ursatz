@@ -18,7 +18,7 @@
 
 /*
  * Themes in a mode as `listen` makes them (R-725): the random motive of a seed, analyzed, as the basic idea of a sentence of 8 bars in
- * C, grown from the same seed. Shared by test_modal_compose and test_modal_color; the including test defines COMPOSER_FIXTURE_DIR.
+ * C, grown from the same seed (or a period: compose_theme_in). Shared by test_modal_compose and test_modal_color; the including test defines COMPOSER_FIXTURE_DIR.
  */
 
 static cJSON *fixture_json(const char *name) {
@@ -47,7 +47,7 @@ static inline cJSON *call_json(UrsatzStatus (*entry)(const ComposerContext *, co
  * Composes a theme in C <mode> as `listen` does: the random motive of the seed, analyzed, as the basic idea of a sentence of 8
  * bars, grown from the same seed. False when no theme could be grown.
  */
-static inline bool compose_theme_with(const char *word, unsigned seed, const char *preferences_json, Plan **plan) {
+static inline bool compose_theme_in(const char *word, const char *into, unsigned seed, const char *preferences_json, Plan **plan) {
     char text[512];
     ComposerResponse response;
     snprintf(text, sizeof(text), "{\"material\": \"%s\", \"meter\": \"4/4\", \"strategy\": \"segments\", \"count\": 1, \"seed\": \"%u\"}", word, seed);
@@ -79,6 +79,7 @@ static inline bool compose_theme_with(const char *word, unsigned seed, const cha
 
     cJSON *request = fixture_json("theme/one-motive.json");
     cJSON_ReplaceItemInObject(request, "key", cJSON_CreateString("C"));
+    cJSON_ReplaceItemInObject(request, "into", cJSON_CreateString(into));
     cJSON_DeleteItemFromObject(request, "mode");
     cJSON_AddStringToObject(request, "material", word);
     cJSON_AddStringToObject(request, "development", "balanced");
@@ -113,6 +114,10 @@ static inline bool compose_theme_with(const char *word, unsigned seed, const cha
     return composed;
 }
 
+
+static inline bool compose_theme_with(const char *word, unsigned seed, const char *preferences_json, Plan **plan) {
+    return compose_theme_in(word, "sentence", seed, preferences_json, plan);
+}
 
 static inline bool compose_theme(const char *word, unsigned seed, Plan **plan) {
     return compose_theme_with(word, seed, NULL, plan);

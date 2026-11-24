@@ -95,6 +95,15 @@ ursatz_test(test_color_chords LIBS ursatz_composer_engine composer_test_support 
 ursatz_test(test_modal_compose LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+# The sweep of the five church modes: 20 themes of a sentence and of a period in each, a theme takes seconds, so one slow test for each mode
+# (about 5 minutes alone); its smoke (seed 500 in two batches) runs every PR.
+ursatz_test_executable(test_modal_sweep SOURCES test_modal_sweep.c LIBS ursatz_composer_engine composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+foreach(mode dorian mixolydian lydian phrygian locrian)
+    ursatz_test(test_modal_sweep_${mode} TARGET test_modal_sweep ARGS ${mode} LABELS slow)
+endforeach()
+ursatz_test(test_modal_sweep_smoke TARGET test_modal_sweep ARGS smoke)
+
 # Slow: 33 s alone (2026-11-24); its smoke runs every PR.
 ursatz_test(test_modal_color LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
