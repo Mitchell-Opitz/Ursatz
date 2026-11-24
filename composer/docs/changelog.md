@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P69)
+
+API 4.7 (R-725, P69 B4): a key's material may be one of the church modes: `"dorian"`, `"lydian"`, `"mixolydian"`, `"phrygian"` or `"locrian"` (the `material` of the theme, piece, plan, grow, counterpoint and random motive requests). The old `mode` member stays major or minor. A region in a piece may be in the home's mode only, or change between major and minor ([modes.md](modes.md)). A word the Composer does not write is refused with "the Composer writes major, minor and modal keys; '<word>' is not one of them". The seventh is raised to a leading tone in the natural minor only; a motive in D natural minor is no longer a motive in D dorian.
+
 ## Unreleased (phase P68)
 
 Ranking by the critic (R-722, P68 B5): with `critic.rank` on, a theme request makes `critic.candidates` themes for each one it keeps, judges them together and keeps the best; the response gains `critic` in each theme and `rejected` in the document (`theme.response.schema.json`, `grow.response.schema.json`). `GrowSetup.critic`, `GrowTheme.judged` and `.judgment`, `GrowRun.rejected`, `.ranked`. `ursatz listen` varies the generated motifs of a theme batch when `candidates.variety` is above 0. With rank off every output is as it was.

@@ -1,6 +1,6 @@
 # Modes in the Composer
 
-The Composer writes major and natural minor keys, and since P69 the five church modes (lydian, mixolydian, dorian, phrygian, locrian) as the key of a phrase (R-725). This page is the modal harmony: what a modal key is, how its chords are stacked, numbered and judged, and what a modal key does not write. Requests and settings for modal keys are added by the branches that open them. Back to the [Composer docs](README.md).
+The Composer writes major and natural minor keys, and since P69 the five church modes (lydian, mixolydian, dorian, phrygian, locrian) as the key of a phrase (R-725). This page is the modal harmony: what a modal key is, how its chords are stacked, numbered and judged, and what a modal key does not write. Requests name a mode as the `material`; settings for modal keys come with the branches that add them. Back to the [Composer docs](README.md).
 
 ## What a modal key is
 
@@ -46,9 +46,18 @@ A deceptive or plagal cadence needs a dominant and is refused in a modal key wit
 
 The recognizer hears major and minor, so a modal phrase is not asked of it. The judge (`harmony_judge`) holds a modal phrase to the modal function table (a tonic, then a dominant), the cadence kind's ending, no avoided chord and root-position chords only, and scores the backward motion and the root progression as soft rules.
 
+## Requests
+
+A request names a mode as its `material` (`"dorian"`, `"lydian"`, `"mixolydian"`, `"phrygian"`, `"locrian"`) in the theme, piece, plan, grow, counterpoint and random motive requests, and `listen --material` takes it. A random motive in a mode has the default tonic of the major degree its steps rotate from: D for dorian, E phrygian, F lydian, G mixolydian, B locrian (A for the natural minor, C for the major). Keys are the same only when their materials are: a D natural minor motive is not a D dorian one. The old `mode` member stays major or minor.
+
+The seventh is raised to a leading tone in the natural minor only (`composer_material_raises_seventh`): the modes keep their own, whatever their third. A word the Composer does not write (the harmonic and melodic minor, the synthetic scales) is refused with "the Composer writes major, minor and modal keys; '<word>' is not one of them". A section of a piece may be in the home's mode, or change between major and minor; a region in another mode is refused with "section 'b' is in C locrian, the piece in C major: a section changes mode only between major and minor".
+
+A locrian key's tonic is voiced in the accompaniment as its root, third and the root an octave up: its diminished fifth is not sounded.
+
 ## What a modal key does not write
 
-- Applied chords, dominant options, predominant forms and the prolongation figures with V, V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws only the figures on the tonic and IV.
+- Applied chords, dominant options, predominant forms and the prolongation figures with V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws the figures on the tonic, IV and the root-position dominant (the approach chord of the mode's cadence).
 - Galant schemas. Scale sequences are written, with the tonic of a locrian key allowed in root position.
-- Chords developed from a motive's tones: a motive writes its harmony as the degrees of a major or minor key, so the motive operator does not apply and the phrase model writes the chords.
-- Pivot chords: no key change is written in a modal key.
+- Pivot chords: no key change is written in a modal key. Sections in another mode wait for mode shifts between sections.
+- A deceptive or plagal cadence (see Cadences).
+- In a locrian cadence the approach chord is written in first inversion (V6 then io), as its root lies a tritone from the tonic's; the bass between a V and an io leaps that tritone where it must, which the other modes never do.
