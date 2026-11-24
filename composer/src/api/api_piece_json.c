@@ -258,6 +258,7 @@ static cJSON *loop_row_json(const PieceSpec *request, const ApiPieceRow *row) {
               cJSON_AddNumberToObject(entry, "beats", (double)row->section->description.beats) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
+              api_add(entry, "brightness", row->plan ? api_piece_brightness_json(row->plan, row->node) : cJSON_CreateNull()) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
               cJSON_AddStringToObject(entry, "source", row->source) &&
               api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
@@ -518,6 +519,7 @@ static cJSON *size_row_json(const PieceSpec *request, const ApiPieceRow *row) {
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "figure", figure_json(row)) &&
               api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
+              api_add(entry, "brightness", row->plan ? api_piece_brightness_json(row->plan, row->node) : cJSON_CreateNull()) &&
               api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&
               api_add(entry, "connective", row->connective < 0 ? cJSON_CreateNull() : cJSON_CreateBool(row->connective > 0)) &&
               add_construction_text(entry, row) && add_time_texts(entry, request, row, api_piece_span_beats(request, row->length));

@@ -26,6 +26,7 @@
 #include "structure/plan_util.h"
 #include "structure/request_parse.h"
 #include "util/util.h"
+#include <analysis/dimension/dimension.h>
 #include <ursatz_composer/piece_plan_keys.h>
 
 /*
@@ -227,6 +228,74 @@ void api_piece_planned_key_at(const Plan *plan, PlanSpan section, char *out, siz
         *flats = util_key_prefers_flats(spelled_key_tonic_pitch_class(&at->region), at->region.material);
     }
     free(ids);
+}
+
+cJSON *api_piece_brightness_json(const Plan *plan, NodeId section) {
+    static const PlanLaneKind LANES[] = {PLAN_LANE_MELODY, PLAN_LANE_BASS, PLAN_LANE_INNER_VOICE};
+    PlanSpan span = plan_node_span(plan, section);
+    PlanSpan key_span = {span.start, {1, 1000000}};
+    LaneSpanId key_ids[2];
+    if (plan_lane_find(plan, PLAN_LANE_REGION, 0, key_span, key_ids, 2) < 1) {
+        return cJSON_CreateNull();
+    }
+    const SpelledKey *key = &plan_lane_span_payload(plan, key_ids[0])->region;
+    size_t capacity = 0;
+    size_t count = 0;
+    DimensionNote *notes = NULL;
+    for (size_t lane = 0; lane < sizeof(LANES) / sizeof(LANES[0]); lane++) {
+        for (int voice = 0; voice < (LANES[lane] == PLAN_LANE_INNER_VOICE ? 4 : 1); voice++) {
+            size_t found = plan_lane_find(plan, LANES[lane], voice, span, NULL, 0);
+            LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
+            if (found && !ids) {
+                free(notes);
+                return NULL;
+            }
+            plan_lane_find(plan, LANES[lane], voice, span, ids, found);
+            for (size_t s = 0; s < found; s++) {
+                PlanSpan note_span = plan_lane_span_span(plan, ids[s]);
+                const PlanNotes *payload = &plan_lane_span_payload(plan, ids[s])->notes;
+                for (size_t n = 0; n < payload->note_count; n++) {
+                    Rational onset;
+                    Rational from_start;
+                    if (rational_add(note_span.start, payload->notes[n].offset, &onset) != RATIONAL_OK ||
+                        rational_sub(onset, span.start, &from_start) != RATIONAL_OK || from_start.num < 0) {
+                        continue;
+                    }
+                    if (count == capacity) {
+                        size_t grown = capacity ? capacity * 2 : 256;
+                        DimensionNote *bigger = realloc(notes, grown * sizeof(*notes));
+                        if (!bigger) {
+                            free(ids);
+                            free(notes);
+                            return NULL;
+                        }
+                        notes = bigger;
+                        capacity = grown;
+                    }
+                    notes[count].onset = from_start;
+                    notes[count].duration = payload->notes[n].duration;
+                    notes[count].pitch = payload->notes[n].midi;
+                    count++;
+                }
+            }
+            free(ids);
+        }
+    }
+    cJSON *result = NULL;
+    Rational value;
+    DimensionSpan measured = {notes, count, span.length, {1, 4}, true, spelled_key_tonic_pitch_class(key), key->material};
+    if (count > 0 && dimension_measure(DIMENSION_BRIGHTNESS, &measured, &value) == DIMENSION_OK) {
+        result = cJSON_CreateObject();
+        if (result && (!cJSON_AddNumberToObject(result, "numerator", (double)value.num) ||
+                       !cJSON_AddNumberToObject(result, "denominator", (double)value.den))) {
+            cJSON_Delete(result);
+            result = NULL;
+        }
+    } else {
+        result = cJSON_CreateNull();
+    }
+    free(notes);
+    return result;
 }
 
 /* The harmony of a section as the request gave it: its progression's numerals (and cells), "schema <name>" or "bar 2: V, bar 3: I V". */
