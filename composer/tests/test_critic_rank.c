@@ -181,11 +181,15 @@ static void test_api_response(void) {
     cJSON_Delete(document);
 }
 
-int main(void) {
+/* With "smoke" only the response through the API, which writes the files test_api_schema reads; the rest ranks themes in memory and is slow. */
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
-    test_rank_off();
-    test_rank_on();
+    if (!smoke) {
+        test_rank_off();
+        test_rank_on();
+    }
     test_api_response();
-    printf("test_critic_rank: ok\n");
+    printf("test_critic_rank%s: ok\n", smoke ? " smoke" : "");
     return 0;
 }
