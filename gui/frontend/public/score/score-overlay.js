@@ -329,7 +329,7 @@ function create(paperEl, hostEl) {
               fill: layer.color,
             }),
           );
-          group.appendChild(svgEl("title", {}, item.text));
+          group.appendChild(svgEl("title", {}, item.title || item.text));
         }
         out.appendChild(group);
       });

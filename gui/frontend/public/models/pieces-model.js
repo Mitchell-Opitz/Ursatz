@@ -66,7 +66,7 @@ function emptyState(id) {
     overlays: [],
     motive: null,
     pool: "approved-and-unflagged",
-    accompaniment: { kind: "none", pattern: "any" },
+    accompaniment: { kind: "none", pattern: "any", voicing: "" },
     picks: [],
     switches: Themes.switchesFromWithout([]),
     weight: "1/2",
@@ -644,7 +644,7 @@ function requestBodyOf(uses, piece) {
     request.sections = sections;
   }
   const acc = piece.accompaniment;
-  request.accompaniment = acc && typeof acc === "object" ? { pattern: acc.pattern } : null;
+  request.accompaniment = acc && typeof acc === "object" ? Themes.withVoicing({ pattern: acc.pattern }, acc) : null;
   if (!sized) {
     request.voicing = null;
   }
@@ -730,7 +730,7 @@ function bodyFromState(state) {
     structure,
     motive: s.motive && text(s.motive.item_id) ? { item_id: s.motive.item_id, version: Number(s.motive.version) } : null,
     pool: s.pool,
-    accompaniment: acc.kind === "pattern" ? { pattern: acc.pattern || "any" } : null,
+    accompaniment: acc.kind === "pattern" ? Themes.withVoicing({ pattern: acc.pattern || "any" }, acc) : null,
     brief: Themes.briefFromPicks(s.picks),
     style_weight: s.weight,
     without: Themes.withoutFromSwitches(s.switches),
@@ -787,7 +787,11 @@ function stateFromBody(body, id) {
     state.pool = piece.pool;
   }
   if (piece.accompaniment && typeof piece.accompaniment === "object" && typeof piece.accompaniment.pattern === "string") {
-    state.accompaniment = { kind: "pattern", pattern: piece.accompaniment.pattern };
+    state.accompaniment = {
+      kind: "pattern",
+      pattern: piece.accompaniment.pattern,
+      voicing: typeof piece.accompaniment.voicing === "string" ? piece.accompaniment.voicing : "",
+    };
   }
   state.picks = Themes.picksFromBrief(piece.brief);
   state.switches = Themes.switchesFromWithout(piece.without);
@@ -1316,6 +1320,13 @@ const api = {
   },
   get PATTERNS() {
     return Themes.PATTERNS;
+  },
+  get VOICINGS() {
+    return Themes.VOICINGS;
+  },
+  /* The materials a region may name (R-611): the piece's list without "style". */
+  get REGION_MATERIALS() {
+    return Vocab.materialChoices("region_materials");
   },
   get WEIGHTS() {
     return Themes.WEIGHTS;

@@ -256,7 +256,7 @@ function pieceRegionControl(owner, anchors, onChange) {
   ];
   const kind = themeField(box, "Key of the section", themeSelect(kinds, region.kind));
   const tonic = themeField(box, "Tonic", themeInput("Eb", region.tonic));
-  const material = themeField(box, "Material", themeSelect(PiecesModel.MATERIALS, region.material || (PiecesModel.MATERIALS[0] || {}).value));
+  const material = themeField(box, "Material", themeSelect(PiecesModel.REGION_MATERIALS, region.material || (PiecesModel.REGION_MATERIALS[0] || {}).value));
   const relation = themeField(
     box,
     "Relation",

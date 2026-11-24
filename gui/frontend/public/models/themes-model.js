@@ -93,7 +93,7 @@ function emptyState(id) {
     slots: [],
     ideas: [],
     chords: Array(chordBars()).fill(""),
-    accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
+    accompaniment: { kind: "none", pattern: "any", voicing: "", item_id: "", version: 0 },
     picks: [],
     switches: allSwitches(true),
     weight: "1/2",
@@ -436,6 +436,14 @@ function motiveId(motives, reference) {
   return motives[at].id;
 }
 
+/* A pattern accompaniment ({pattern}) with the voicing of `source` when the pattern is block and one is chosen (R-731): only a block takes one. */
+function withVoicing(accompaniment, source) {
+  if (accompaniment.pattern === "block" && source && typeof source.voicing === "string" && source.voicing !== "") {
+    accompaniment.voicing = source.voicing;
+  }
+  return accompaniment;
+}
+
 /* The body of a theme version from the theme member the form builds ({form, slots, ideas, chords, accompaniment, brief, style_weight,
  * without, tempo, check, seed}). */
 function requestBodyOf(uses, theme) {
@@ -474,7 +482,7 @@ function requestBodyOf(uses, theme) {
   } else if (acc.pattern === "motive" && isReference(acc)) {
     request.accompaniment = { pattern: "motive", motive: { $item: { item_id: acc.item_id, version: acc.version } } };
   } else {
-    request.accompaniment = { pattern: acc.pattern };
+    request.accompaniment = withVoicing({ pattern: acc.pattern }, acc);
   }
   request.voicing = null;
   if (theme.style_weight !== undefined && theme.style_weight !== null) {
@@ -525,7 +533,7 @@ function themeOfBody(body) {
   let accompaniment = null;
   if (acc && typeof acc === "object") {
     const item = acc.motive && acc.motive.$item ? acc.motive.$item : null;
-    accompaniment = acc.pattern === "motive" && item ? { pattern: "motive", item_id: item.item_id, version: item.version } : { pattern: acc.pattern };
+    accompaniment = acc.pattern === "motive" && item ? { pattern: "motive", item_id: item.item_id, version: item.version } : withVoicing({ pattern: acc.pattern }, acc);
   }
   return {
     form,
@@ -552,7 +560,7 @@ function bodyFromForm(state) {
   const acc = s.accompaniment || { kind: "none" };
   let accompaniment = null;
   if (acc.kind === "pattern") {
-    accompaniment = { pattern: acc.pattern || "any" };
+    accompaniment = withVoicing({ pattern: acc.pattern || "any" }, acc);
   } else if (acc.kind === "motive") {
     accompaniment = { pattern: "motive", item_id: acc.item_id, version: Number(acc.version) };
   }
@@ -630,7 +638,7 @@ function formFromBody(body, id) {
     state.accompaniment =
       acc.pattern === "motive"
         ? { kind: "motive", pattern: "any", item_id: acc.item_id, version: Number(acc.version) }
-        : { kind: "pattern", pattern: acc.pattern, item_id: "", version: 0 };
+        : { kind: "pattern", pattern: acc.pattern, voicing: typeof acc.voicing === "string" ? acc.voicing : "", item_id: "", version: 0 };
   }
   state.picks = picksFromBrief(theme.brief);
   state.switches = switchesFromWithout(theme.without);
@@ -1086,6 +1094,11 @@ const api = {
   get PATTERNS() {
     return patterns();
   },
+  /* The voicings the Composer lists (K3, R-731), as {value, label}; a block accompaniment may sound its chords with one. */
+  get VOICINGS() {
+    return Vocab.list("voicings").map((entry) => ({ value: entry.value, label: entry.label }));
+  },
+  withVoicing,
   get WEIGHTS() {
     return weights();
   },
