@@ -116,6 +116,7 @@ bool plan_json_read_rational_member(JsonReader *reader, const cJSON *object, con
 bool plan_json_key_payload_json(cJSON *object, const SpelledKey *key, const PlanKeyRelation *relation);
 cJSON *plan_json_node_constraints_json(const Plan *plan, NodeId id);
 cJSON *plan_json_span_constraints_json(const Plan *plan, LaneSpanId id);
+bool plan_json_read_borrowed_from(JsonReader *reader, const cJSON *object, const char *path, PlanHarmony *harmony);
 bool plan_json_read_key_span(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *key, PlanKeyRelation *relation);
 bool plan_json_read_function(JsonReader *reader, const cJSON *object, const char *path, PlanHarmony *harmony);
 const char *plan_json_result_name(PlanResult result);

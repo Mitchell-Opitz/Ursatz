@@ -191,7 +191,7 @@ static void test_reopen(void) {
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, span_of(2, 2), "B", &second) == PLAN_OK);
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
-    payload.harmony = (PlanHarmony){"I", HARMONIC_FUNCTION_TONIC, true};
+    payload.harmony = (PlanHarmony){"I", HARMONIC_FUNCTION_TONIC, true, NULL};
     LaneSpanId span;
     assert(plan_add_lane_span(plan, form, PLAN_LANE_HARMONY, 0, span_of(0, 2), &payload, &span) == PLAN_OK);
 
