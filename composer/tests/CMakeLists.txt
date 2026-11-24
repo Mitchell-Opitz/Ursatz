@@ -646,6 +646,9 @@ ursatz_test(test_piece_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_piece_sections LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+ursatz_test(test_piece_r611 LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 # Labeled slow (about 28 s alone, 51 s on the CI runner, 2026-11-22): the setup of the fixture api_responses_written, which the fast tests that
 # require it still run first (ctest adds a fixture's setup whatever the label filter). Splitting what it writes from what it checks is not in P66c
 # (R-699).
