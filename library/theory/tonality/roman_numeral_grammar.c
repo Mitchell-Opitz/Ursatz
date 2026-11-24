@@ -124,6 +124,21 @@ static size_t parse_mark(const char *text, bool uppercase, Mark *mark) {
     return 0;
 }
 
+/* The color suffixes, longest first so "maj9" is not read as the mark "maj". The text is static: the numeral keeps the pointer. */
+static const char *const COLORS[] = {"maj9", "add9", "add6", "69", "q3", "q4", "9"};
+
+static size_t parse_color(const char *text, const char **color) {
+    *color = NULL;
+    for (size_t i = 0; i < sizeof(COLORS) / sizeof(COLORS[0]); i++) {
+        size_t length = starts_with(text, COLORS[i]);
+        if (length != 0) {
+            *color = COLORS[i];
+            return length;
+        }
+    }
+    return 0;
+}
+
 static bool parse_figure(const char *text, FigureKind *kind, int *inversion, size_t *taken) {
     *kind = FIGURE_NONE;
     *inversion = 0;
@@ -189,13 +204,21 @@ bool standard_tonality_numeral_parse(const char *text, StandardTonalityNumeralTe
     }
     p += taken;
 
+    /* A color suffix comes straight after the numeral and takes the place of the mark: the chord is a plain major or minor triad. */
     Mark mark;
-    p += parse_mark(p, uppercase, &mark);
+    size_t colored = parse_color(p, &parsed.color);
+    if (colored != 0) {
+        p += colored;
+        mark = MARK_NONE;
+    } else {
+        p += parse_mark(p, uppercase, &mark);
+    }
 
     FigureKind figure;
     parse_figure(p, &figure, &parsed.inversion, &taken);
     p += taken;
-    if (!resolve_quality(uppercase, mark, figure, &parsed.quality)) {
+    if (!resolve_quality(uppercase, mark, figure, &parsed.quality) ||
+        (parsed.color != NULL && standard_tonality_numeral_quality_is_seventh(parsed.quality))) {
         return false;
     }
 
@@ -252,6 +275,15 @@ static const char *figure_text(bool seventh, int inversion, StandardTonalityNume
     return slashed ? TRIAD_SLASHED[inversion] : TRIAD[inversion];
 }
 
+static bool color_valid(const char *color) {
+    for (size_t i = 0; i < sizeof(COLORS) / sizeof(COLORS[0]); i++) {
+        if (strcmp(color, COLORS[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static const char *alteration_text(int alteration) {
     return alteration < 0 ? "b" : (alteration > 0 ? "#" : "");
 }
@@ -266,9 +298,13 @@ bool standard_tonality_numeral_format_styled(const StandardTonalityNumeralText *
     bool seventh = standard_tonality_numeral_quality_is_seventh(numeral->quality);
     /* A dominant seventh has no mark; the figure "7" is the whole seventh sign. */
     char text[64];
-    int length = snprintf(text, sizeof(text), "%s%s%s%s", alteration_text(numeral->alteration),
+    if (numeral->color != NULL && (seventh || !color_valid(numeral->color))) {
+        return false;
+    }
+    int length = snprintf(text, sizeof(text), "%s%s%s%s%s", alteration_text(numeral->alteration),
                           standard_tonality_roman_numeral_degree(numeral->degree, quality_uppercase(numeral->quality)),
-                          mark_text(numeral->quality, style), figure_text(seventh, numeral->inversion, style));
+                          numeral->color != NULL ? "" : mark_text(numeral->quality, style), numeral->color != NULL ? numeral->color : "",
+                          figure_text(seventh, numeral->inversion, style));
     if (length < 0 || (size_t)length >= sizeof(text)) {
         return false;
     }
@@ -363,5 +399,40 @@ bool standard_tonality_numeral_from_base(const StandardTonalityRomanNumeral *num
     memset(out, 0, sizeof(*out));
     out->degree = numeral->degree;
     out->quality = quality;
+    return true;
+}
+
+bool standard_tonality_numeral_color_type(const KnowledgeSnapshot *snapshot, const StandardTonalityNumeralText *numeral, const ChordType **type) {
+    static const struct {
+        const char *suffix;
+        StandardTonalityNumeralQuality quality;
+        const char *id;
+    } TYPES[] = {{"add9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.add9"},
+                 {"add9", STANDARD_TONALITY_NUMERAL_MINOR, "persichetti.chord-type.minor-add9"},
+                 {"add6", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.add6"},
+                 {"add6", STANDARD_TONALITY_NUMERAL_MINOR, "persichetti.chord-type.minor-add6"},
+                 {"69", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.six-nine"},
+                 {"9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.dominant-ninth"},
+                 {"9", STANDARD_TONALITY_NUMERAL_MINOR, "persichetti.chord-type.minor-ninth"},
+                 {"maj9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.major-ninth"}};
+    if (snapshot == NULL || numeral == NULL || type == NULL || numeral->color == NULL) {
+        return false;
+    }
+    const char *id = NULL;
+    if (strcmp(numeral->color, "q3") == 0 || strcmp(numeral->color, "q4") == 0) {
+        bool triad = numeral->quality == STANDARD_TONALITY_NUMERAL_MAJOR || numeral->quality == STANDARD_TONALITY_NUMERAL_MINOR ||
+                     numeral->quality == STANDARD_TONALITY_NUMERAL_DIMINISHED;
+        id = triad ? (numeral->color[1] == '3' ? "persichetti.chord-type.quartal-three" : "persichetti.chord-type.quartal-four") : NULL;
+    }
+    for (size_t i = 0; id == NULL && i < sizeof(TYPES) / sizeof(TYPES[0]); i++) {
+        if (strcmp(TYPES[i].suffix, numeral->color) == 0 && TYPES[i].quality == numeral->quality) {
+            id = TYPES[i].id;
+        }
+    }
+    const ChordType *found = id != NULL ? knowledge_snapshot_chord_type(snapshot, id) : NULL;
+    if (found == NULL) {
+        return false;
+    }
+    *type = found;
     return true;
 }

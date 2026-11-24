@@ -6,6 +6,7 @@
 
 #include "theory/tonality/roman_numeral_rules.h"
 #include "theory/tonality/common_practice_materials.h"
+#include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/tonality/tonal_key.h"
 
 /*
@@ -23,6 +24,8 @@
  *               diminished (lowercase, a seventh figure required)
  *               "M" or "maj": major seventh (uppercase, a seventh figure
  *               required: IM7, IVmaj7)
+ *   color       a color suffix after the quality (R-727): add9 add6 69 9 maj9 q3 q4 (Iadd9, IV69, V9, Imaj9, ii9, Vq3); the numeral
+ *               is then a triad (a seventh figure is refused) and the suffix names the chord type that sounds
  *   figure      triads: 6 (first inversion), 64 (second)
  *               sevenths: 7 (root position), 65, 43, 42 (inversions 1 to 3);
  *               2 is also 42
@@ -66,7 +69,16 @@ typedef struct {
     int target_alteration;                  /* -1, 0, +1 */
     int target_degree;                      /* 1..7 */
     bool target_minor;                      /* the target numeral was lowercase */
+    const char *color;                      /* a color chord's suffix (R-727): "add9", "add6", "69", "9", "maj9", "q3" or "q4"; NULL for none */
 } StandardTonalityNumeralText;
+
+/*
+ * The chord type (K2) a color suffix names on the numeral's quality (R-727): add9 on a major triad is persichetti.chord-type.add9, on a
+ * minor triad minor-add9; add6 and minor-add6 likewise; 69 on a major triad six-nine; 9 on a major triad dominant-ninth, on a minor one
+ * minor-ninth; maj9 on a major triad major-ninth; q3 and q4 the quartal three- and four-note chords on any triad. False (*type
+ * untouched) for a numeral with no color, a suffix that names no type for that quality, or a snapshot without the entry.
+ */
+bool standard_tonality_numeral_color_type(const KnowledgeSnapshot *snapshot, const StandardTonalityNumeralText *numeral, const ChordType **type);
 
 /* Spelling of the marks and figures a formatted numeral uses. */
 typedef enum {
