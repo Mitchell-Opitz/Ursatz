@@ -170,11 +170,44 @@ static void test_applied(void) {
     expect_canonical("V4/3/\xE2\x99\xAD" "VI", "V43/bVI");
 }
 
+/* A color suffix (R-727) comes after the numeral and names the chord type with the numeral's quality. */
+static void test_color(void) {
+    const KnowledgeSnapshot *snapshot = test_knowledge();
+    static const struct {
+        const char *text;
+        const char *id;
+    } CASES[] = {{"Iadd9", "persichetti.chord-type.add9"},         {"iadd9", "persichetti.chord-type.minor-add9"},
+                 {"Iadd6", "persichetti.chord-type.add6"},         {"iadd6", "persichetti.chord-type.minor-add6"},
+                 {"IV69", "persichetti.chord-type.six-nine"},      {"V9", "persichetti.chord-type.dominant-ninth"},
+                 {"ii9", "persichetti.chord-type.minor-ninth"},    {"Imaj9", "persichetti.chord-type.major-ninth"},
+                 {"Vq3", "persichetti.chord-type.quartal-three"},  {"iiq4", "persichetti.chord-type.quartal-four"},
+                 {"V9", "persichetti.chord-type.dominant-ninth"}};
+    for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
+        Text text = parsed(CASES[i].text);
+        const ChordType *type = NULL;
+        assert(text.color != NULL && !standard_tonality_numeral_quality_is_seventh(text.quality));
+        assert(standard_tonality_numeral_color_type(snapshot, &text, &type) && strcmp(type->id, CASES[i].id) == 0);
+        assert(strcmp(standard_tonality_color_suffix(type), text.color) == 0);
+        expect_canonical(CASES[i].text, CASES[i].text);
+    }
+    /* A suffix that names no type for the quality has none; a seventh figure and a color do not go together. */
+    const ChordType *type = NULL;
+    Text text = parsed("vi69");
+    assert(!standard_tonality_numeral_color_type(snapshot, &text, &type) && type == NULL);
+    text = parsed("Imaj9");
+    text.quality = Q(MINOR);
+    assert(!standard_tonality_numeral_color_type(snapshot, &text, &type));
+    assert(!standard_tonality_numeral_parse("V97", &text) && !standard_tonality_numeral_parse("V9add9", &text) && !standard_tonality_numeral_parse("Vq5", &text));
+    assert(!standard_tonality_numeral_color_type(NULL, &text, &type) && !standard_tonality_numeral_color_type(snapshot, NULL, &type));
+    Text plain_text = parsed("V7");
+    assert(plain_text.color == NULL && !standard_tonality_numeral_color_type(snapshot, &plain_text, &type));
+}
+
 static void test_rejected(void) {
     const char *const REJECTED[] = {"",        "x",      "VIII",    "Vi",      "vI",      "Iv",     "viI",    "Vo",
                                     "V\xC2\xB0", "vi+",   "i+",      "V+7",     "viio\xC3\xB8", "vii\xC3\xB8", "vii/o",  "vii%",
                                     "ii\xC3\xB8" "6", "iiM7",  "VM",      "V7 ",     " V7",     "V7x",    "V8",     "V5",
-                                    "V66",     "V9",     "V7/",     "V/",      "V/x",     "V/V/V",  "V/V7",   "V/Vo",
+                                    "V66",     "V7/",     "V/",      "V/x",     "V/V/V",  "V/V7",   "V/Vo",
                                     "V/V6",    "bb V",   "bbV",     "b",       "#",       "V/b",    "Vmaj",   "viio75",
                                     "vii7o",   "V6/6",   "V4/4",    "V3/4",    "V+/V7",   "\xE2\x99\xAD", "iiio\xC3\xB8"};
     for (size_t i = 0; i < sizeof(REJECTED) / sizeof(REJECTED[0]); i++) {
@@ -361,6 +394,7 @@ int main(void) {
     test_figures_and_slash_spellings();
     test_applied();
     test_rejected();
+    test_color();
     test_format_failures();
     test_styles();
     test_root_semitones();
