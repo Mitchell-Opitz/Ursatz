@@ -78,6 +78,12 @@ A numeral the key's own chords do not read (an alteration, or another quality th
 
 The settings reach only the chords the phrase model deals: a theme whose motives have chords of their own keeps them, so `share` moves a theme with motives given no harmony and the harmony around given chords. In a modal key the same applies, with the mode's own predominant chords.
 
+## Mode shifts in pieces
+
+A region of a piece is in any material the Composer writes, on one tonic or another (R-611, R-730): the Persona 5 move, A in C locrian and B in C natural minor, `two steps brighter` of A. `region_material_written` is `composer_material_supported`; the harmonic minor and the synthetic scales are refused with "the Composer writes major, minor and modal keys". A theme given to a section is read in that section's key, so its material must be the section's: `return_key_shift` and the theme fill compare the materials exactly, and a request that gives a C natural minor theme to a C locrian region is refused at the section's `fill` with "the theme is in C natural minor, the section in C locrian". A section that returns another is in the key of the section it returns.
+
+Each section row of a piece response has `brightness` (`{"numerator", "denominator"}`, null for a section without notes): the measure of R-730 over the section's melody, bass and inner voices, against the tonic and material of the key lane at its start. A diatonic mode whose notes all sound measures its rank, locrian 1 to lydian 7. For the R-611 piece (seed 1, themes drawn from a motive with no harmony) A measures 1 and B 4: B is more than 3/2 brighter than A, which `test_ternary_modes` asserts. The `brightness` dimension is not a contrast aspect; a brightness target is a region relation.
+
 ## What a modal key does not write
 
 - Applied chords, dominant options, predominant forms and the prolongation figures with V6, V65, V43 or viio6: the embellishment operator does not apply, and a prolongation draws the figures on the tonic, IV and the root-position dominant (the approach chord of the mode's cadence).
