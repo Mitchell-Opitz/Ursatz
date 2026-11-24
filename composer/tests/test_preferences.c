@@ -141,6 +141,11 @@ static void defaults_round_trip(void) {
            read.motif.color_note == 8);
     assert(read_text("{\"melody\":{\"color_note\":20},\"motif\":{\"color_note\":0}}", &read, path, message) && read.melody.color_note == 20 &&
            read.motif.color_note == 0);
+    /* The color chords (R-727): motif.color_chords is a ratio, off by default, and a plan chord takes a color suffix. */
+    assert(defaults.motif.color_chords.num == 0 && defaults.motif.color_chords.den == 1);
+    assert(read_text("{\"motif\":{\"color_chords\":\"1/2\",\"plan\":[\"I\",\"IVadd9@2:1\"]}}", &read, path, message) && read.motif.color_chords.num == 1 &&
+           read.motif.color_chords.den == 2 && read.motif.plan_count == 2 && strcmp(read.motif.plan[0].color, "") == 0 &&
+           strcmp(read.motif.plan[1].color, "add9") == 0 && read.motif.plan[1].bar == 2 && read.motif.plan[1].beat == 1);
 
     cJSON *document = composer_preferences_write(&defaults);
     assert(document);
@@ -458,6 +463,9 @@ static void limits_are_refused(void) {
     refused("{\"motif\":{\"skips_per_motif\":12}}", "/motif/skips_per_motif");
     refused("{\"motif\":{\"color_note\":9}}", "/motif/color_note");
     refused("{\"melody\":{\"color_note\":21}}", "/melody/color_note");
+    refused("{\"motif\":{\"color_chords\":\"3/2\"}}", "/motif/color_chords");
+    refused("{\"motif\":{\"plan\":[\"Vq3\"]}}", "/motif/plan/0");
+    refused("{\"motif\":{\"plan\":[\"Vadd7\"]}}", "/motif/plan/0");
     refused("{\"motif\":{\"syncopation_types\":{\"off_beat\":0,\"tie_beat\":0,\"tie_bar\":0,\"anticipation\":0}}}",
             "/motif/syncopation_types");
     refused("{\"motif\":{\"syncopation_types\":{\"slide\":1}}}", "/motif/syncopation_types/slide");

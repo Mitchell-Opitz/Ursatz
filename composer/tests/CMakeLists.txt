@@ -89,6 +89,9 @@ ursatz_test(test_modal_harmony LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_modal_mixture LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+ursatz_test(test_color_chords LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 ursatz_test(test_modal_compose LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
