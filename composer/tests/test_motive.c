@@ -1204,7 +1204,7 @@ static void test_extras_in_json(void) {
     options.features[0].last = 3;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
     assert(motive_from_json(EXTRAS_JSON, &options, &again, &error) == MOTIVE_OK);
     assert(!again.accompaniment && again.feature_count == 1 && again.chord_count == 1);
     assert(again.chords[0].degree == 4 && strcmp(again.features[0].label, "x") == 0);
@@ -1219,17 +1219,17 @@ static void test_extras_errors(void) {
     MotiveOptions options = base;
     options.has_harmony = true;
     options.harmony_count = 2;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0};
-    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0}; /* at the end of a one-bar motive */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
+    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false}; /* at the end of a one-bar motive */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "harmony[1]") == 0);
 
     options = base;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0}; /* a third inversion needs a seventh */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false}; /* a third inversion needs a seventh */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
 
     options = base;

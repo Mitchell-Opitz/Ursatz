@@ -316,6 +316,7 @@ static bool read_numeral(const KnowledgeSnapshot *knowledge, const char *token, 
     read.has_target = numeral.has_target;
     read.target_degree = numeral.has_target ? numeral.target_degree : 0;
     read.target_alteration = numeral.has_target ? numeral.target_alteration : 0;
+    read.target_minor = numeral.has_target && numeral.target_minor;
     if (numeral.color != NULL && (numeral.has_target || !standard_tonality_numeral_color_type(knowledge, &numeral, &read.color))) {
         return false;
     }
@@ -422,6 +423,7 @@ bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size
         numeral.has_target = true;
         numeral.target_degree = chord->target_degree;
         numeral.target_alteration = chord->target_alteration;
+        numeral.target_minor = chord->target_minor;
     }
     numeral.inversion = chord->inversion;
     if (chord->color != NULL) {
