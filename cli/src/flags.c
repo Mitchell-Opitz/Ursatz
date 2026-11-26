@@ -98,6 +98,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--plans", NULL, CLI_FLAG_SWITCH, NULL, "listen: put each theme's plan in its JSON, for critique"},
     {"--port", NULL, CLI_FLAG_VALUE, "<n>", "global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand"},
     {"--position", NULL, CLI_FLAG_VALUE, "<where>", "fragment: leading, trailing or middle"},
+    {"--preset", NULL, CLI_FLAG_VALUE, "<name>", "listen: a preset of settings from her listening (ff7 or hollow-knight); --settings apply over it"},
     {"--print-settings", NULL, CLI_FLAG_SWITCH, NULL, "print the default preferences document and exit"},
     {"--rated", NULL, CLI_FLAG_VALUE, "<file>", "critique: a rated set (ursatz-rated-set 1) to judge pair by pair against her ratings"},
     {"--rating", NULL, CLI_FLAG_REPEAT, "<r>", "rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable"},

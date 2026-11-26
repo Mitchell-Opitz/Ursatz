@@ -98,6 +98,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--plans` | listen: put each theme's plan in its JSON, for critique | `listen` |
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
+| `--preset <name>` | listen: a preset of settings from her listening (ff7 or hollow-knight); --settings apply over it | `listen` |
 | `--print-settings` | print the default preferences document and exit | `listen` |
 | `--rated <file>` | critique: a rated set (ursatz-rated-set 1) to judge pair by pair against her ratings | `critique` |
 | `--rating <r>` | rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable | `rate` |

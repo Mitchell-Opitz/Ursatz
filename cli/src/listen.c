@@ -39,6 +39,7 @@ typedef struct {
     const char *style_path;
     const char *tempo_text;
     const char *strategy_text;
+    const char *preset_text; /* --preset: a preset of the Composer (R-754), for motifs and themes */
     const char *into_text;
     const char *development_text;
     const char *bars_text;
@@ -83,6 +84,7 @@ static const CliOptionRow ROWS[] = {
     {"--style", offsetof(Options, style_path), false},
     {"--tempo", offsetof(Options, tempo_text), false},
     {"--strategy", offsetof(Options, strategy_text), false},
+    {"--preset", offsetof(Options, preset_text), false},
     {"--into", offsetof(Options, into_text), false},
     {"--development", offsetof(Options, development_text), false},
     {"--bars", offsetof(Options, bars_text), false},
@@ -332,6 +334,8 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
                                               : cJSON_AddNullToObject(line, "blend") != NULL);
     ok = ok && (manifest->options->settings_path ? cJSON_AddStringToObject(line, "settings", manifest->options->settings_path)
                                                  : cJSON_AddNullToObject(line, "settings"));
+    ok = ok && (manifest->options->preset_text ? cJSON_AddStringToObject(line, "preset", manifest->options->preset_text) != NULL
+                                               : cJSON_AddNullToObject(line, "preset") != NULL);
     ok = ok && (manifest->preferences ? cJSON_AddItemToObject(line, "preferences", cJSON_Duplicate(manifest->preferences, true))
                                       : cJSON_AddNullToObject(line, "preferences") != NULL);
     ok = ok && cJSON_AddItemToObject(line, "files", files) && cJSON_AddStringToObject(line, "status", sample->status);
@@ -371,6 +375,7 @@ static cJSON *random_motive_request(const Options *options, unsigned long seed, 
     bool ok = request && cJSON_AddStringToObject(request, "material", options->material_text) &&
               cJSON_AddStringToObject(request, "meter", options->meter_text) &&
               cJSON_AddStringToObject(request, "strategy", options->strategy_text) && cJSON_AddNumberToObject(request, "count", 1) &&
+              (!options->preset_text || cJSON_AddStringToObject(request, "preset", options->preset_text)) &&
               cJSON_AddStringToObject(request, "seed", seed_text(seed, number, sizeof number)) &&
               (!options->style_path || cJSON_AddStringToObject(request, "style", options->style_path)) &&
               (!preferences || cJSON_AddItemToObject(request, "preferences", cJSON_Duplicate(preferences, true))) &&
@@ -484,6 +489,7 @@ static bool add_brief(cJSON *request, const Options *options) {
                  {"blend", options->blend_path},
                  {"blend_weight", options->blend_weight_text},
                  {"blend_weights", options->blend_weights_text},
+                 {"preset", options->preset_text},
                  {"tempo", options->tempo_text}};
     for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
         ok = !texts[i].text || set_member(request, texts[i].name, cJSON_CreateString(texts[i].text));
