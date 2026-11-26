@@ -126,7 +126,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return api_fail(error, URSATZ_ERR_REQUEST, "/role", "role must be melodic or accompaniment, not '%s'", role_text);
     }
     /* The motif group steers the segments strategy; the drawn strategy keeps its constants (R-304). */
-    if (!api_read_preferences(request, preferences, has_preferences, error)) {
+    if (!api_read_preferences_with_preset(request, preferences, has_preferences, NULL, 0, error)) {
         return URSATZ_ERR_REQUEST;
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;

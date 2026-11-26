@@ -107,6 +107,17 @@ UrsatzStatus api_load_style(const char *path, const char *const *without, size_t
  */
 bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, UrsatzError *error);
 
+/*
+ * The settings of a theme or a random motive request (R-754): the defaults, then the preset the request's "preset" names (a string, or null
+ * for none), then the request's "preferences" over it. *present is true when either is given. The preset's accompaniment pattern is copied
+ * into `accompaniment` ("" for none). An unknown preset is refused at /preset: "'x' is not a preset; see the vocabulary's presets".
+ */
+bool api_read_preferences_with_preset(const cJSON *request, ComposerPreferences *out, bool *present, char *accompaniment,
+                                      size_t accompaniment_size, UrsatzError *error);
+
+/* The preset a request names: its name (borrowed from the request), NULL for none; false, refused at /preset, for one that is no string or no preset. */
+bool api_read_preset_name(const cJSON *request, const char **name, UrsatzError *error);
+
 /* A seed from the clock, for a request that gives none. */
 unsigned long api_default_seed(void);
 

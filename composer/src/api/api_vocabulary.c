@@ -733,6 +733,21 @@ static bool add_theme_developments(cJSON *root) {
     return list != NULL;
 }
 
+/* The presets (API 4.9, R-754): name, label and where the settings come from, in the order the Composer holds them. */
+static bool add_presets(cJSON *root) {
+    cJSON *list = add_list(root, "presets");
+    for (size_t i = 0; list && i < composer_preset_count(); i++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddStringToObject(entry, "name", composer_preset_name(i)) ||
+            !cJSON_AddStringToObject(entry, "label", composer_preset_label(i)) ||
+            !cJSON_AddStringToObject(entry, "source", composer_preset_source(i)) || !cJSON_AddItemToArray(list, entry)) {
+            cJSON_Delete(entry);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 /* The lanes of a piece version a regenerate or a set of variations may name (a section's lane; "all" is every one). */
 static bool add_lanes(cJSON *root) {
     static const char *const LANES[] = {"harmony", "bass", "melody", "inner", "all"};
@@ -830,7 +845,7 @@ bool api_vocabulary_build(cJSON *root, const KnowledgeSnapshot *knowledge, const
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_accompaniment_patterns(root, knowledge) &&
-           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_lanes(root) &&
+           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_presets(root) && add_lanes(root) &&
            add_preferences(root) && add_preference_keys(root) && add_rules(root) && add_limits(root);
 }
 

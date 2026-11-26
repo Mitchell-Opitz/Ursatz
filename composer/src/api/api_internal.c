@@ -410,6 +410,62 @@ bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *
     return true;
 }
 
+bool api_read_preset_name(const cJSON *request, const char **name, UrsatzError *error) {
+    bool given;
+    const cJSON *item = member(request, "preset", &given);
+    *name = NULL;
+    if (!given) {
+        return true;
+    }
+    if (!cJSON_IsString(item)) {
+        return member_fail(error, "preset", "the name of a preset");
+    }
+    for (size_t i = 0; i < composer_preset_count(); i++) {
+        if (strcmp(composer_preset_name(i), item->valuestring) == 0) {
+            *name = item->valuestring;
+            return true;
+        }
+    }
+    api_fail(error, URSATZ_ERR_REQUEST, "/preset", "'%.40s' is not a preset; see the vocabulary's presets", item->valuestring);
+    return false;
+}
+
+bool api_read_preferences_with_preset(const cJSON *request, ComposerPreferences *out, bool *present, char *accompaniment,
+                                      size_t accompaniment_size, UrsatzError *error) {
+    const char *preset = NULL;
+    composer_preferences_default(out);
+    if (accompaniment && accompaniment_size > 0) {
+        accompaniment[0] = '\0';
+    }
+    if (!api_read_preset_name(request, &preset, error)) {
+        return false;
+    }
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    if (preset && !composer_preset_apply(preset, out, accompaniment, accompaniment_size, message, sizeof message)) {
+        api_fail(error, URSATZ_ERR_INTERNAL, "/preset", "%s", message);
+        return false;
+    }
+    bool given = false;
+    const cJSON *item = member(request, "preferences", &given);
+    if (present) {
+        *present = given || preset != NULL;
+    }
+    if (!item) {
+        return true;
+    }
+    if (!cJSON_IsObject(item)) {
+        return member_fail(error, "preferences", "an object");
+    }
+    char path[COMPOSER_PREFERENCES_PATH_MAX / 2];
+    if (!composer_preferences_apply(item, out, path, sizeof path, message, sizeof message)) {
+        char full[sizeof error->path];
+        snprintf(full, sizeof full, "/preferences%s", path);
+        api_fail(error, URSATZ_ERR_REQUEST, full, "%s", message);
+        return false;
+    }
+    return true;
+}
+
 NodeId api_find_node(const Plan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *found = plan_node_name(plan, id);

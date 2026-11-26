@@ -41,9 +41,3 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
-composer/src/preferences/preferences_preset.c composer_preset_count  # the vocabulary reads it in the next commit (P69c B5)
-composer/src/preferences/preferences_preset.c composer_preset_name  # the vocabulary reads it in the next commit (P69c B5)
-composer/src/preferences/preferences_preset.c composer_preset_label  # the vocabulary reads it in the next commit (P69c B5)
-composer/src/preferences/preferences_preset.c composer_preset_source  # the vocabulary reads it in the next commit (P69c B5)
-composer/src/preferences/preferences_preset.c composer_preset_apply  # the requests read it in the next commit (P69c B5)
-composer/src/preferences/preferences_preset.c say  # the requests read it in the next commit (P69c B5)

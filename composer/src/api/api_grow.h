@@ -90,6 +90,7 @@ typedef struct {
     PlanVoicing voicing;
     Rational style_weight;
     GrowDevelopment development;
+    const char *preset;                      /* the preset the request names (R-754), echoed in the brief; NULL for none; not owned */
     bool generate_blueprint;                 /* development "blueprint" (R-752): the Composer writes the theme's blueprint from the motif (R-751) */
     const BlueprintPreferences *blueprint_preferences; /* NULL for the defaults; not owned */
     const GrowContinuation *continuation;    /* NULL for the defaults; not owned */

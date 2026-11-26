@@ -356,6 +356,8 @@ typedef struct {
     const char *style;
     const char *without[WITHOUT_MAX];
     const char *voicing_id; /* "accompaniment": {"voicing": ...}, resolved in the snapshot by theme_prepare */
+    const char *preset;     /* the preset the request names (R-754), NULL for none */
+    char preset_pattern[64]; /* its accompaniment pattern, "" for none: the pattern when the request and its blueprint give none */
 } ThemeBrief;
 
 /* The members of the brief as the text the options of grow take. */
@@ -457,6 +459,9 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
             return api_fail(error, URSATZ_ERR_REQUEST, "/voicing", "\"voicing\" in the request must be satb or chorale, not '%s'",
                             voicing);
         }
+    }
+    if (!text->accompaniment && !text->voicing && !text->texture && brief->preset_pattern[0]) {
+        text->accompaniment = brief->preset_pattern;
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(request, "without");
     if (without && !cJSON_IsNull(without) && !(cJSON_IsArray(without) && cJSON_GetArraySize(without) == 0)) {
@@ -699,6 +704,19 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     const cJSON *blueprint = cJSON_GetObjectItemCaseSensitive(request, "blueprint");
     blueprint = blueprint && !cJSON_IsNull(blueprint) ? blueprint : NULL;
     UrsatzStatus status = blueprint ? refuse_beside_blueprint(request, error) : URSATZ_OK;
+    if (status == URSATZ_OK && !api_read_preset_name(request, &state->brief.preset, error)) {
+        status = URSATZ_ERR_REQUEST;
+    }
+    if (status == URSATZ_OK && state->brief.preset) {
+        /* The preset's accompaniment is the pattern when the request gives none: read before the brief. */
+        ComposerPreferences scratch;
+        char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+        composer_preferences_default(&scratch);
+        if (!composer_preset_apply(state->brief.preset, &scratch, state->brief.preset_pattern, sizeof state->brief.preset_pattern, message,
+                                   sizeof message)) {
+            status = api_fail(error, URSATZ_ERR_INTERNAL, "/preset", "%s", message);
+        }
+    }
     if (status == URSATZ_OK) {
         status = read_motives(&state->theme, request, blueprint != NULL, error);
     }
@@ -743,9 +761,10 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
      * The motif group shapes a theme's drawn rhythms and its new material (R-475, R-477) and nothing else: a theme's
      * motives come from the request (docs/theme-request.md).
      */
-    if (!api_read_preferences(request, &state->preferences, &state->has_preferences, error)) {
+    if (!api_read_preferences_with_preset(request, &state->preferences, &state->has_preferences, NULL, 0, error)) {
         return URSATZ_ERR_REQUEST;
     }
+    setup->preset = state->brief.preset;
     if (state->has_preferences) {
         setup->melody = &state->preferences.melody;
         setup->fidelity = &state->preferences.development;

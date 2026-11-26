@@ -200,7 +200,8 @@ cJSON *api_brief_json(const GrowBrief *brief) {
         !cJSON_AddItemToObject(object, "material", material) ||
         !cJSON_AddItemToObject(object, "density", brief->has_density ? api_ratio_number(&brief->density) : cJSON_CreateNull()) ||
         !cJSON_AddItemToObject(object, "without", without) ||
-        (brief->development && !cJSON_AddStringToObject(object, "development", brief->development))) {
+        (brief->development && !cJSON_AddStringToObject(object, "development", brief->development)) ||
+        (brief->preset && !cJSON_AddStringToObject(object, "preset", brief->preset))) {
         /* Whatever was not added to the object is still ours. */
         if (!object || !cJSON_GetObjectItem(object, "tempo")) {
             cJSON_Delete(tempo);

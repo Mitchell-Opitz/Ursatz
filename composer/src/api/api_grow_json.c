@@ -609,6 +609,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->without = setup->without;
     out->without_count = setup->without_count;
     out->development = setup->material ? api_setup_development_name(setup) : NULL; /* a theme's, not a grow's */
+    out->preset = setup->material ? setup->preset : NULL;
 }
 
 /* The construction of the theme (R-468) as the response gives it, null for a theme without one. */

@@ -145,6 +145,10 @@
         },
         "development": {
           "type": "string"
+        },
+        "preset": {
+          "type": "string",
+          "description": "The preset the request names (R-754), when it names one."
         }
       }
     },

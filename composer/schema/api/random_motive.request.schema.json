@@ -82,6 +82,13 @@
         "type": "object"
       },
       "description": "Motives (the motive JSON format) the result should not repeat nor resemble (API 4.3, R-673). Read only when preferences.candidates.variety is above 0."
+    },
+    "preset": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The name of a preset (R-754): settings of her listening, built in, which `preferences` apply over (the vocabulary's presets)."
     }
   },
   "anyOf": [
