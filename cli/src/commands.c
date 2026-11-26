@@ -64,7 +64,7 @@ static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--ro
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
-static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--plans", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
+static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--blueprint", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--plans", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
@@ -555,7 +555,7 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz critique --verdict obs-1c9e agree item:itm-3f2a",
      FLAGS_CRITIQUE, 0, 16, run_critique},
     {"listen",
-    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--motif <file>] [--theme-request <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
+    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--motif <file>] [--theme-request <file>] [--blueprint <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
     "listen --print-settings",
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
@@ -580,6 +580,8 @@ const CliCommand CLI_COMMANDS[] = {
     "  --bars is 4 or 8 (default 8); --check passes over a seed whose analysis contradicts the plan; --motif is the\n"
     "  motif of every theme, anything the motive command reads (default: a generated motif for each sample);\n"
     "  --theme-request is a theme request (docs/theme-request.md) with the sample's seed, instead of a motif.\n"
+    "  --blueprint is a theme request with a blueprint (docs/blueprints.md), as JSON or as Ursatz Text, made as --theme-request is; it\n"
+    "  cannot be given with --motif or --theme-request.\n"
     "  --plans puts each theme's plan in its JSON (themes[0].plan), for ursatz critique; the files' notes stay the same.\n"
     "\n"
     "Exit status: 0 at least one sample was written; 1 usage, an invalid option or an unreadable file; 2 none could\n"

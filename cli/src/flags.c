@@ -27,6 +27,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--blend", NULL, CLI_FLAG_VALUE, "<file>", "a second style model file, blended with --style"},
     {"--blend-weight", NULL, CLI_FLAG_VALUE, "<n/d>", "the second style's share in every dimension, 0 to 1"},
     {"--blend-weights", NULL, CLI_FLAG_VALUE, "<list>", "the second style's share per dimension, as harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>"},
+    {"--blueprint", NULL, CLI_FLAG_VALUE, "<file>", "a theme request with a blueprint, as JSON or Ursatz Text, that every theme of the batch is made from"},
     {"--by", NULL, CLI_FLAG_VALUE, "<n>", "restate: move the motive by n semitones, or n steps with --tonal"},
     {"--cadence", NULL, CLI_FLAG_VALUE, "<type>", "the cadence the phrase ends in: PAC, IAC, HC, DC or PC"},
     {"--candidates", NULL, CLI_FLAG_VALUE, "<n>", "compose n candidates and write the best"},

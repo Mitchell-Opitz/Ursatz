@@ -27,6 +27,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--blend <file>` | a second style model file, blended with --style | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weight <n/d>` | the second style's share in every dimension, 0 to 1 | `grow`, `plan`, `fill`, `listen` |
 | `--blend-weights <list>` | the second style's share per dimension, as harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d> | `grow`, `plan`, `fill`, `listen` |
+| `--blueprint <file>` | a theme request with a blueprint, as JSON or Ursatz Text, that every theme of the batch is made from | `listen` |
 | `--by <n>` | restate: move the motive by n semitones, or n steps with --tonal | `develop` |
 | `--cadence <type>` | the cadence the phrase ends in: PAC, IAC, HC, DC or PC | `progression`, `grow` |
 | `--candidates <n>` | compose n candidates and write the best | `fill` |
