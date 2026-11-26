@@ -1199,6 +1199,32 @@ GrowResult grow_blueprint_check_climax(const GrowBlueprint *blueprint, const Gro
     return GROW_OK;
 }
 
+GrowResult grow_blueprint_check_marks(const GrowBlueprint *blueprint, const GrowBlueprintDraw *drawn, const PlanMeter *meter,
+                                      GrowRefusal *refusal) {
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        for (size_t k = 0; k < this->anchor_count + this->event_count; k++) {
+            bool anchor = k < this->anchor_count;
+            Rational offset = anchor ? this->anchors[k].offset : this->events[k - this->anchor_count].offset;
+            if (drawn->known[bar] && starts_at(&drawn->rhythm[bar], offset)) {
+                continue;
+            }
+            char at[32];
+            char path[96];
+            beats_text(offset, meter, at, sizeof(at));
+            snprintf(path, sizeof(path), "/blueprint/bars/%zu/%s/%zu/at", bar, anchor ? "anchors" : "events",
+                     anchor ? k : k - this->anchor_count);
+            return drawn->known[bar]
+                       ? refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu %s at %s: no note starts there", bar,
+                                anchor ? "anchor" : "event", at)
+                       : refuse(refusal, GROW_ERR_BAD_REQUEST, path,
+                                "bar %zu %s at %s: no note starts there (the bar's idea has no rhythm of its own: give it one)", bar,
+                                anchor ? "anchor" : "event", at);
+        }
+    }
+    return GROW_OK;
+}
+
 /* The melody span (voice 0) inside the theme that holds the time, PLAN_LANE_SPAN_NONE for none. */
 static LaneSpanId melody_span_at(const Plan *plan, PlanSpan theme, Rational time) {
     LaneSpanId ids[GROW_BLUEPRINT_BARS * 8];
@@ -1240,7 +1266,24 @@ PlanResult grow_blueprint_place(Plan *plan, NodeId theme, const GrowBlueprint *b
         return PLAN_OK;
     }
     PlanResult result = PLAN_OK;
-    if (blueprint->has_climax) {
+    for (size_t bar = 0; result == PLAN_OK && bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        for (size_t a = 0; result == PLAN_OK && a < this->anchor_count; a++) {
+            PlanConstraint constraint;
+            memset(&constraint, 0, sizeof(constraint));
+            constraint.kind = PLAN_CONSTRAINT_ANCHOR;
+            constraint.params.anchor.midi = this->anchors[a].midi;
+            result = place_at(plan, span, bar_length, bar, this->anchors[a].offset, &constraint, &constraint.params.anchor.offset);
+        }
+        for (size_t e = 0; result == PLAN_OK && e < this->event_count; e++) {
+            PlanConstraint constraint;
+            memset(&constraint, 0, sizeof(constraint));
+            constraint.kind = PLAN_CONSTRAINT_EVENT;
+            constraint.params.event.type = this->events[e].type;
+            result = place_at(plan, span, bar_length, bar, this->events[e].offset, &constraint, &constraint.params.event.offset);
+        }
+    }
+    if (result == PLAN_OK && blueprint->has_climax) {
         PlanConstraint constraint;
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CLIMAX;

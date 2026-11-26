@@ -810,12 +810,21 @@ GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *ou
 GrowResult grow_blueprint_check_climax(const GrowBlueprint *blueprint, const GrowBlueprintDraw *drawn, const PlanMeter *meter,
                                        GrowRefusal *refusal);
 
+/*
+ * Whether each anchor and event of the blueprint lies on a note onset of its bar's rhythm as the draw knows it (the bar's melody,
+ * rhythm, job, or the basic motive's notes it restates): refused before composing otherwise ("bar 2 anchor at 3/2: no note starts
+ * there").
+ */
+GrowResult grow_blueprint_check_marks(const GrowBlueprint *blueprint, const GrowBlueprintDraw *drawn, const PlanMeter *meter,
+                                      GrowRefusal *refusal);
+
 /* Gives each bar's melody to the theme section, a span a bar (plan_give_melody). */
 GrowResult grow_blueprint_give_melody(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal);
 
 /*
- * Puts the blueprint's climax on the melody span of the theme section that holds its onset, as a `climax` constraint (R-746), once
- * the structure stage has made the spans. PLAN_OK when there is no climax or no such span.
+ * Puts the blueprint's anchors, events and climax on the melody spans of the theme section that hold their onsets, as `anchor`,
+ * `event` and `climax` constraints (R-746) at their offsets from the span's start, once the structure stage has made the spans.
+ * A mark no span holds is left out (a voicing that writes the soprano makes none).
  */
 PlanResult grow_blueprint_place(Plan *plan, NodeId theme, const GrowBlueprint *blueprint);
 

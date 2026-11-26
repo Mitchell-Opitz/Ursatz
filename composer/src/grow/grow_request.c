@@ -888,11 +888,12 @@ static GrowResult build_plan(const GrowRequest *request, Plan **out, GrowRefusal
         result = refuse(refusal, GROW_ERR_BAD_REQUEST, request->blueprint ? "/blueprint/bars" : "/chords",
                         "the given chords do not fit the theme");
     }
-    /* A blueprint's melody, bass and inner voices are Given, and its climax is checked against them (R-743). */
+    /* A blueprint's melody, bass and inner voices are Given; its climax, anchors and events are checked against them (R-743). */
     if (result == GROW_OK && request->blueprint) {
         result = grow_blueprint_give_melody(plan, theme_id, request->blueprint, refusal);
         result = result == GROW_OK ? grow_blueprint_give_voices(plan, theme_id, request->blueprint, refusal) : result;
         result = result == GROW_OK ? grow_blueprint_check_climax(request->blueprint, request->drawn, &request->meter, refusal) : result;
+        result = result == GROW_OK ? grow_blueprint_check_marks(request->blueprint, request->drawn, &request->meter, refusal) : result;
     }
     if (result == GROW_OK) {
         result = grow_check_given_cadences(request, first, refusal);

@@ -633,7 +633,7 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
     }
     result = grow_beginning_build(&build);
     result = result == PLAN_OK ? grow_ending_build(&build) : result;
-    /* A blueprint's climax goes on the melody span that holds it, now that the spans are made (R-743). */
+    /* A blueprint's anchors, events and climax go on the melody spans that hold them, now that the spans are made (R-743). */
     if (result == PLAN_OK && shared && shared->blueprint) {
         result = grow_blueprint_place(plan, request.section, shared->blueprint);
     }
