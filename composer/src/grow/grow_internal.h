@@ -840,6 +840,15 @@ GrowResult grow_blueprint_generate_marks(const GrowRequest *request, const Bluep
 void grow_blueprint_beats_text(Rational time, const PlanMeter *meter, char *out, size_t size);
 
 /*
+ * The blueprint a run wrote as the request's `blueprint` member reads it (R-752): each bar's chords; for every bar outside the basic-slot
+ * ideas (the sentence's first four bars, the period's first two and bars 4 and 5, which restate the motif) its drawn rhythm as a rhythm
+ * text, with the bar's anchors and events as note names and onsets in beats; and the climax. `rhythm` and `known` are the draw's. Sent back
+ * with the same motif it composes the theme again. NULL when memory runs out.
+ */
+struct cJSON *grow_blueprint_write(const GrowBlueprint *blueprint, const GrowBlueprintLine rhythm[], const bool known[], const SectionPairing *pairing,
+                                   const PlanMeter *meter, const SpelledKey *key);
+
+/*
  * The checks of the climax against the draw (R-743): a note of the bar's rhythm starts at its onset, a Given melody note there is
  * its pitch, and no other Given note or anchor reaches it ("the climax Ab5 is not the theme's highest note: bar 3 has A5").
  */

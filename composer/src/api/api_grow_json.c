@@ -752,6 +752,11 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
     if (ok && theme->judged && setup->critic) {
         ok = cJSON_AddItemToObject(object, "critic", api_critic_json(&theme->judgment, setup->critic));
     }
+    if (ok && theme->generated) {
+        const GrowGenerated *generated = theme->generated;
+        ok = api_add(object, "blueprint", grow_blueprint_write(&generated->blueprint, generated->rhythm, generated->known, &setup->pairing,
+                                                               &setup->meter, &setup->key));
+    }
     if (!ok) {
         cJSON_Delete(score);
         cJSON_Delete(object);

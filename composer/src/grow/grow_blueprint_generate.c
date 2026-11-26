@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cJSON.h>
+
+#include <model/pitch/pitch_arithmetic.h>
 #include <model/pitch/pitch_material.h>
 
 #include <ursatz_composer/motive.h>
@@ -1009,4 +1012,89 @@ GrowResult grow_blueprint_generate_marks(const GrowRequest *request, const Bluep
     }
     free(marks);
     return result;
+}
+
+/* --------------------------------------------------------------------------------------------- the echo */
+
+/* Whether the bar belongs to a basic-slot idea of a sentence or a period: a restatement of the motif, which a request's blueprint gives no rhythm. */
+static bool restates_motif(const SectionPairing *pairing, size_t bar) {
+    if (pairing->beginning == SECTION_BEGINNING_PRESENTATION) {
+        return bar < 4;
+    }
+    return bar < 2 || (bar >= 4 && bar < 6);
+}
+
+/* The rhythm text of one bar's line ("x:q x:e x:e x:h"), NULL when it cannot be written; the caller frees it. */
+static char *rhythm_text_of(const GrowBlueprintLine *line, const PlanMeter *meter) {
+    Motive motive;
+    motive_init(&motive, *meter);
+    motive.form = MOTIVE_SKETCH_FORM_RHYTHM;
+    for (size_t i = 0; i < line->count && i < MOTIVE_MAX_NOTES; i++) {
+        MotiveSketchNote *note = &motive.notes[motive.note_count++];
+        note->pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+        note->onset = line->notes[i].offset;
+        note->duration = line->notes[i].duration;
+        rational_add(note->onset, note->duration, &motive.length);
+    }
+    return motive_to_rhythm_text(&motive);
+}
+
+cJSON *grow_blueprint_write(const GrowBlueprint *blueprint, const GrowBlueprintLine rhythm[], const bool known[], const SectionPairing *pairing,
+                            const PlanMeter *meter, const SpelledKey *key) {
+    static const char *const EVENTS[] = {"appoggiatura", "suspension", "passing", "neighbor", "escape", "anticipation", "retardation"};
+    bool flats = util_key_prefers_flats(spelled_key_tonic_pitch_class(key), key->material);
+    cJSON *root = cJSON_CreateObject();
+    cJSON *bars = root ? cJSON_AddArrayToObject(root, "bars") : NULL;
+    bool ok = root && bars;
+    for (size_t b = 0; ok && b < blueprint->bar_count; b++) {
+        const GrowBlueprintBar *bar = &blueprint->bars[b];
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddItemToArray(bars, item);
+        if (!ok) {
+            cJSON_Delete(item);
+            break;
+        }
+        ok = !bar->chords[0] || cJSON_AddStringToObject(item, "chords", bar->chords);
+        if (ok && known[b] && !restates_motif(pairing, b)) {
+            char *text = rhythm_text_of(&rhythm[b], meter);
+            ok = text && cJSON_AddStringToObject(item, "rhythm", text);
+            free(text);
+        }
+        cJSON *anchors = ok && bar->anchor_count > 0 ? cJSON_AddArrayToObject(item, "anchors") : NULL;
+        for (size_t a = 0; ok && anchors && a < bar->anchor_count; a++) {
+            char at[24];
+            char name[16];
+            cJSON *anchor = cJSON_CreateObject();
+            grow_blueprint_beats_text(bar->anchors[a].offset, meter, at, sizeof at);
+            pitch_name_of_midi(bar->anchors[a].midi, flats, name, sizeof name);
+            ok = anchor && cJSON_AddStringToObject(anchor, "at", at) && cJSON_AddStringToObject(anchor, "pitch", name) &&
+                 cJSON_AddItemToArray(anchors, anchor);
+            if (!ok) {
+                cJSON_Delete(anchor);
+            }
+        }
+        cJSON *events = ok && bar->event_count > 0 ? cJSON_AddArrayToObject(item, "events") : NULL;
+        for (size_t e = 0; ok && events && e < bar->event_count; e++) {
+            char at[24];
+            cJSON *event = cJSON_CreateObject();
+            grow_blueprint_beats_text(bar->events[e].offset, meter, at, sizeof at);
+            ok = event && cJSON_AddStringToObject(event, "at", at) && cJSON_AddStringToObject(event, "type", EVENTS[bar->events[e].type]) &&
+                 cJSON_AddItemToArray(events, event);
+            if (!ok) {
+                cJSON_Delete(event);
+            }
+        }
+    }
+    if (ok && blueprint->has_climax) {
+        char at[24];
+        cJSON *climax = cJSON_AddObjectToObject(root, "climax");
+        grow_blueprint_beats_text(blueprint->climax_at, meter, at, sizeof at);
+        ok = climax && cJSON_AddNumberToObject(climax, "bar", (double)blueprint->climax_bar) && cJSON_AddStringToObject(climax, "at", at) &&
+             cJSON_AddStringToObject(climax, "pitch", blueprint->climax_name);
+    }
+    if (!ok) {
+        cJSON_Delete(root);
+        return NULL;
+    }
+    return root;
 }
