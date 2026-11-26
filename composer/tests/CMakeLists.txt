@@ -7,7 +7,7 @@ include_directories(${CMAKE_SOURCE_DIR}/tests/support)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Helpers the tests share (tests/support).
-ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c
+ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c support/test_blueprint_check.c
     support/voice_hear.c LIBS ursatz_composer_engine ursatz_test_support cjson INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
