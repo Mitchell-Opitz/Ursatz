@@ -844,6 +844,10 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     setup->motive = &state->material->basic;
     setup->accompaniment_motive = state->material->has_accompaniment_motive ? &state->material->accompaniment_motive : NULL;
     setup->material = state->material;
+    if (setup->generate_blueprint) {
+        /* A generated blueprint's candidates are ranked by the critic (R-755): the request's critic settings, or the defaults. */
+        setup->critic = &state->preferences.critic;
+    }
     const char *refusal = setup->generate_blueprint ? generate_refusal(state) : NULL;
     if (refusal) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/development",

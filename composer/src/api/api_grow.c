@@ -531,11 +531,24 @@ UrsatzStatus api_grow_run(const GrowSetup *setup, GrowRun *run, UrsatzError *err
     run->chord_bar = -1;
     run->last_seed = setup->seed;
     const GrowBriefText *text = setup->text;
-    /* With critic ranking the run collects `candidates` themes for each one kept, to the most it can hold. */
-    bool ranking = setup->critic != NULL && setup->critic->rank;
+    /*
+     * With critic ranking the run collects `candidates` themes for each one kept, to the most it can hold. A generated blueprint is ranked too
+     * when blueprint.candidates is above 1 (R-755): the critic keeps the best of that many; with critic.rank on, the larger of the two counts.
+     */
+    unsigned long blueprint_candidates = 1;
+    if (setup->generate_blueprint) {
+        BlueprintPreferences defaults;
+        blueprint_preferences_default(&defaults);
+        blueprint_candidates = setup->blueprint_preferences ? setup->blueprint_preferences->candidates : defaults.candidates;
+    }
+    bool critic_ranks = setup->critic != NULL && setup->critic->rank;
+    bool ranking = setup->critic != NULL && (critic_ranks || blueprint_candidates > 1);
     unsigned long want = setup->suggest;
     if (ranking) {
-        want = setup->suggest * (unsigned long)setup->critic->candidates;
+        unsigned long candidates = critic_ranks && (unsigned long)setup->critic->candidates > blueprint_candidates
+                                       ? (unsigned long)setup->critic->candidates
+                                       : blueprint_candidates;
+        want = setup->suggest * candidates;
         want = want > GROW_MAX_SUGGESTIONS ? GROW_MAX_SUGGESTIONS : want;
         want = want < setup->suggest ? setup->suggest : want;
     }
