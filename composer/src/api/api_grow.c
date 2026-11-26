@@ -297,6 +297,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     GrowGenerated *generated = NULL;
     FillRng generator_rng;
     if (setup->generate_blueprint) {
+        request.final_whole = (setup->melody ? setup->melody->cadence_long : melody_fill_params_default().cadence_long);
         generated = calloc(1, sizeof(*generated));
         if (!generated) {
             return GROW_ERR_ALLOC;

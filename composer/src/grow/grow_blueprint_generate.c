@@ -383,6 +383,26 @@ static BlueprintFunction function_of(const ThemeTypeIdea *idea) {
                                      : BLUEPRINT_FUNCTION_BASIC;
 }
 
+/* A K11 cadence cell that is one note long, drawn uniformly (the last bar of a theme whose cadence is long, R-322); NULL when the meter has none. */
+static const PatternEntry *whole_note_cell(const GrowRequest *request, PlanNote *out, size_t *count, FillRng *rng) {
+    const PatternEntry *cells[GEN_CELLS_MAX];
+    const PatternEntry *ones[GEN_CELLS_MAX];
+    size_t found = composer_rhythm_cells(request->knowledge, &request->meter, PATTERN_JOB_CADENCE, cells, GEN_CELLS_MAX);
+    size_t kept = 0;
+    for (size_t c = 0; c < found; c++) {
+        PlanNote notes[COMPOSER_RHYTHM_NOTES_MAX];
+        size_t note_count = 0;
+        if (composer_rhythm_cell_notes(cells[c], request->knowledge, &request->meter, notes, &note_count) && note_count == 1) {
+            ones[kept++] = cells[c];
+        }
+    }
+    if (kept == 0) {
+        return NULL;
+    }
+    const PatternEntry *cell = ones[fill_rng_below(rng, kept)];
+    return composer_rhythm_cell_notes(cell, request->knowledge, &request->meter, out, count) ? cell : NULL;
+}
+
 static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout, const Cells *cells, const BlueprintPreferences *preferences,
                                FillRng *rng, GrowBlueprint *out, GrowRefusal *refusal) {
     BarInfo info[GEN_BARS];
@@ -452,7 +472,9 @@ static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout,
                 this->job = chosen == THEME_JOB_MOTIF ? GROW_JOB_MOTIF : GROW_JOB_LIQUIDATION;
                 info[bar] = (BarInfo){false, false};
             } else {
-                const PatternEntry *cell = composer_rhythm_draw_cell(request->knowledge, &request->meter, pattern_job_of(chosen), before_half,
+                bool whole = chosen == THEME_JOB_CADENCE && request->final_whole && bar == GEN_BARS - 1;
+                const PatternEntry *cell = whole ? whole_note_cell(request, cell_notes, &cell_count, rng)
+                                                  : composer_rhythm_draw_cell(request->knowledge, &request->meter, pattern_job_of(chosen), before_half,
                                                                      preferences->sounds[BLUEPRINT_SOUND_LONG_WEAK], true, rng, cell_notes, &cell_count);
                 if (!cell) {
                     char meter[16];
@@ -680,9 +702,9 @@ static bool sound_ninth(Marks *marks, size_t bar) {
     const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
     MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
     size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
-    if (count == 0 || !marks->drawn->known[bar] || line->count < 1 || !room(this, 2, 1) || line->notes[0].offset.num != 0 ||
-        rational_cmp(line->notes[0].duration, marks->beat) < 0) {
-        return false;
+    if (count == 0 || !marks->drawn->known[bar] || line->count < 2 || !room(this, 2, 1) || line->notes[0].offset.num != 0 ||
+        rational_cmp(line->notes[0].duration, marks->beat) < 0 || sounding(chords, count, line->notes[1].offset) != 0) {
+        return false; /* the ninth resolves to the root on the second note of the chord's span: a bar of one note has none */
     }
     int third = triad_third(marks, &chords[0]);
     int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
@@ -695,9 +717,7 @@ static bool sound_ninth(Marks *marks, size_t bar) {
     }
     add_anchor(this, line->notes[0].offset, root + 2);
     add_event(this, line->notes[0].offset, PLAN_EVENT_APPOGGIATURA);
-    if (line->count > 1 && sounding(chords, count, line->notes[1].offset) == 0) {
-        add_anchor(this, line->notes[1].offset, root);
-    }
+    add_anchor(this, line->notes[1].offset, root);
     suffix_first_chord(this->chords, third, "add9");
     return true;
 }

@@ -175,6 +175,11 @@ typedef struct {
      */
     const struct GrowBlueprint *blueprint;
     const struct GrowBlueprintDraw *drawn;
+    /*
+     * The theme's last bar is one whole note (melody.cadence_long, R-322): read only by the blueprint generator (R-751), which then draws
+     * the cadence bar of the last idea from the K11 cells that are one note long.
+     */
+    bool final_whole;
     unsigned long seed;
 } GrowRequest;
 
