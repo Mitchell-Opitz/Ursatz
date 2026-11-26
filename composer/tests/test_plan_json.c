@@ -280,7 +280,9 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
                a->params.accompaniment.texture == b->params.accompaniment.texture &&
                a->params.accompaniment.low == b->params.accompaniment.low &&
-               a->params.accompaniment.high == b->params.accompaniment.high;
+               a->params.accompaniment.high == b->params.accompaniment.high &&
+               strcmp(a->params.accompaniment.motive_node, b->params.accompaniment.motive_node) == 0 &&
+               strcmp(a->params.accompaniment.pattern_id, b->params.accompaniment.pattern_id) == 0;
     case PLAN_CONSTRAINT_VOICING:
         return a->params.voicing.write_soprano == b->params.voicing.write_soprano;
     case PLAN_CONSTRAINT_COUNTERPOINT:
@@ -468,6 +470,66 @@ static void test_round_trip(void) {
     length.params.bars = 1;
     assert(plan_node_add_constraint(parsed, 6, &length) == PLAN_ERR_GIVEN_LOCKED);
 
+    free(text);
+    free(again);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+}
+
+/*
+ * An accompaniment constraint that names a K11 pattern entry (R-745): the pattern "entry" with its pattern_id round-trips, the id is written
+ * only when set, and the constraint is refused without an id for the entry or with an id for another pattern.
+ */
+static char *replace_all(const char *text, const char *from, const char *to);
+
+static void test_pattern_id(void) {
+    static const char *const ID = "michelle.pattern.arpeggio-wave";
+    Plan *plan = build_sentence_plan();
+    NodeId root = plan_root(plan);
+    PlanJsonError error;
+    PlanConstraint plain;
+    memset(&plain, 0, sizeof(plain));
+    plain.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
+    plain.params.accompaniment.pattern = PLAN_ACCOMPANIMENT_ALBERTI;
+    plain.params.accompaniment.texture = -1;
+    assert(plan_node_add_constraint(plan, root, &plain) == PLAN_OK);
+    char *without = plan_to_json(plan, test_plan_producer(), &error);
+    assert(without && strstr(without, "\"pattern_id\"") == NULL);
+
+    PlanConstraint entry = plain;
+    entry.params.accompaniment.pattern = PLAN_ACCOMPANIMENT_ENTRY;
+    assert(plan_node_add_constraint(plan, root, &entry) == PLAN_ERR_BAD_PAYLOAD); /* an entry names its id */
+    snprintf(entry.params.accompaniment.pattern_id, sizeof(entry.params.accompaniment.pattern_id), "%s", ID);
+    assert(plan_node_add_constraint(plan, root, &entry) == PLAN_OK);
+    PlanConstraint other = plain;
+    snprintf(other.params.accompaniment.pattern_id, sizeof(other.params.accompaniment.pattern_id), "%s", ID);
+    assert(plan_node_add_constraint(plan, root, &other) == PLAN_ERR_BAD_PAYLOAD); /* and no other pattern takes one */
+
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
+    assert(text && strstr(text, "\"pattern\": \"entry\"") && strstr(text, "\"pattern_id\": \"michelle.pattern.arpeggio-wave\""));
+    Plan *parsed = NULL;
+    expect_ok(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
+    assert(again && strcmp(text, again) == 0);
+    bool found = false;
+    for (size_t c = 0; c < plan_node_constraint_count(parsed, root); c++) {
+        const PlanConstraint *read = plan_node_constraint_at(parsed, root, c);
+        found = found || (read->kind == PLAN_CONSTRAINT_ACCOMPANIMENT && read->params.accompaniment.pattern == PLAN_ACCOMPANIMENT_ENTRY &&
+                          strcmp(read->params.accompaniment.pattern_id, ID) == 0);
+    }
+    assert(found);
+
+    /* A file that names the entry with no id, or an id with another pattern, is refused. */
+    char *bad = replace_all(text, "\"pattern_id\": \"michelle.pattern.arpeggio-wave\"", "\"low\": 0");
+    Plan *refused = (Plan *)0x1;
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) != PLAN_OK && refused == NULL);
+    free(bad);
+    bad = replace_all(text, "\"pattern\": \"entry\"", "\"pattern\": \"alberti\"");
+    refused = (Plan *)0x1;
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) != PLAN_OK && refused == NULL);
+    free(bad);
+    free(without);
     free(text);
     free(again);
     plan_destroy(plan);
@@ -1472,6 +1534,7 @@ static void test_format_five_reads(void) {
 
 int main(void) {
     test_round_trip();
+    test_pattern_id();
     test_old_transforms();
     test_motive_tones();
     test_borrowed_harmony();
