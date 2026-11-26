@@ -9,6 +9,13 @@
  "cadence": "PAC",
  "development": "balanced",
  "tempo": 76,
+ "preferences": {
+  "melody": {
+   "waive": [
+    "forbidden-outline"
+   ]
+  }
+ },
  "blueprint": {
   "bars": [
    {
@@ -47,13 +54,27 @@
       "at": "3/2",
       "pitch": "C#5"
      }
+    ],
+    "events": [
+     {
+      "at": "3/2",
+      "type": "anticipation"
+     }
     ]
    },
    {
-    "chords": "iadd9"
+    "chords": "iadd9",
+    "rhythm": "x:h x:e x:e x:q"
    },
    {
-    "chords": "VImaj9"
+    "chords": "VImaj9",
+    "rhythm": "x:q. x:e x:h",
+    "anchors": [
+     {
+      "at": "2",
+      "pitch": "A5"
+     }
+    ]
    },
    {
     "chords": "ivadd9 V7@2",
