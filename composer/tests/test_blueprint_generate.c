@@ -317,6 +317,45 @@ static void test_through_the_api(void) {
     free(text);
 }
 
+static double ratio_of(const cJSON *object) {
+    return cJSON_GetObjectItemCaseSensitive(object, "numerator")->valuedouble / cJSON_GetObjectItemCaseSensitive(object, "denominator")->valuedouble;
+}
+
+/* The candidates of the generator are ranked by the critic (R-755): with blueprint.candidates 3 the response has `rejected` and the kept theme
+   scores at least each rejected one; with 1 it has neither `rejected` nor `critic`. */
+static void test_ranking(void) {
+    for (int candidates = 1; candidates <= 3; candidates += 2) {
+        cJSON *request = read_request();
+        set_string(request, "development", "blueprint");
+        assert(cJSON_AddNumberToObject(request, "seed", 1));
+        cJSON *preferences = cJSON_AddObjectToObject(request, "preferences");
+        cJSON *blueprint = preferences ? cJSON_AddObjectToObject(preferences, "blueprint") : NULL;
+        assert(blueprint && cJSON_AddNumberToObject(blueprint, "candidates", candidates));
+        char *text = cJSON_PrintUnformatted(request);
+        ComposerResponse response;
+        assert(composer_api_theme(test_context(), text, NULL, &response) == URSATZ_OK);
+        cJSON *document = cJSON_Parse(response.json);
+        assert(document);
+        const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
+        const cJSON *rejected = cJSON_GetObjectItemCaseSensitive(document, "rejected");
+        if (candidates == 1) {
+            assert(!rejected && !cJSON_GetObjectItemCaseSensitive(theme, "critic"));
+        } else {
+            const cJSON *critic = cJSON_GetObjectItemCaseSensitive(theme, "critic");
+            assert(cJSON_IsArray(rejected) && cJSON_GetArraySize(rejected) >= 1 && cJSON_IsObject(critic));
+            double kept = ratio_of(cJSON_GetObjectItemCaseSensitive(critic, "score"));
+            const cJSON *candidate;
+            cJSON_ArrayForEach(candidate, rejected) {
+                assert(kept >= ratio_of(cJSON_GetObjectItemCaseSensitive(candidate, "score")));
+            }
+        }
+        cJSON_Delete(document);
+        composer_response_destroy(&response);
+        cJSON_Delete(request);
+        free(text);
+    }
+}
+
 /* The request with one or two members set (their values parsed as JSON) and development blueprint is refused at /development. */
 static void refused_with(const char *member, const char *value, const char *second, const char *second_value) {
     cJSON *request = read_request();
@@ -367,6 +406,7 @@ int main(void) {
     test_drawn_blueprints();
     test_weights();
     test_through_the_api();
+    test_ranking();
     test_refusals();
     printf("test_blueprint_generate: ok\n");
     return 0;
