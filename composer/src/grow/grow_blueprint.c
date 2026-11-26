@@ -8,6 +8,7 @@
 
 #include <cJSON.h>
 
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/theme_shape.h>
 
@@ -592,4 +593,53 @@ UrsatzStatus grow_blueprint_check_ideas(const GrowBlueprint *blueprint, const Se
         return fail(error, "/blueprint/bars/0/job", "bar 0: liquidation takes the rhythm of the bar before, and the first bar has none");
     }
     return URSATZ_OK;
+}
+
+/* ------------------------------------------------------------ building the plan */
+
+/* Records a refusal of the build: its result, the request path of its field and its message. */
+static GrowResult refuse(GrowRefusal *refusal, GrowResult result, const char *path, const char *format, ...)
+    __attribute__((format(printf, 4, 5)));
+
+static GrowResult refuse(GrowRefusal *refusal, GrowResult result, const char *path, const char *format, ...) {
+    if (refusal) {
+        va_list args;
+        refusal->result = result;
+        snprintf(refusal->path, sizeof(refusal->path), "%s", path);
+        va_start(args, format);
+        vsnprintf(refusal->message, sizeof(refusal->message), format, args);
+        va_end(args);
+    }
+    return result;
+}
+
+GrowResult grow_blueprint_give_voices(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal) {
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        char path[64];
+        if (this->has_bass) {
+            GivenResult given = this->has_melody ? plan_give_bass_with_rests(plan, theme, bar, this->bass.notes, this->bass.count)
+                                                 : plan_give_bass(plan, theme, bar, this->bass.notes, this->bass.count);
+            if (given != GIVEN_OK) {
+                snprintf(path, sizeof(path), "/blueprint/bars/%zu/bass", bar);
+                return given == GIVEN_ERR_PLAN ? GROW_ERR_ALLOC
+                                               : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu bass: %s", bar,
+                                                        given_result_name(given));
+            }
+        }
+        for (size_t voice = 0; voice < this->inner_count; voice++) {
+            const GrowBlueprintLine *line = &this->inner[voice];
+            if (line->count == 0) {
+                continue;
+            }
+            GivenResult given = plan_give_inner_voice(plan, theme, bar, (int)voice + 1, line->notes, line->count);
+            if (given != GIVEN_OK) {
+                snprintf(path, sizeof(path), "/blueprint/bars/%zu/inner/%zu", bar, voice);
+                return given == GIVEN_ERR_PLAN ? GROW_ERR_ALLOC
+                                               : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu inner voice %zu: %s", bar,
+                                                        voice + 1, given_result_name(given));
+            }
+        }
+    }
+    return GROW_OK;
 }

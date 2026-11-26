@@ -772,4 +772,11 @@ UrsatzStatus grow_blueprint_read(const struct cJSON *json, const KnowledgeSnapsh
 UrsatzStatus grow_blueprint_check_ideas(const GrowBlueprint *blueprint, const SectionPairing *pairing, const PlanMeter *meter,
                                         size_t bars, const SectionConstruction *construction, bool basic_slot, UrsatzError *error);
 
+/*
+ * Gives the bass and the inner voices of the blueprint's bars to the theme section (R-743), bar by bar: the bass with
+ * plan_give_bass where it fills its bar and, under a Given melody, with plan_give_bass_with_rests; each inner voice k of a bar that
+ * has a note as voice k + 1 (plan_give_inner_voice). GROW_ERR_BAD_REQUEST, with the bar's path in refusal, when a span does not fit.
+ */
+GrowResult grow_blueprint_give_voices(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal);
+
 #endif

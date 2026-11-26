@@ -93,6 +93,22 @@ bool given_cell_length(const PlanMeter *meter, Rational *length);
 GivenResult plan_give_bass(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
 
 /*
+ * A bass span that may rest (R-743): as plan_give_bass, but the notes need not fill the bars, so a gap between them, before the
+ * first or after the last is a rest. A theme blueprint gives such a bass only under a Given melody.
+ */
+GivenResult plan_give_bass_with_rests(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+
+/* The inner voices a span may be given in: voices 1 to 8 of the inner voice lane, as the accompaniment writes them. */
+#define GIVEN_INNER_VOICES 8
+
+/*
+ * An inner voice span, as long as the notes need in whole bars, Given, in voice 1 to GIVEN_INNER_VOICES of the inner voice lane
+ * (GIVEN_ERR_BAD_NOTES for another voice); rests are allowed as in a melody. A theme blueprint gives them in place of an
+ * accompaniment.
+ */
+GivenResult plan_give_inner_voice(Plan *plan, NodeId section, size_t bar, int voice, const PlanNote *notes, size_t count);
+
+/*
  * A realized section of another plan (a theme the theme command composed) given to a section of this one: its harmony,
  * bass, melody and inner voice spans become Given spans owned by the section, moved to its start and transposed by the
  * key difference between the two (the key lanes must have the same shape and mode), and its phrase and idea nodes are

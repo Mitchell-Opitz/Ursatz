@@ -152,15 +152,15 @@ static GivenResult note_span(const Placement *placement, const PlanNote *notes, 
 }
 
 static GivenResult give_notes(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count,
-                              PlanLaneKind lane) {
+                              PlanLaneKind lane, int voice, bool tiled) {
     Placement placement;
     PlanSpan span;
     GivenResult result = read_placement(plan, section, bar, &placement);
     if (result == GIVEN_OK) {
-        result = note_span(&placement, notes, count, lane == PLAN_LANE_BASS, &span);
+        result = note_span(&placement, notes, count, tiled, &span);
     }
     if (result == GIVEN_OK) {
-        result = check_room(plan, &placement, lane, 0, span, NULL);
+        result = check_room(plan, &placement, lane, voice, span, NULL);
     }
     if (result != GIVEN_OK) {
         return result;
@@ -170,7 +170,7 @@ static GivenResult give_notes(Plan *plan, NodeId section, size_t bar, const Plan
     memset(&payload, 0, sizeof(payload));
     payload.notes.notes = notes;
     payload.notes.note_count = count;
-    if (plan_add_lane_span(plan, section, lane, 0, span, &payload, &id) != PLAN_OK ||
+    if (plan_add_lane_span(plan, section, lane, voice, span, &payload, &id) != PLAN_OK ||
         plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) != PLAN_OK) {
         return GIVEN_ERR_PLAN;
     }
@@ -178,11 +178,22 @@ static GivenResult give_notes(Plan *plan, NodeId section, size_t bar, const Plan
 }
 
 GivenResult plan_give_melody(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
-    return give_notes(plan, section, bar, notes, count, PLAN_LANE_MELODY);
+    return give_notes(plan, section, bar, notes, count, PLAN_LANE_MELODY, 0, false);
 }
 
 GivenResult plan_give_bass(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
-    return give_notes(plan, section, bar, notes, count, PLAN_LANE_BASS);
+    return give_notes(plan, section, bar, notes, count, PLAN_LANE_BASS, 0, true);
+}
+
+GivenResult plan_give_bass_with_rests(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
+    return give_notes(plan, section, bar, notes, count, PLAN_LANE_BASS, 0, false);
+}
+
+GivenResult plan_give_inner_voice(Plan *plan, NodeId section, size_t bar, int voice, const PlanNote *notes, size_t count) {
+    if (voice < 1 || voice > GIVEN_INNER_VOICES) {
+        return GIVEN_ERR_BAD_NOTES;
+    }
+    return give_notes(plan, section, bar, notes, count, PLAN_LANE_INNER_VOICE, voice, false);
 }
 
 /* ------------------------------------------------------------- a progression */
