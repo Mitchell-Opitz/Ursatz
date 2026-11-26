@@ -917,6 +917,9 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
         slot->voicing.name = slot->entry.name;
         status = knowledge_voicing_read(slot, entry, path, message, message_size);
         slot->has_voicing = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "pattern") == 0) {
+        status = knowledge_pattern_read(slot, entry, subtype, path, message, message_size);
+        slot->has_pattern = status == KNOWLEDGE_OK;
     } else if (strcmp(kind, "relation") == 0) {
         slot->relation.id = slot->entry.id;
         slot->relation.name = slot->entry.name;
