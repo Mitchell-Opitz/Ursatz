@@ -637,6 +637,10 @@ ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTOR
 # Theme blueprints (R-743): every refusal with its path, a written period rendered note for note, a skeleton composed on seed 1.
 ursatz_test(test_theme_blueprint LIBS ursatz_composer_engine composer_test_support cjson)
 
+# Gate 2 of P69b (R-740): the full blueprint of each reference theme in fixtures/references renders the reference's notes on seed 1.
+ursatz_test(test_reference_blueprints LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 # The layers of a composed result (R-634): a theme request with "layers" returns the realization and the reading.
 ursatz_test(test_api_layers LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
