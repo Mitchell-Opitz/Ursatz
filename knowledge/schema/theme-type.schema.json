@@ -77,6 +77,125 @@
                   "first",
                   "final"
                 ]
+              },
+              "expect": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "jobs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 5,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "motif",
+                          "variant",
+                          "contrast",
+                          "running",
+                          "long",
+                          "syncopated",
+                          "liquidation",
+                          "cadence"
+                        ]
+                      }
+                    }
+                  },
+                  "harmony": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "chords",
+                            "type"
+                          ],
+                          "properties": {
+                            "chords": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 8,
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "restate",
+                            "type"
+                          ],
+                          "properties": {
+                            "restate": {
+                              "const": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "climax": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 7
+                    }
+                  },
+                  "sounds": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit",
+                        "kinds"
+                      ],
+                      "properties": {
+                        "unit": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 7
+                        },
+                        "kinds": {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "uniqueItems": true,
+                          "items": {
+                            "enum": [
+                              "ninth_downbeat",
+                              "sus4_dominant",
+                              "appoggiatura",
+                              "major_seventh",
+                              "leading_tone"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
