@@ -70,6 +70,7 @@
     "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
     "anchor": { "type": "string", "minLength": 1, "maxLength": 31, "description": "home, previous, or the name of an earlier section (its key at its start)." },
     "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
+    "offsetTime": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$", "description": "A fraction of a whole note from a span's start, from 0." },
     "formRecord": {
       "type": "object",
       "required": ["name", "version", "hash", "checks", "closing"],
@@ -208,7 +209,7 @@
       "properties": {
         "kind": {
           "enum": ["length_bars", "cadence", "motive_ref", "region", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
-                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones", "contrast"]
+                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones", "contrast", "anchor", "event", "climax"]
         }
       },
       "allOf": [
@@ -256,6 +257,36 @@
         {
           "if": { "properties": { "kind": { "const": "pickup" } } },
           "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "anchor" } } },
+          "then": {
+            "required": ["offset", "midi"],
+            "properties": {
+              "offset": { "$ref": "#/$defs/offsetTime" },
+              "midi": { "type": "integer", "minimum": 0, "maximum": 127 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "event" } } },
+          "then": {
+            "required": ["offset", "type"],
+            "properties": {
+              "offset": { "$ref": "#/$defs/offsetTime" },
+              "type": { "enum": ["appoggiatura", "suspension", "passing", "neighbor", "escape", "anticipation", "retardation"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "climax" } } },
+          "then": {
+            "required": ["offset", "midi"],
+            "properties": {
+              "offset": { "$ref": "#/$defs/offsetTime" },
+              "midi": { "type": "integer", "minimum": 0, "maximum": 127 }
+            }
+          }
         },
         {
           "if": { "properties": { "kind": { "const": "contrast" } } },
