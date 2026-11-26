@@ -213,7 +213,7 @@ static void test_summaries(void) {
     const char *request =
         "{\"schema\": \"ursatz-theme-request\", \"schema_version\": 2, \"into\": \"sentence\", \"hybrid\": null, "
         "\"key\": \"C\", \"mode\": \"major\", \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\", "
-        "\"first_cadence\": null, \"motives\": [{\"id\": \"A\", \"form\": \"full\", "
+        "\"first_cadence\": null, \"development\": \"balanced\", \"motives\": [{\"id\": \"A\", \"form\": \"full\", "
         "\"degrees\": \"1:q 2:e 3:e 5:q 3:q 5:q 3:e 2:e 1:h\", \"pickup\": \"0\", \"harmony\": null, "
         "\"features\": [{\"label\": \"a\", \"first\": 0, \"last\": 4}, {\"label\": \"b\", \"first\": 5, \"last\": 8}], "
         "\"role\": \"melodic\"}], \"slots\": {\"basic\": \"A\", \"contrasting\": null, \"continuation\": null, "
