@@ -9,6 +9,7 @@
  "bars": 8,
  "cadence": "PAC",
  "first_cadence": null,
+ "development": "balanced",
  "motives": [
   {
    "id": "A",
