@@ -68,8 +68,9 @@ endfunction()
 # --- overrides (R-672) -------------------------------------------------------------------
 
 # One theme at a seed with a settings document (or none): the file it wrote is <dir>/01.mid.
+# The balanced development: the seeds that case measured (R-672) were measured on it, and a blueprint (the default since R-756) is not the same theme.
 function(theme_with seed settings dir)
-    set(arguments listen --what themes --count 1 --seed ${seed} --out-dir ${dir})
+    set(arguments listen --what themes --count 1 --seed ${seed} --development balanced --out-dir ${dir})
     if(NOT settings STREQUAL "")
         list(APPEND arguments --settings ${settings})
     endif()

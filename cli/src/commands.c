@@ -577,7 +577,7 @@ const CliCommand CLI_COMMANDS[] = {
     "  keep the closest; themes prefer it too. --blend, --blend-weight and --blend-weights are for themes. --tempo\n"
     "  is quarter notes per minute from 20 to 400. --strategy is segments (default), drawn or blueprint, for motifs and for\n"
     "  the generated motif of a theme.\n"
-    "  Themes only: --into is sentence (default) or period; --development is melody, balanced (default), theme or blueprint;\n"
+    "  Themes only: --into is sentence (default) or period; --development is melody, balanced, theme or blueprint (default, where the theme fits it);\n"
     "  --bars is 4 or 8 (default 8); --check passes over a seed whose analysis contradicts the plan; --motif is the\n"
     "  motif of every theme, anything the motive command reads (default: a generated motif for each sample);\n"
     "  --theme-request is a theme request (docs/theme-request.md) with the sample's seed, instead of a motif.\n"

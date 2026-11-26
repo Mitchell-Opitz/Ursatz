@@ -42,6 +42,7 @@ typedef struct {
     const char *preset_text; /* --preset: a preset of the Composer (R-754), for motifs and themes */
     const char *into_text;
     const char *development_text;
+    bool development_given; /* --development was on the command line: a request names no development otherwise, and the Composer writes a blueprint when it can (R-756) */
     const char *bars_text;
     const char *motif_path;
     const char *theme_request_path;
@@ -148,8 +149,9 @@ static int check_options(Options *options) {
     if (!options->into_text) {
         options->into_text = "sentence";
     }
+    options->development_given = options->development_text != NULL;
     if (!options->development_text) {
-        options->development_text = "balanced";
+        options->development_text = "blueprint";
     }
     if (!options->bars_text) {
         options->bars_text = "8";
@@ -585,7 +587,7 @@ static cJSON *theme_request_from_motive(const Options *options, const cJSON *doc
          cJSON_AddStringToObject(request, "into", options->into_text) && cJSON_AddStringToObject(request, "key", "C") &&
          cJSON_AddStringToObject(request, "material", options->material_text) && cJSON_AddStringToObject(request, "meter", meter_text) &&
          cJSON_AddNumberToObject(request, "bars", options->bars_text[0] - '0') &&
-         cJSON_AddStringToObject(request, "development", options->development_text) &&
+         (!options->development_given || cJSON_AddStringToObject(request, "development", options->development_text)) &&
          cJSON_AddStringToObject(entry, "id", "M1") && cJSON_AddStringToObject(entry, "form", "full") &&
          cJSON_AddStringToObject(entry, "degrees", degrees->valuestring) &&
          cJSON_AddStringToObject(entry, "pickup", cJSON_IsString(pickup) ? pickup->valuestring : "0") &&

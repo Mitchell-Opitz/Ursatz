@@ -168,7 +168,7 @@ static void test_lists(void) {
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "into")->valuestring, "sentence") == 0);
     assert(cJSON_GetObjectItemCaseSensitive(theme_defaults, "bars")->valueint == 8);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "cadence")->valuestring, "PAC") == 0);
-    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "development")->valuestring, "balanced") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "development")->valuestring, "blueprint") == 0);
     assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
 
     /* The functions a game loop section can be (R-510): transition on intro and body, coda on ending. */

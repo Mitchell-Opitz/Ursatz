@@ -584,6 +584,7 @@ typedef struct {
     ComposerStyle *style;
     GrowRun run;
     bool ran;
+    bool implicit_blueprint;  /* the request named no development and is written as a blueprint (R-756): a theme that cannot be, is balanced */
     GrowBlueprint *blueprint; /* the request's blueprint, NULL for none */
 } ThemeState;
 
@@ -844,11 +845,16 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     setup->motive = &state->material->basic;
     setup->accompaniment_motive = state->material->has_accompaniment_motive ? &state->material->accompaniment_motive : NULL;
     setup->material = state->material;
+    /* A request that names no development is written as a blueprint when it can be (R-756); one that cannot keeps the balanced development. */
+    if (!state->brief.text.development && !setup->generate_blueprint) {
+        setup->generate_blueprint = generate_refusal(state) == NULL;
+        state->implicit_blueprint = setup->generate_blueprint;
+    }
     if (setup->generate_blueprint) {
         /* A generated blueprint's candidates are ranked by the critic (R-755): the request's critic settings, or the defaults. */
         setup->critic = &state->preferences.critic;
     }
-    const char *refusal = setup->generate_blueprint ? generate_refusal(state) : NULL;
+    const char *refusal = setup->generate_blueprint && state->brief.text.development ? generate_refusal(state) : NULL;
     if (refusal) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/development",
                         "development blueprint writes an 8-bar sentence or period from a motif of up to 2 bars in a major or minor key in 4/4, 3/4 or 6/8: %s",
@@ -877,6 +883,13 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
     if (status == URSATZ_OK) {
         state.ran = true;
         status = api_grow_run(&state.setup, &state.run, &out->error);
+        if (status == URSATZ_ERR_UNSATISFIABLE && state.implicit_blueprint) {
+            /* No blueprint could be written and composed for this motif: the request is the balanced theme it was before (R-756). */
+            api_grow_run_destroy(&state.run);
+            state.setup.generate_blueprint = false;
+            state.setup.critic = state.has_preferences ? &state.preferences.critic : NULL;
+            status = api_grow_run(&state.setup, &state.run, &out->error);
+        }
     }
     if (status == URSATZ_OK) {
         GrowThemeInfo info;

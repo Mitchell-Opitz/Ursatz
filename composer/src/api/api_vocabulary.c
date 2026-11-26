@@ -811,7 +811,7 @@ static bool add_defaults(cJSON *root) {
     return motif && theme && cJSON_AddStringToObject(defaults, "meter", "4/4") && cJSON_AddStringToObject(motif, "form", "full") &&
            cJSON_AddStringToObject(motif, "notes", "C4:q") && cJSON_AddStringToObject(motif, "pickup", "0") &&
            cJSON_AddStringToObject(theme, "into", "sentence") && cJSON_AddNumberToObject(theme, "bars", 8) &&
-           cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "balanced");
+           cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "blueprint");
 }
 
 /*

@@ -722,7 +722,7 @@ static void expect_development(const char *value, const char *expected) {
 }
 
 static void test_development_setting(void) {
-    expect_development(NULL, "balanced");
+    expect_development(NULL, "blueprint");
     expect_development("\"balanced\"", "balanced");
     expect_development("\"melody\"", "melody");
     expect_development("\"theme\"", "theme");

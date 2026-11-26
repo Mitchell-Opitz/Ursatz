@@ -38,7 +38,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--data <dir>` | global: the data folder (or the environment variable URSATZ_DATA); stands before the subcommand | every command (stands before it) |
 | `--degree <n>` | restate: move the first note to scale degree n | `develop` |
 | `--depth <n>` | the most operations in the chain, 1 to 4 | `recognize` |
-| `--development <name>` | how a theme develops: melody, balanced, theme or blueprint | `listen` |
+| `--development <name>` | how a theme develops: melody, balanced, theme or blueprint (the default, where the theme fits) | `listen` |
 | `--distance <d>` | how far the variants are from the motive: close, medium or far; explore: how many settings move from your taste, 1 to 8 | `variants`, `explore` |
 | `--drop <n>` | liquidate: how many notes to drop at each step | `develop` |
 | `--dry-run` | migrate: report every planned move and rewrite, and write nothing | `migrate` |

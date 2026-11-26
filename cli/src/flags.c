@@ -38,7 +38,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--data", NULL, CLI_FLAG_VALUE, "<dir>", "global: the data folder (or the environment variable URSATZ_DATA); stands before the subcommand"},
     {"--degree", NULL, CLI_FLAG_VALUE, "<n>", "restate: move the first note to scale degree n"},
     {"--depth", NULL, CLI_FLAG_VALUE, "<n>", "the most operations in the chain, 1 to 4"},
-    {"--development", NULL, CLI_FLAG_VALUE, "<name>", "how a theme develops: melody, balanced, theme or blueprint"},
+    {"--development", NULL, CLI_FLAG_VALUE, "<name>", "how a theme develops: melody, balanced, theme or blueprint (the default, where the theme fits)"},
     {"--distance", NULL, CLI_FLAG_VALUE, "<d>", "how far the variants are from the motive: close, medium or far; explore: how many settings move from your taste, 1 to 8"},
     {"--drop", NULL, CLI_FLAG_VALUE, "<n>", "liquidate: how many notes to drop at each step"},
     {"--dry-run", NULL, CLI_FLAG_SWITCH, NULL, "migrate: report every planned move and rewrite, and write nothing"},
