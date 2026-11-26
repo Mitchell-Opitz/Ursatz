@@ -44,8 +44,9 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [melody-fill.md](melody-fill.md): the melody operator.
 - [blueprints.md](blueprints.md): theme blueprints: the request's `blueprint` member (R-743), the melody constraints, rhythm-only idea motives and the blueprint motive (R-746).
 - [modes.md](modes.md): the church modes as a key (R-725): stacked chords, numerals, functions, the phrase model and cadences per mode, and what a modal key does not write.
-- [preferences.md](preferences.md): the settings document (R-411): the melody, development, candidates and critic groups, and how it is read and written.
+- [preferences.md](preferences.md): the settings document (R-411): the melody, development, candidates, critic and harmony groups, and how it is read and written.
 - [critic.md](critic.md): the critic: the melody line of a candidate, the eight evaluators of her listening notes and the score (R-719).
+- [preferences-blueprint.md](preferences-blueprint.md): the blueprint group of the settings document: the weights of the blueprint generator and the blueprint motif strategy (R-750).
 - [preferences-motif.md](preferences-motif.md): the motif group of the settings document: every setting of the segments motive generator.
 - [accompaniment.md](accompaniment.md): the accompaniment operator.
 - [voicing.md](voicing.md): the four-part voicing operator.

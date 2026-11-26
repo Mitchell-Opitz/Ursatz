@@ -30,7 +30,7 @@ Each gives a `CriticFinding`: its penalty from 0 to 1, and where and by how much
 
 ## The score
 
-`critic_score(findings, settings)` is minus the sum of weight x penalty, each weight 0 to 20 (default 1); an evaluator in `CriticSettings.reversed` counts plus, so a listener can ask for what she usually avoids. The settings are the preferences' `critic` group ([preferences.md](preferences.md#the-critic-group-r-722)): `critic_settings_default` gives weights 1, nothing reversed, `rank` false, `candidates` 4 and `keep_rejected` 8. `critic_evaluate(line, set, set_count, knowledge, findings)` takes the lines of the candidates judged together as `set` (the line itself among them, skipped by pointer); an empty line is `CRITIC_ERR_EMPTY`.
+`critic_score(findings, settings)` is minus the sum of weight x penalty, each weight 0 to 20 (default 1); an evaluator in `CriticSettings.reversed` counts plus, so a listener can ask for what she usually avoids. The settings are the preferences' `critic` group ([the critic group](#the-critic-group-r-722) below): `critic_settings_default` gives weights 1, nothing reversed, `rank` false, `candidates` 4 and `keep_rejected` 8. `critic_evaluate(line, set, set_count, knowledge, findings)` takes the lines of the candidates judged together as `set` (the line itself among them, skipped by pointer); an empty line is `CRITIC_ERR_EMPTY`.
 
 ## Observations (R-720)
 
@@ -63,6 +63,20 @@ None of them is scored. They say what was heard, in the words of the plan; wheth
 `candidates` holds 1 to 16 objects, each with a `plan` (the plan document of a theme or a piece) or a `motive` (a motive document, as the `motive` member of a listen sample), not both. `preferences` is optional and read as everywhere else (its `critic` group counts). Each plan is heard once (`hearing_create`) and its melody line read from that render; each motive is read with `critic_line_from_motive`. Every candidate is judged with the lines of all of them as the set, and a plan with a node named `theme` is also observed against the hearing.
 
 The response is `ursatz-critique` version 1 ([schema](../schema/api/critique.response.schema.json)): `candidates` has, in the order given, `index`, `score`, `evaluators` (each `rule`, `penalty`, `weight`, `reversed`) and `observations` (each `rule`, `scored`, `bar`, `beat`, `message`, with `bar` and `beat` null when there is no place). A rational is `{"numerator", "denominator"}`. Refusals: a candidate that is neither, an unreadable plan or motive and a request of more than 16 are `URSATZ_ERR_REQUEST` at `/candidates` or `/candidates/<i>` (`/plan`, `/motive`); a bad preference is refused at `/preferences/critic/...`.
+
+## The critic group (R-722)
+
+The critic's settings, in `CriticSettings` ([critic.md](critic.md)). `rank` and the reversed evaluators change what a run chooses; with the defaults every output is what it was.
+
+| Key | Default | Limit | What it shapes |
+| --- | --- | --- | --- |
+| `rank` | false | true or false | Choose a theme among several candidates by the critic's score (B5). |
+| `candidates` | 4 | 2 to 8 | The candidates made for each theme kept. |
+| `keep_rejected` | 8 | 0 to 16 | The rejected candidates a run reports. |
+| `reverse` | none | evaluator codes | The evaluators whose penalty counts for a candidate (none twice). |
+| `weights.<code>` | 1 | 0 to 20 | The weight of each evaluator: `rhythmic_monotony`, `contrast_distance`, `leap_load`, `open_ending`, `stray_syncopation`, `one_rhythm`, `repeated_notes`, `wide_range`. |
+
+A value outside its limit is refused at `/critic/<key>`, an evaluator that is unknown at `/critic/weights/<code>` or `/critic/reverse/<i>`.
 
 ## Ranking theme candidates (R-722)
 
