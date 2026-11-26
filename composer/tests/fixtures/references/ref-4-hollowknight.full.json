@@ -1,0 +1,96 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "E",
+ "material": "minor",
+ "meter": "3/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 66,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "iadd9",
+    "melody": "E5:q F#5:q. E5:e",
+    "bass": "E2:e B2:e G3:e F#4:e G3:e B2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VI7",
+    "melody": "B4:h C5:e D5:e",
+    "bass": "C2:e G2:e E3:e B3:e E3:e G2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "ivadd9",
+    "melody": "C5:q. B4:e A4:q",
+    "bass": "A2:e E3:e C4:e B3:e C4:e E3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "v",
+    "melody": "E5:h D5:q",
+    "bass": "B1:e F#2:e E3:e B1:e F#2:e D3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "iadd9",
+    "melody": "E5:q F#5:q. E5:e",
+    "bass": "E2:e B2:e G3:e F#4:e G3:e B2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VI7",
+    "melody": "G5:h F#5:e E5:e",
+    "bass": "C2:e G2:e E3:e B3:e E3:e G2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "ivadd6",
+    "melody": "F#5:q. E5:e C5:q",
+    "bass": "A2:e E3:e C4:e F#4:e C4:e E3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "iadd9",
+    "melody": "D5:e B4:e E5:h",
+    "bass": "E2:h.",
+    "inner": [
+     "B2:h.",
+     "G3:h.",
+     "F#4:h."
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,66 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "F",
+ "material": "major",
+ "meter": "6/8",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 168,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "I",
+    "rhythm": "x:e x:e x:e x:e x:e x:e",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "C5"
+     }
+    ],
+    "events": [
+     {
+      "at": "3",
+      "type": "neighbor"
+     }
+    ]
+   },
+   {
+    "chords": "IV",
+    "rhythm": "x:q x:e x:q."
+   },
+   {
+    "chords": "I V7/V@3",
+    "job": "running"
+   },
+   {
+    "chords": "V7",
+    "rhythm": "x:e x:e x:e x:q."
+   },
+   {
+    "chords": "I"
+   },
+   {
+    "chords": "V7/II"
+   },
+   {
+    "chords": "II V7@3",
+    "job": "running"
+   },
+   {
+    "chords": "I",
+    "rhythm": "x:q r:e x:e r:q"
+   }
+  ],
+  "climax": {
+   "bar": 6,
+   "at": "2",
+   "pitch": "Bb5"
+  },
+  "accompaniment": {
+   "pattern": "michelle.pattern.compound-oom-pah"
+  }
+ }
+}

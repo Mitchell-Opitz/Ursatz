@@ -1,0 +1,96 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "sentence",
+ "key": "C",
+ "material": "major",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 92,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "I",
+    "melody": "D5:h C5:e D5:e E5:q",
+    "bass": "C3:e G3:e E4:e G3:e C3:e G3:e E4:e G3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "V7",
+    "melody": "G5:q. F5:e D5:h",
+    "bass": "G2:e D3:e B3:e D3:e G2:e F3:e B3:e F3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "V7",
+    "melody": "C5:h B4:e C5:e D5:q",
+    "bass": "G2:e D3:e B3:e D3:e G2:e F3:e B3:e F3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "F5:q. E5:e C5:h",
+    "bass": "C3:e G3:e E4:e G3:e C3:e G3:e E4:e G3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VI II@2",
+    "melody": "E5:e D5:e C5:q F5:e E5:e D5:q",
+    "bass": "A2:e E3:e C4:e E3:e D3:e A3:e F4:e A3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "I6 IV@2",
+    "melody": "G5:e F5:e E5:q A5:h",
+    "bass": "E3:e G3:e C4:e G3:e F2:e C3:e A3:e C3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "II6 V7@2",
+    "melody": "G5:q. F5:e D5:q. B4:e",
+    "bass": "F2:e D3:e A3:e D3:e G2:e F3:e B3:e F3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "C5:w",
+    "bass": "C2:w",
+    "inner": [
+     "C3:w",
+     "G3:w",
+     "E4:w"
+    ]
+   }
+  ]
+ }
+}

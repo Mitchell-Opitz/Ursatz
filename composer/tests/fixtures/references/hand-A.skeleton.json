@@ -1,0 +1,72 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "C",
+ "material": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 84,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "I",
+    "rhythm": "x:q. x:e x:e x:e x:q",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "D5"
+     }
+    ],
+    "events": [
+     {
+      "at": "0",
+      "type": "appoggiatura"
+     }
+    ]
+   },
+   {
+    "chords": "V7",
+    "rhythm": "x:e x:e x:q x:h",
+    "anchors": [
+     {
+      "at": "2",
+      "pitch": "B4"
+     }
+    ]
+   },
+   {
+    "chords": "IV",
+    "job": "running"
+   },
+   {
+    "chords": "V",
+    "job": "cadence"
+   },
+   {
+    "chords": "I"
+   },
+   {
+    "chords": "IV"
+   },
+   {
+    "chords": "II6 V7@2",
+    "job": "motif"
+   },
+   {
+    "chords": "I",
+    "rhythm": "x:w"
+   }
+  ],
+  "climax": {
+   "bar": 6,
+   "at": "0",
+   "pitch": "Ab5"
+  },
+  "accompaniment": {
+   "pattern": "arpeggiated"
+  }
+ }
+}

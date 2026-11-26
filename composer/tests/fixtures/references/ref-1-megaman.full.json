@@ -1,0 +1,80 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "E",
+ "material": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 152,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "I",
+    "melody": "B4:s D5:s E5:e G5:e F#5:q. E5:e D5:e",
+    "bass": "E2:e E3:e E2:e E3:e E2:e E3:e E2:e E3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VI",
+    "melody": "E5:q B4:e C5:e D5:e E5:q.",
+    "bass": "C2:e C3:e C2:e C3:e C2:e C3:e C2:e C3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VII",
+    "melody": "F#5:s G5:s A5:e B5:e A5:q. F#5:e D5:e",
+    "bass": "D2:e D3:e D2:e D3:e D2:e D3:e D2:e D3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "V",
+    "melody": "F#5:q. E5:s D#5:s B4:h",
+    "bass": "B1:e B2:e B1:e B2:e B1:e B2:e B1:e B2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "B4:s D5:s E5:e G5:e F#5:q. E5:e D5:e",
+    "bass": "E2:e E3:e E2:e E3:e E2:e E3:e E2:e E3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VI",
+    "melody": "E5:q B4:e C5:e D5:e G5:q.",
+    "bass": "C2:e C3:e C2:e C3:e C2:e C3:e C2:e C3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "IV V@2",
+    "melody": "A5:e G5:e F#5:e E5:e D#5:e F#5:e B5:q",
+    "bass": "A1:e A2:e A1:e A2:e B1:e B2:e B1:e B2:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "G5:e F#5:e E5:q. r:q.",
+    "bass": "E2:e E3:e E2:e E3:e E2:q. r:e",
+    "inner": [
+     "r:e r:e r:e r:e E3:q. r:e"
+    ]
+   }
+  ]
+ }
+}
