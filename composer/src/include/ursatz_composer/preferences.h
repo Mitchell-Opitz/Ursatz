@@ -119,6 +119,14 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
                                size_t message_size);
 
 /*
+ * As composer_preferences_read, over the settings *out already holds instead of the defaults: every member of the object is applied as it
+ * is, the members it leaves out keep their values (a preset's document over the defaults, a request's over a preset's, R-754). The same
+ * refusals; on a refusal *out holds what was read before it.
+ */
+bool composer_preferences_apply(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
+                                size_t message_size);
+
+/*
  * The full document for the preferences, every member present, in the shape docs/preferences.md describes: ratios as
  * "n/d" text and nct_types in the order passing, neighbor, appoggiatura, suspension, anticipation. The caller deletes
  * it with cJSON_Delete. NULL when memory runs out.

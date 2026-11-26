@@ -809,9 +809,14 @@ static bool read_candidates(const cJSON *group, CandidatePreferences *candidates
 
 bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
                                size_t message_size) {
+    composer_preferences_default(out);
+    return composer_preferences_apply(object, out, path, path_size, message, message_size);
+}
+
+bool composer_preferences_apply(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
+                                size_t message_size) {
     Refusal refusal = {path, path_size, message, message_size};
     const cJSON *item;
-    composer_preferences_default(out);
     if (path && path_size > 0) {
         path[0] = '\0';
     }
