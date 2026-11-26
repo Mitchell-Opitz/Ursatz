@@ -3,7 +3,7 @@
 #           -DFIXTURES=<tests/fixtures> [-DSTYLE_FOLDER=ON] [-DCASE=overrides] -P cli_listen.cmake
 # CASE=overrides runs only the overrides of the melody stage (R-672); CASE=motifs the motifs and settings sections, CASE=themes the
 # themes from a generated motif, a motif file and triplets, and CASE=theme_settings the themes with settings, the style file and the
-# usage errors (each also runs --print-settings and the refusals); without a case the script runs the rest.
+# usage errors (each also runs --print-settings and the refusals); CASE=blueprint runs --blueprint (R-747); without a case the script runs the rest.
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
@@ -109,6 +109,53 @@ if(CASE STREQUAL "plans")
         message(FATAL_ERROR "--plans was accepted with --what motifs")
     endif()
     expect_match("${ERR}" "--plans")
+    return()
+endif()
+
+if(CASE STREQUAL "blueprint")
+    # --blueprint (R-747) is a theme request with a blueprint, as JSON or as Ursatz Text, made as --theme-request is: the sample of seed 1 and the sample of seed
+    # 2 hold the MIDI that `ursatz theme` writes for those seeds, whichever form the file is.
+    set(BLUEPRINT "${FIXTURES}/theme/blueprint-sentence")
+    expect_status(0 listen --what themes --blueprint "${BLUEPRINT}.json" --count 2 --seed 1 --out-dir from-json)
+    expect_samples(from-json 2)
+    expect_status(0 theme "${BLUEPRINT}.json" --seed 1 --midi theme-1.mid)
+    expect_status(0 theme "${BLUEPRINT}.json" --seed 2 --midi theme-2.mid)
+    compare_files(TRUE from-json/01.mid theme-1.mid)
+    compare_files(TRUE from-json/02.mid theme-2.mid)
+    compare_files(FALSE from-json/01.mid from-json/02.mid)
+    expect_status(0 listen --what themes --blueprint "${BLUEPRINT}.txt" --count 2 --seed 1 --out-dir from-text)
+    expect_samples(from-text 2)
+    foreach(i 01 02)
+        compare_files(TRUE from-json/${i}.mid from-text/${i}.mid)
+        compare_files(TRUE from-json/${i}.musicxml from-text/${i}.musicxml)
+    endforeach()
+    # the manifest records the file where it records a theme request
+    file(STRINGS "${WORK}/from-text/listen.jsonl" lines)
+    list(GET lines 0 first)
+    string(JSON recorded GET "${first}" theme_request)
+    if(NOT recorded STREQUAL "${BLUEPRINT}.txt")
+        message(FATAL_ERROR "the manifest records '${recorded}' as the theme request: ${first}")
+    endif()
+    # the tempo of the command line replaces the request's, as for --theme-request
+    expect_status(0 listen --what themes --blueprint "${BLUEPRINT}.txt" --count 1 --seed 1 --tempo 140 --out-dir tempo)
+    compare_files(FALSE from-text/01.mid tempo/01.mid)
+    # the refusals: with --motif or --theme-request, without --what themes, a file that is not there, a text with a mistake, a request with no blueprint
+    expect_status(1 listen --what themes --blueprint "${BLUEPRINT}.json" --motif "${FIXTURES}/motifs/test-motif-6-8.json" --out-dir bad-dir)
+    expect_match("${ERR}" "--blueprint cannot be given together with --motif or --theme-request")
+    expect_status(1 listen --what themes --blueprint "${BLUEPRINT}.json" --theme-request "${FIXTURES}/theme/one-motive.json" --out-dir bad-dir)
+    expect_match("${ERR}" "--blueprint cannot be given together with --motif or --theme-request")
+    expect_status(1 listen --what motifs --blueprint "${BLUEPRINT}.json" --out-dir bad-dir)
+    expect_match("${ERR}" "--blueprint")
+    expect_status(1 listen --what themes --blueprint missing.txt --out-dir bad-dir)
+    expect_match("${ERR}" "cannot read blueprint 'missing.txt'")
+    file(WRITE "${WORK}/bad.txt" "ursatz-text 1 blueprint\n1: chords I\n3: chords V\n")
+    expect_status(1 listen --what themes --blueprint bad.txt --out-dir bad-dir)
+    expect_match("${ERR}" "blueprint 'bad.txt': line 3: bar 3 is out of order: the next bar is 2")
+    file(WRITE "${WORK}/bad.json" "{ not json")
+    expect_status(1 listen --what themes --blueprint bad.json --out-dir bad-dir)
+    expect_match("${ERR}" "blueprint 'bad.json' is not valid JSON")
+    expect_status(1 listen --what themes --blueprint "${FIXTURES}/theme/one-motive.json" --out-dir bad-dir)
+    expect_match("${ERR}" "is not a theme request with a blueprint member")
     return()
 endif()
 

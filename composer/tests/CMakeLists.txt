@@ -462,10 +462,10 @@ ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FIL
 
 # The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The motifs case runs the motifs and
 # settings sections, the themes case the themes from a generated motif, a motif file and triplets, the theme_settings case the themes with
-# settings and the style file. The slow case runs every section and also makes a style model
+# settings and the style file, the blueprint case --blueprint (R-747). The slow case runs every section and also makes a style model
 # from the sonatina folder with the Analyzer (about 53 s at -j1 in a Debug build, 2026-11-21). The fast cases: motifs 0.2 s, themes 8 s, theme_settings 13 s
 # and overrides 12 s (kept in the fast set with their times).
-foreach(case motifs themes theme_settings overrides plans theme_variety style_folder)
+foreach(case motifs themes theme_settings overrides plans theme_variety blueprint style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")

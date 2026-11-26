@@ -203,6 +203,12 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
 ursatz_test(workshop_command_text SOURCES test_command_text.c LIBS ursatz_workshop ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_command_text)
 
+# A blueprint in Ursatz Text (P69b B7, R-747): the tools blueprint-parse and text on a tools workshop, the fixture sentence, every field, every refusal.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_blueprint_text)
+ursatz_test(workshop_blueprint_text SOURCES test_blueprint_text.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS BLUEPRINT_FIXTURES="${CMAKE_SOURCE_DIR}/composer/tests/fixtures/theme"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_blueprint_text)
+
 # The section commands (P65 B7): the pure edits of a piece request on the game loop fixture, then the commands on a migrated copy of the layout 0
 # fixture folder (a version made and journaled, a stale base, the schema's limits, the Composer's refusal at its path, an overlay on a form piece).
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_section_commands)

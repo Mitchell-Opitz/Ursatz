@@ -1,9 +1,10 @@
 # Ursatz Text on the command line (P65 B6), run as processes on a migrated copy of the layout 0 fixture folder: show with its views, apply with text commands,
 # the generated help.
-# Run with: cmake -DURSATZ=<ursatz> -DDATA_V0=<fixture folder> -DPLAN=<a plan file> -DWORK=<folder of its own> -P cli_text.cmake
+# Run with: cmake -DURSATZ=<ursatz> -DDATA_V0=<fixture folder> -DPLAN=<a plan file> -DBLUEPRINT=<a blueprint without its extension: <name>.txt and <name>.json>
+#           -DWORK=<folder of its own> -P cli_text.cmake
 
-if(NOT URSATZ OR NOT DATA_V0 OR NOT PLAN OR NOT WORK)
-    message(FATAL_ERROR "give -DURSATZ, -DDATA_V0, -DPLAN and -DWORK")
+if(NOT URSATZ OR NOT DATA_V0 OR NOT PLAN OR NOT WORK OR NOT BLUEPRINT)
+    message(FATAL_ERROR "give -DURSATZ, -DDATA_V0, -DPLAN, -DBLUEPRINT and -DWORK")
 endif()
 
 file(REMOVE_RECURSE "${WORK}")
@@ -115,6 +116,43 @@ string(JSON after LENGTH "${stdout}" projects)
 if(NOT before EQUAL after)
     message(FATAL_ERROR "a text with a mistake applied something: ${before} projects before, ${after} after")
 endif()
+
+# a blueprint (P69b B7, R-747): the text shows as the theme request JSON, the JSON as the text, a mistake names its line
+ursatz(show "${BLUEPRINT}.txt" --view json)
+expect_status(0 "show of a blueprint text as json")
+string(JSON blueprint_bars LENGTH "${stdout}" blueprint bars)
+string(JSON blueprint_into GET "${stdout}" into)
+string(JSON blueprint_climax GET "${stdout}" blueprint climax pitch)
+string(JSON blueprint_schema GET "${stdout}" schema)
+if(NOT blueprint_bars EQUAL 8 OR NOT blueprint_into STREQUAL "sentence" OR NOT blueprint_climax STREQUAL "A5" OR NOT blueprint_schema STREQUAL "ursatz-theme-request")
+    message(FATAL_ERROR "the json of the blueprint text is not its request:\n${stdout}")
+endif()
+set(blueprint_request "${stdout}")
+ursatz(show "${BLUEPRINT}.json" --view json)
+expect_status(0 "show of a blueprint request as json")
+string(JSON blueprint_file_bars LENGTH "${stdout}" blueprint bars)
+if(NOT blueprint_file_bars EQUAL 8 OR NOT stdout STREQUAL blueprint_request)
+    message(FATAL_ERROR "the request file and the text show as different JSON:\n${stdout}\n${blueprint_request}")
+endif()
+ursatz(show "${BLUEPRINT}.json" --view full)
+expect_status(0 "show of a blueprint request as full")
+file(READ "${BLUEPRINT}.txt" blueprint_text)
+if(NOT stdout STREQUAL blueprint_text)
+    message(FATAL_ERROR "the request file does not show as the text file:\n${stdout}")
+endif()
+ursatz(show "${BLUEPRINT}.txt" --view full)
+expect_status(0 "show of a blueprint text as full")
+if(NOT stdout STREQUAL blueprint_text)
+    message(FATAL_ERROR "the text file does not show as itself:\n${stdout}")
+endif()
+ursatz(show "${BLUEPRINT}.txt" --view summary)
+expect_status(1 "show of a blueprint as a summary")
+expect_text("a blueprint shows the views json [(]the theme request[)] and full [(]its text[)], not summary" "show of a blueprint as a summary")
+string(REPLACE "\n3: " "\n4: " bad_blueprint "${blueprint_text}")
+file(WRITE "${WORK}/bad-blueprint.txt" "${bad_blueprint}")
+ursatz(show "${WORK}/bad-blueprint.txt" --view json)
+expect_status(1 "show of a blueprint text with a bar out of order")
+expect_text("line 13: bar 4 is out of order: the next bar is 3" "show of a blueprint text with a bar out of order")
 
 # the generated help
 ursatz(help commands)
