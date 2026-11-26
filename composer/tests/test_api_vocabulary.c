@@ -168,7 +168,7 @@ static void test_lists(void) {
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "into")->valuestring, "sentence") == 0);
     assert(cJSON_GetObjectItemCaseSensitive(theme_defaults, "bars")->valueint == 8);
     assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "cadence")->valuestring, "PAC") == 0);
-    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "development")->valuestring, "balanced") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(theme_defaults, "development")->valuestring, "blueprint") == 0);
     assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
 
     /* The functions a game loop section can be (R-510): transition on intro and body, coda on ending. */
@@ -230,6 +230,9 @@ static void test_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "skips_per_motif_max")->valuedouble == 11);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "plan_chords_max")->valuedouble == 4);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "plan_beat_max")->valuedouble == 12);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "blueprint_range_min")->valuedouble == 12);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "blueprint_range_max")->valuedouble == 24);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "blueprint_candidates_max")->valuedouble == 8);
 
     /* The orders and the notes of the GUI tables it replaces. */
     const cJSON *meters = list("meters");
@@ -325,10 +328,11 @@ static void test_round_trip(void) {
         accepted("random_motive", request);
         cJSON_Delete(request);
     }
-    /* The strategies the vocabulary serves are the ones the request takes: segments (the default) and drawn. */
-    assert(cJSON_GetArraySize(list("random_motive_strategies")) == 2);
+    /* The strategies the vocabulary serves are the ones the request takes: segments (the default), drawn and blueprint. */
+    assert(cJSON_GetArraySize(list("random_motive_strategies")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 0)), "segments") == 0);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 1)), "drawn") == 0);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 2)), "blueprint") == 0);
     cJSON_ArrayForEach(entry, list("random_motive_strategies")) {
         cJSON *request = random_request("major", "4/4");
         assert(cJSON_AddStringToObject(request, "strategy", value_of(entry)));
@@ -624,8 +628,20 @@ static void test_theme_form_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(limits, "construction_bars"), "max")->valuedouble == 16);
     assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(limits, "construction_pickup")));
     {
+        /* The presets (API 4.9, R-754): ff7 and hollow-knight, in the order the Composer holds them, each with its label and its source. */
+        const cJSON *presets = cJSON_GetObjectItemCaseSensitive(vocabulary, "presets");
+        assert(cJSON_IsArray(presets) && cJSON_GetArraySize(presets) == 2);
+        const cJSON *ff7 = cJSON_GetArrayItem(presets, 0);
+        const cJSON *hollow = cJSON_GetArrayItem(presets, 1);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(ff7, "name")->valuestring, "ff7") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(ff7, "label")->valuestring, "Final Fantasy VII") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(hollow, "name")->valuestring, "hollow-knight") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(hollow, "label")->valuestring, "Hollow Knight") == 0);
+        assert(strlen(cJSON_GetObjectItemCaseSensitive(ff7, "source")->valuestring) > 0 && strlen(cJSON_GetObjectItemCaseSensitive(hollow, "source")->valuestring) > 0);
+    }
+    {
         const cJSON *developments = cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_developments");
-        assert(cJSON_GetArraySize(developments) == 3);
+        assert(cJSON_GetArraySize(developments) == 4);
         const cJSON *first = cJSON_GetArrayItem(developments, 0);
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(first, "value")->valuestring, "melody") == 0);
         assert(cJSON_GetObjectItemCaseSensitive(first, "label") && cJSON_GetObjectItemCaseSensitive(first, "help"));
@@ -853,7 +869,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "4.8") == 0);
+    assert(strcmp(composer_api_version(), "4.9") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

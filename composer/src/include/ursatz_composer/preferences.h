@@ -9,6 +9,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <ursatz_composer/motive_random.h>
 
 /*
@@ -57,6 +58,7 @@ typedef struct {
     CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
     CriticSettings critic;           /* the critic group (R-722): weights 1, nothing reversed, rank off */
     HarmonyPreferences harmony;      /* the harmony group (P69): mixture off */
+    BlueprintPreferences blueprint;  /* the blueprint group (P69c, R-750): the weights of the blueprint generator */
 } ComposerPreferences;
 
 /*
@@ -96,6 +98,9 @@ typedef struct {
 #define COMPOSER_PREFERENCES_POOL_MIN 2
 #define COMPOSER_PREFERENCES_POOL_MAX 8
 #define COMPOSER_PREFERENCES_KEEP_REJECTED_MAX 16
+#define COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MIN 12
+#define COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MAX 24
+#define COMPOSER_PREFERENCES_BLUEPRINT_CANDIDATES_MAX 8
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 256
@@ -112,6 +117,28 @@ void composer_preferences_default(ComposerPreferences *out);
  */
 bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
                                size_t message_size);
+
+/*
+ * As composer_preferences_read, over the settings *out already holds instead of the defaults: every member of the object is applied as it
+ * is, the members it leaves out keep their values (a preset's document over the defaults, a request's over a preset's, R-754). The same
+ * refusals; on a refusal *out holds what was read before it.
+ */
+bool composer_preferences_apply(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
+                                size_t message_size);
+
+/*
+ * The presets (R-754): named settings documents built in (composer/presets), each the preferences a style of her listening sets and the
+ * accompaniment pattern it travels with, in the order the vocabulary lists them. composer_preset_name, _label and _source answer NULL past
+ * composer_preset_count. composer_preset_apply applies the named preset's preferences over *out as composer_preferences_apply does (the
+ * settings the preset leaves out stay as *out has them) and copies its accompaniment pattern into `accompaniment` ("" for none); false,
+ * with a message, for a name that is no preset.
+ */
+size_t composer_preset_count(void);
+const char *composer_preset_name(size_t index);
+const char *composer_preset_label(size_t index);
+const char *composer_preset_source(size_t index);
+bool composer_preset_apply(const char *name, ComposerPreferences *out, char *accompaniment, size_t accompaniment_size, char *message,
+                           size_t message_size);
 
 /*
  * The full document for the preferences, every member present, in the shape docs/preferences.md describes: ratios as

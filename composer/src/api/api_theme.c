@@ -276,37 +276,6 @@ static UrsatzStatus refuse_idea_beside_part(const GrowMaterial *material, const 
     return URSATZ_OK;
 }
 
-/*
- * The chords of a blueprint's bars (R-744), each bar's text read as an entry of the request's "chords" is, into the material's
- * chords; a refusal names the bar's "chords".
- */
-static UrsatzStatus read_blueprint_chords(const ComposerChords *chords, const GrowSetup *setup, GrowMaterial *material,
-                                          UrsatzError *error) {
-    for (size_t bar = 0; bar < setup->blueprint->bar_count; bar++) {
-        const char *text = setup->blueprint->bars[bar].chords;
-        if (!text[0]) {
-            continue;
-        }
-        cJSON *list = cJSON_CreateArray();
-        cJSON *entry = cJSON_CreateObject();
-        if (!list || !entry || !cJSON_AddNumberToObject(entry, "bar", (double)bar) || !cJSON_AddStringToObject(entry, "text", text) ||
-            !cJSON_AddItemToArray(list, entry)) {
-            cJSON_Delete(list);
-            cJSON_Delete(entry);
-            return api_fail_alloc(error);
-        }
-        UrsatzStatus status = request_read_chords(chords, list, "/blueprint/bars", "the theme", 0, &setup->meter, &setup->key,
-                                                  (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS,
-                                                  &material->chord_count, error);
-        cJSON_Delete(list);
-        if (status != URSATZ_OK) {
-            snprintf(error->path, sizeof error->path, "/blueprint/bars/%zu/chords", bar);
-            return status;
-        }
-    }
-    return URSATZ_OK;
-}
-
 /* Fills the motives of the material once the key and the meter are known (the style has given the mode). */
 static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *theme, const cJSON *request,
                                     const GrowSetup *setup, UrsatzError *error) {
@@ -366,7 +335,8 @@ static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *th
     ComposerChords tones;
     const ComposerChords *chords = composer_chords_init(&tones, setup->knowledge, NULL, 0) ? &tones : NULL;
     if (setup->blueprint) {
-        return read_blueprint_chords(chords, setup, material, error);
+        return api_blueprint_chords(chords, setup->blueprint, &setup->meter, &setup->key, setup->bars, material->chords, material->chord_numerals,
+                                    GROW_EXT_CHORDS, &material->chord_count, error);
     }
     return request_read_chords(chords, cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
                                (long)setup->bars, material->chords, material->chord_numerals, GROW_REQUEST_CHORDS, &material->chord_count,
@@ -386,6 +356,8 @@ typedef struct {
     const char *style;
     const char *without[WITHOUT_MAX];
     const char *voicing_id; /* "accompaniment": {"voicing": ...}, resolved in the snapshot by theme_prepare */
+    const char *preset;     /* the preset the request names (R-754), NULL for none */
+    char preset_pattern[64]; /* its accompaniment pattern, "" for none: the pattern when the request and its blueprint give none */
 } ThemeBrief;
 
 /* The members of the brief as the text the options of grow take. */
@@ -488,6 +460,9 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
                             voicing);
         }
     }
+    if (!text->accompaniment && !text->voicing && !text->texture && brief->preset_pattern[0]) {
+        text->accompaniment = brief->preset_pattern;
+    }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(request, "without");
     if (without && !cJSON_IsNull(without) && !(cJSON_IsArray(without) && cJSON_GetArraySize(without) == 0)) {
         if (!style) {
@@ -521,7 +496,7 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
 /* --- the outputs --------------------------------------------------------------------------------------- */
 
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
+static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, const char *setup_development,
                                         const ApiOutputOptions *outputs, UrsatzError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
@@ -546,7 +521,7 @@ static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON 
             char *text = NULL;
             if (built == EXPLAIN_OK) {
                 snprintf(explanation.sections[0].development, sizeof(explanation.sections[0].development), "%s",
-                         api_development_name(setup_development));
+                         setup_development);
                 text = outputs->explain == 2 ? explain_to_json(&explanation) : explain_to_text(&explanation);
                 explain_destroy(&explanation);
             }
@@ -609,8 +584,62 @@ typedef struct {
     ComposerStyle *style;
     GrowRun run;
     bool ran;
+    bool implicit_blueprint;  /* the request named no development and is written as a blueprint (R-756): a theme that cannot be, is balanced */
     GrowBlueprint *blueprint; /* the request's blueprint, NULL for none */
 } ThemeState;
+
+/*
+ * Whether the request fits the generated blueprint (R-752): an 8-bar sentence or period in 4/4, 3/4 or 6/8, in a major or natural minor key,
+ * from a full basic motif of at most 2 bars, with nothing beside it that gives chords, ideas, a style or a voicing. NULL when it fits, else
+ * the reason.
+ */
+static const char *generate_refusal(const ThemeState *state) {
+    const GrowSetup *setup = &state->setup;
+    static const char *const GIVEN[] = {"construction", "blueprint", "chords", "ideas"};
+    static const char *const WHAT[] = {"the request gives a construction", "the request gives a blueprint", "the request gives chords",
+                                       "the request gives idea motives"};
+    static char reason[96];
+    Rational bar;
+    if (setup->bars != 8) {
+        snprintf(reason, sizeof reason, "the theme has %zu bars", setup->bars);
+        return reason;
+    }
+    if (setup->into == GROW_INTO_HYBRID) {
+        return "the theme is a hybrid";
+    }
+    for (size_t i = 0; i < sizeof(GIVEN) / sizeof(GIVEN[0]); i++) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(state->request, GIVEN[i]);
+        if (item && !cJSON_IsNull(item)) {
+            return WHAT[i];
+        }
+    }
+    if (state->brief.style != NULL) {
+        return "the request gives a style";
+    }
+    if (state->brief.voicing_id != NULL || setup->has_voicing) {
+        return "the request gives a voicing";
+    }
+    for (int slot = 0; slot < GROW_SLOT_COUNT; slot++) {
+        if (slot != GROW_SLOT_BASIC && state->theme.slot_motive[slot]) {
+            return "the request gives a slot besides basic";
+        }
+    }
+    if (!state->theme.slot_motive[GROW_SLOT_BASIC] || setup->motive == NULL || setup->motive->form != MOTIVE_SKETCH_FORM_FULL) {
+        return "the basic motif is not a full motive";
+    }
+    if (plan_meter_bar_length(&setup->meter, &bar) != PLAN_OK ||
+        rational_cmp(setup->motive->length, (Rational){bar.num * 2, bar.den}) > 0) {
+        return "the basic motif is longer than 2 bars";
+    }
+    const char *material = setup->key.material ? setup->key.material->id : "";
+    if (strcmp(material, "omt.material.major") != 0 && strcmp(material, "omt.material.natural-minor") != 0) {
+        return "the key is not major or natural minor";
+    }
+    bool meter = setup->meter.beats_per_bar == 4 && setup->meter.beat_unit == 4;
+    meter = meter || (setup->meter.beats_per_bar == 3 && setup->meter.beat_unit == 4);
+    meter = meter || (setup->meter.beats_per_bar == 6 && setup->meter.beat_unit == 8);
+    return meter ? NULL : "the meter is not 4/4, 3/4 or 6/8";
+}
 
 /* A blueprint gives its chords, its accompaniment and its idea motives per bar: the request's own members are refused beside it. */
 static UrsatzStatus refuse_beside_blueprint(const cJSON *request, UrsatzError *error) {
@@ -676,6 +705,19 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     const cJSON *blueprint = cJSON_GetObjectItemCaseSensitive(request, "blueprint");
     blueprint = blueprint && !cJSON_IsNull(blueprint) ? blueprint : NULL;
     UrsatzStatus status = blueprint ? refuse_beside_blueprint(request, error) : URSATZ_OK;
+    if (status == URSATZ_OK && !api_read_preset_name(request, &state->brief.preset, error)) {
+        status = URSATZ_ERR_REQUEST;
+    }
+    if (status == URSATZ_OK && state->brief.preset) {
+        /* The preset's accompaniment is the pattern when the request gives none: read before the brief. */
+        ComposerPreferences scratch;
+        char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+        composer_preferences_default(&scratch);
+        if (!composer_preset_apply(state->brief.preset, &scratch, state->brief.preset_pattern, sizeof state->brief.preset_pattern, message,
+                                   sizeof message)) {
+            status = api_fail(error, URSATZ_ERR_INTERNAL, "/preset", "%s", message);
+        }
+    }
     if (status == URSATZ_OK) {
         status = read_motives(&state->theme, request, blueprint != NULL, error);
     }
@@ -720,9 +762,10 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
      * The motif group shapes a theme's drawn rhythms and its new material (R-475, R-477) and nothing else: a theme's
      * motives come from the request (docs/theme-request.md).
      */
-    if (!api_read_preferences(request, &state->preferences, &state->has_preferences, error)) {
+    if (!api_read_preferences_with_preset(request, &state->preferences, &state->has_preferences, NULL, 0, error)) {
         return URSATZ_ERR_REQUEST;
     }
+    setup->preset = state->brief.preset;
     if (state->has_preferences) {
         setup->melody = &state->preferences.melody;
         setup->fidelity = &state->preferences.development;
@@ -734,6 +777,7 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->mixture = &state->preferences.harmony.mixture;
         setup->color = &state->preferences.harmony.color;
         setup->motif = &state->preferences.motif;
+        setup->blueprint_preferences = &state->preferences.blueprint;
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
@@ -801,6 +845,21 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     setup->motive = &state->material->basic;
     setup->accompaniment_motive = state->material->has_accompaniment_motive ? &state->material->accompaniment_motive : NULL;
     setup->material = state->material;
+    /* A request that names no development is written as a blueprint when it can be (R-756); one that cannot keeps the balanced development. */
+    if (!state->brief.text.development && !setup->generate_blueprint) {
+        setup->generate_blueprint = generate_refusal(state) == NULL;
+        state->implicit_blueprint = setup->generate_blueprint;
+    }
+    if (setup->generate_blueprint) {
+        /* A generated blueprint's candidates are ranked by the critic (R-755): the request's critic settings, or the defaults. */
+        setup->critic = &state->preferences.critic;
+    }
+    const char *refusal = setup->generate_blueprint && state->brief.text.development ? generate_refusal(state) : NULL;
+    if (refusal) {
+        return api_fail(error, URSATZ_ERR_REQUEST, "/development",
+                        "development blueprint writes an 8-bar sentence or period from a motif of up to 2 bars in a major or minor key in 4/4, 3/4 or 6/8: %s",
+                        refusal);
+    }
     return URSATZ_OK;
 }
 
@@ -824,6 +883,13 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
     if (status == URSATZ_OK) {
         state.ran = true;
         status = api_grow_run(&state.setup, &state.run, &out->error);
+        if (status == URSATZ_ERR_UNSATISFIABLE && state.implicit_blueprint) {
+            /* No blueprint could be written and composed for this motif: the request is the balanced theme it was before (R-756). */
+            api_grow_run_destroy(&state.run);
+            state.setup.generate_blueprint = false;
+            state.setup.critic = state.has_preferences ? &state.preferences.critic : NULL;
+            status = api_grow_run(&state.setup, &state.run, &out->error);
+        }
     }
     if (status == URSATZ_OK) {
         GrowThemeInfo info;
@@ -837,7 +903,7 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(context->knowledge, document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
+        status = document ? add_theme_members(context->knowledge, document, &state.run, api_setup_development_name(&state.setup), &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == URSATZ_OK && state.has_preferences &&
             !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
             status = api_fail_alloc(&out->error);

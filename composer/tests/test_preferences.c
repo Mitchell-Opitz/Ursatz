@@ -51,12 +51,19 @@ static const char *DEFAULT_DEVELOPMENT =
 static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
 static const char *DEFAULT_CRITIC =
     "{\"rank\":false,\"candidates\":4,\"keep_rejected\":8,\"reverse\":[],\"weights\":{\"rhythmic_monotony\":1,\"contrast_distance\":1,"
-    "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1}}";
+    "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1,\"register_shift\":1,\"half_notes\":1}}";
 static const char *DEFAULT_HARMONY =
     "{\"mixture\":{\"share\":\"0/1\",\"from\":[\"parallel\",\"one step darker\",\"one step brighter\"]},\"color\":{\"share\":\"0/1\",\"types\":["
     "\"persichetti.chord-type.add9\",\"persichetti.chord-type.minor-add9\",\"persichetti.chord-type.add6\",\"persichetti.chord-type.minor-add6\","
     "\"persichetti.chord-type.six-nine\",\"persichetti.chord-type.dominant-ninth\",\"persichetti.chord-type.major-ninth\","
     "\"persichetti.chord-type.minor-ninth\",\"persichetti.chord-type.quartal-three\",\"persichetti.chord-type.quartal-four\"]}}";
+static const char *DEFAULT_BLUEPRINT =
+    "{\"sounds\":{\"ninth_downbeat\":3,\"sus4_dominant\":2,\"appoggiatura\":3,\"major_seventh\":1,\"leading_tone\":2,\"long_weak\":2},"
+    "\"jobs\":{\"basic\":{\"running\":2,\"long\":3,\"syncopated\":1,\"variant\":2,\"contrast\":1},"
+    "\"fragment\":{\"running\":3,\"long\":0,\"syncopated\":2,\"variant\":1,\"contrast\":1},"
+    "\"contrasting\":{\"running\":1,\"long\":1,\"syncopated\":1,\"variant\":0,\"contrast\":3},"
+    "\"cadential\":{\"running\":2,\"long\":2,\"syncopated\":1,\"variant\":1,\"contrast\":0}},"
+    "\"climax\":{\"m6\":1,\"m7\":2},\"range\":16,\"candidates\":3}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -167,11 +174,14 @@ static void defaults_round_trip(void) {
     text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "harmony"));
     assert(text && strcmp(text, DEFAULT_HARMONY) == 0);
     cJSON_free(text);
-    /* The whole document is the six groups, in this order. */
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "blueprint"));
+    assert(text && strcmp(text, DEFAULT_BLUEPRINT) == 0);
+    cJSON_free(text);
+    /* The whole document is the seven groups, in this order. */
     text = cJSON_PrintUnformatted(document);
     char whole[8192];
-    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s,\"harmony\":%s}",
-             DEFAULT_MELODY, DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC, DEFAULT_HARMONY);
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s,\"harmony\":%s,\"blueprint\":%s}",
+             DEFAULT_MELODY, DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC, DEFAULT_HARMONY, DEFAULT_BLUEPRINT);
     assert(text && strcmp(text, whole) == 0);
     cJSON_free(text);
 
@@ -695,6 +705,54 @@ static void critic_group(void) {
     refused("{\"critic\":[]}", "/critic");
 }
 
+static void blueprint_group(void) {
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    ComposerPreferences defaults;
+    composer_preferences_default(&defaults);
+    assert(defaults.blueprint.sounds[BLUEPRINT_SOUND_NINTH_DOWNBEAT] == 3 && defaults.blueprint.sounds[BLUEPRINT_SOUND_LONG_WEAK] == 2);
+    assert(defaults.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_LONG] == 0 &&
+           defaults.blueprint.jobs[BLUEPRINT_FUNCTION_CONTRASTING][BLUEPRINT_JOB_CONTRAST] == 3);
+    assert(defaults.blueprint.climax[0] == 1 && defaults.blueprint.climax[1] == 2 && defaults.blueprint.range == 16 && defaults.blueprint.candidates == 3);
+    assert(read_text("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":0,\"long_weak\":20},\"jobs\":{\"fragment\":{\"contrast\":7},"
+                     "\"cadential\":{\"running\":0}},\"climax\":{\"m6\":0},\"range\":24,\"candidates\":8}}",
+                     &read, path, message));
+    assert(read.blueprint.sounds[BLUEPRINT_SOUND_NINTH_DOWNBEAT] == 0 && read.blueprint.sounds[BLUEPRINT_SOUND_LONG_WEAK] == 20 &&
+           read.blueprint.sounds[BLUEPRINT_SOUND_APPOGGIATURA] == 3);
+    assert(read.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_CONTRAST] == 7 &&
+           read.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_RUNNING] == 3 &&
+           read.blueprint.jobs[BLUEPRINT_FUNCTION_CADENTIAL][BLUEPRINT_JOB_RUNNING] == 0);
+    assert(read.blueprint.climax[0] == 0 && read.blueprint.climax[1] == 2 && read.blueprint.range == 24 && read.blueprint.candidates == 8);
+    assert(!test_preferences_are_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(memcmp(&again.blueprint, &read.blueprint, sizeof(read.blueprint)) == 0);
+    cJSON_Delete(document);
+    assert(read_text("{\"blueprint\":{\"range\":12,\"candidates\":1}}", &read, path, message) && read.blueprint.range == 12 && read.blueprint.candidates == 1);
+    assert(read_text("{\"blueprint\":{\"range\":16,\"candidates\":3}}", &read, path, message) && test_preferences_are_default(&read));
+
+    refused("{\"blueprint\":[]}", "/blueprint");
+    refused("{\"blueprint\":{\"walk\":1}}", "/blueprint/walk");
+    refused("{\"blueprint\":{\"sounds\":[]}}", "/blueprint/sounds");
+    refused("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":21}}}", "/blueprint/sounds/ninth_downbeat");
+    refused("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":-1}}}", "/blueprint/sounds/ninth_downbeat");
+    refused("{\"blueprint\":{\"sounds\":{\"whistle\":1}}}", "/blueprint/sounds/whistle");
+    refused("{\"blueprint\":{\"jobs\":{\"fragment\":{\"walk\":1}}}}", "/blueprint/jobs/fragment/walk");
+    refused("{\"blueprint\":{\"jobs\":{\"fragment\":{\"long\":21}}}}", "/blueprint/jobs/fragment/long");
+    refused("{\"blueprint\":{\"jobs\":{\"coda\":{}}}}", "/blueprint/jobs/coda");
+    refused("{\"blueprint\":{\"jobs\":{\"basic\":1}}}", "/blueprint/jobs/basic");
+    refused("{\"blueprint\":{\"jobs\":[]}}", "/blueprint/jobs");
+    refused("{\"blueprint\":{\"climax\":{\"m5\":1}}}", "/blueprint/climax/m5");
+    refused("{\"blueprint\":{\"climax\":{\"m7\":21}}}", "/blueprint/climax/m7");
+    refused("{\"blueprint\":{\"range\":11}}", "/blueprint/range");
+    refused("{\"blueprint\":{\"range\":25}}", "/blueprint/range");
+    refused("{\"blueprint\":{\"candidates\":0}}", "/blueprint/candidates");
+    refused("{\"blueprint\":{\"candidates\":9}}", "/blueprint/candidates");
+    refused("{\"blueprint\":{\"candidates\":2.5}}", "/blueprint/candidates");
+}
+
 int main(void) {
     defaults_round_trip();
     l4_members_round_trip();
@@ -704,6 +762,7 @@ int main(void) {
     waive_and_reverse();
     candidates_group();
     critic_group();
+    blueprint_group();
     printf("test_preferences: ok\n");
     return 0;
 }

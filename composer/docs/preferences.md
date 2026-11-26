@@ -97,29 +97,19 @@ How a set of random motives is chosen, in `CandidatePreferences`. Off by default
 | `variety` | 0 | 0 to 20 | How much each random motive is chosen for being unlike the ones before it. 0 draws as it always did. With a style the choice mixes closeness to the style (counted 20 - `variety` times) and distance from the other motives (`variety` times). |
 | `pool` | 4 | 2 to 8 | The candidates drawn for each motive that is chosen among (at least the 8 a style asks for, when there is one). Read only when `variety` is above 0. |
 
-The distance of a candidate is the least, over the motives of the request's `avoid` list and those already chosen, of 1 - (rhythm similarity + contour similarity) / 2 (the library's `similarity_rhythm_score` and `similarity_contour_score`, the contour from the directions of the intervals); a tie keeps the first candidate drawn. A candidate equal to a motive of `avoid` is never kept. A value outside its limit is refused at `/candidates/variety` or `/candidates/pool`. The document's six groups are `melody`, `motif`, `development`, `candidates`, `critic` and `harmony`, in that order.
+The distance of a candidate is the least, over the motives of the request's `avoid` list and those already chosen, of 1 - (rhythm similarity + contour similarity) / 2 (the library's `similarity_rhythm_score` and `similarity_contour_score`, the contour from the directions of the intervals); a tie keeps the first candidate drawn. A candidate equal to a motive of `avoid` is never kept. A value outside its limit is refused at `/candidates/variety` or `/candidates/pool`. The document's seven groups are `melody`, `motif`, `development`, `candidates`, `critic`, `harmony` and `blueprint` ([preferences-blueprint.md](preferences-blueprint.md)), in that order.
 
 ## The critic group (R-722)
 
-The critic's settings, in `CriticSettings` ([critic.md](critic.md)). `rank` and the reversed evaluators change what a run chooses; with the defaults every output is what it was.
-
-| Key | Default | Limit | What it shapes |
-| --- | --- | --- | --- |
-| `rank` | false | true or false | Choose a theme among several candidates by the critic's score (B5). |
-| `candidates` | 4 | 2 to 8 | The candidates made for each theme kept. |
-| `keep_rejected` | 8 | 0 to 16 | The rejected candidates a run reports. |
-| `reverse` | none | evaluator codes | The evaluators whose penalty counts for a candidate (none twice). |
-| `weights.<code>` | 1 | 0 to 20 | The weight of each evaluator: `rhythmic_monotony`, `contrast_distance`, `leap_load`, `open_ending`, `stray_syncopation`, `one_rhythm`, `repeated_notes`, `wide_range`. |
-
-A value outside its limit is refused at `/critic/<key>`, an evaluator that is unknown at `/critic/weights/<code>` or `/critic/reverse/<i>`.
+Moved to [critic.md](critic.md#the-critic-group-r-722): `rank`, `candidates`, `keep_rejected`, `reverse` and the weight of each evaluator.
 
 ## The key and rule tables (R-672)
 
-`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.color_note`: 144 rows (the 12 of the critic group, then `harmony.mixture`). The color note settings are in [modes.md](modes.md#the-color-note), `harmony.mixture` in [modes.md](modes.md#modal-mixture). A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
+`composer_preferences_keys` lists every setting by its dotted key, for an application that edits settings one at a time ("melody.weights.melodic"). There is one row per leaf of the default document, in document order (a weighted list's entries and a list of words are leaves of their own, a list of words being one leaf), the two keys `melody.waive` and `melody.reverse` after `melody.register`, and `motif.plan`, the one setting the default document does not hold, after `motif.color_note`: 177 rows (the 30 of the `blueprint` group last). The color note settings are in [modes.md](modes.md#the-color-note), `harmony.mixture` in [modes.md](modes.md#modal-mixture). A row has the `key`, its `type` (`integer` from `min` to `max`, `boolean`, `ratio` with the denominator limit in `max`, `words` with the words it may hold, or `plan`) and whether it is `hard`.
 
 A **hard** setting changes what a request may ask for or what a candidate may be: `melody.range.low`, `melody.range.high`, `melody.nct_types`, `melody.rhythm_repeat_bars`, `melody.waive`, `motif.leap.low`, `motif.leap.high`, `motif.leaps_per_motif`, `melody.cadence_long`, `motif.skips_per_motif`, `motif.contrast_fidelity_min`, `motif.plan` and every `development.fidelity_minimum.*` (R-671). Every other setting is **soft**: a preference a listener can move.
 
-`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) the 7 hard rules (key `melody.waive`) and the 8 evaluators of the critic (key `critic.weights.<code>`, soft). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
+`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) the 7 hard rules (key `melody.waive`) and the 10 evaluators of the critic (key `critic.weights.<code>`, soft). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
 
 ## The motif group
 

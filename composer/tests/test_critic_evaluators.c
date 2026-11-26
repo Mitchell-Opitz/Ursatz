@@ -8,7 +8,7 @@
 #include "support/test_knowledge.h"
 
 /*
- * The eight evaluators of the critic (R-719) over lines built by hand, 4/4 with a beat of 1/4. A line is given by the durations of its
+ * The ten evaluators of the critic (R-719, R-755) over lines built by hand, 4/4 with a beat of 1/4. A line is given by the durations of its
  * notes in sixteenths of a whole note and their pitches; a bar is 16 sixteenths and the first bar is bar 1.
  */
 
@@ -267,6 +267,60 @@ static void test_wide_range(void) {
     critic_line_destroy(&line);
 }
 
+/* A shift of register (R-755): the mean pitch of a bar against the bar before, over 7 semitones by up to 5 more. */
+static void test_register_shift(void) {
+    CriticFinding f[CRITIC_EVALUATOR_COUNT];
+    const int bars[] = {16, 16};
+    const int twelve[] = {60, 72};
+    CriticLine line = build(bars, twelve, 2);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_REGISTER_SHIFT], 1, 1);
+    assert(f[CRITIC_REGISTER_SHIFT].value.num == 12 && f[CRITIC_REGISTER_SHIFT].limit.num == 7 && f[CRITIC_REGISTER_SHIFT].first == 1 &&
+           f[CRITIC_REGISTER_SHIFT].last == 2);
+    critic_line_destroy(&line);
+    const int eight[] = {60, 68};
+    line = build(bars, eight, 2);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_REGISTER_SHIFT], 1, 5);
+    assert(f[CRITIC_REGISTER_SHIFT].value.num == 8);
+    critic_line_destroy(&line);
+    const int within[] = {60, 67};
+    line = build(bars, within, 2);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_REGISTER_SHIFT], 0, 1);
+    critic_line_destroy(&line);
+    /* The mean of a bar: two notes of the second bar, 66 and 74, make 70 against 60. */
+    const int mixed_durations[] = {16, 8, 8};
+    const int mixed[] = {60, 66, 74};
+    line = build(mixed_durations, mixed, 3);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_REGISTER_SHIFT], 3, 5);
+    critic_line_destroy(&line);
+}
+
+/* Half notes one after another (R-755): each half note after a half note counts, 2 make the penalty 1. */
+static void test_half_notes(void) {
+    CriticFinding f[CRITIC_EVALUATOR_COUNT];
+    const int three_halves[] = {8, 8, 8, 8};
+    int pitches[4] = {60, 62, 64, 62};
+    CriticLine line = build(three_halves, pitches, 3);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_HALF_NOTES], 1, 1);
+    assert(f[CRITIC_HALF_NOTES].count == 2 && f[CRITIC_HALF_NOTES].bar == 1);
+    critic_line_destroy(&line);
+    const int broken[] = {8, 4, 8, 4};
+    line = build(broken, pitches, 4);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_HALF_NOTES], 0, 1);
+    assert(f[CRITIC_HALF_NOTES].count == 0);
+    critic_line_destroy(&line);
+    const int one_pair[] = {4, 8, 8, 4};
+    line = build(one_pair, pitches, 4);
+    evaluate(&line, NULL, 0, f);
+    expect(&f[CRITIC_HALF_NOTES], 1, 2);
+    critic_line_destroy(&line);
+}
+
 static void test_score(void) {
     CriticFinding findings[CRITIC_EVALUATOR_COUNT];
     CriticSettings settings;
@@ -318,6 +372,8 @@ int main(void) {
     test_stray_syncopation();
     test_one_rhythm();
     test_wide_range();
+    test_register_shift();
+    test_half_notes();
     test_score();
     test_settings_and_refusals();
     printf("test_critic_evaluators: ok\n");

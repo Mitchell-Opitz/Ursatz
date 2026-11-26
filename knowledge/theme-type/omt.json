@@ -18,7 +18,61 @@
             "slot": "basic",
             "half": "beginning",
             "units": 2,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "jobs": [
+                [
+                  "long",
+                  "running",
+                  "syncopated"
+                ],
+                [
+                  "variant",
+                  "contrast",
+                  "long",
+                  "running"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "I",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I",
+                    "IV V@2"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I V@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I",
+                    "V7"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "ninth_downbeat",
+                    "appoggiatura"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "repetition",
@@ -26,7 +80,31 @@
             "slot": "basic",
             "half": "beginning",
             "units": 2,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "harmony": [
+                {
+                  "restate": true,
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "V7",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "appoggiatura",
+                    "ninth_downbeat"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "fragment 1",
@@ -34,7 +112,46 @@
             "slot": "continuation",
             "half": "ending",
             "units": 1,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "jobs": [
+                [
+                  "running",
+                  "syncopated",
+                  "variant",
+                  "contrast"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "VI"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "IV"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "VI II@2"
+                  ],
+                  "type": "omt.vocabulary.sequential"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "appoggiatura",
+                    "major_seventh"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "fragment 2",
@@ -42,7 +159,52 @@
             "slot": "continuation",
             "half": "ending",
             "units": 1,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "jobs": [
+                [
+                  "liquidation"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "IV"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "II6"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I6 IV@2"
+                  ],
+                  "type": "omt.vocabulary.sequential"
+                },
+                {
+                  "chords": [
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                }
+              ],
+              "climax": [
+                0
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "appoggiatura",
+                    "major_seventh"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "cadential",
@@ -50,7 +212,62 @@
             "slot": "cadential",
             "half": "ending",
             "units": 2,
-            "cadence": "final"
+            "cadence": "final",
+            "expect": {
+              "jobs": [
+                [
+                  "running",
+                  "long",
+                  "syncopated",
+                  "variant"
+                ],
+                [
+                  "cadence"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "II6 V7@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "IV V7@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "V7",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                }
+              ],
+              "climax": [
+                0
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "sus4_dominant",
+                    "leading_tone",
+                    "appoggiatura"
+                  ]
+                },
+                {
+                  "unit": 1,
+                  "kinds": [
+                    "ninth_downbeat"
+                  ]
+                }
+              ]
+            }
           }
         ]
       },
@@ -71,6 +288,23 @@
           "source": "schoenberg",
           "chapter": "VIII",
           "note": "the continuation develops the motive toward the cadence"
+        },
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "the continuation fragments, speeds the harmony and ends in a cadential progression; the antecedent ends on a half cadence and the consequent on an authentic one"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "liquidation: the motive's characteristic features are removed toward the cadence"
+        },
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "references.md (her references' sounds and climax places) and taste-profile.md",
+          "note": "the sounds she hears in her references (a ninth or an appoggiatura on the downbeat, a suspended fourth before the dominant, a leading tone into the tonic) and the bar where the line peaks"
         }
       ],
       "status": "active",
@@ -106,7 +340,7 @@
           ]
         }
       ],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.theme-type.period",
@@ -123,7 +357,61 @@
             "slot": "basic",
             "half": "beginning",
             "units": 2,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "jobs": [
+                [
+                  "long",
+                  "running",
+                  "syncopated"
+                ],
+                [
+                  "variant",
+                  "contrast",
+                  "long",
+                  "running"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "I",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I",
+                    "IV V@2"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I V@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                },
+                {
+                  "chords": [
+                    "I",
+                    "V7"
+                  ],
+                  "type": "omt.vocabulary.prolongational"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "ninth_downbeat",
+                    "appoggiatura"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "contrasting idea",
@@ -131,7 +419,65 @@
             "slot": "contrasting",
             "half": "beginning",
             "units": 2,
-            "cadence": "first"
+            "cadence": "first",
+            "expect": {
+              "jobs": [
+                [
+                  "contrast",
+                  "running",
+                  "long",
+                  "syncopated"
+                ],
+                [
+                  "cadence"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "IV",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "VI",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "II6",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "VII",
+                    "V"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "appoggiatura",
+                    "major_seventh"
+                  ]
+                },
+                {
+                  "unit": 1,
+                  "kinds": [
+                    "sus4_dominant"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "consequent basic idea",
@@ -139,7 +485,24 @@
             "slot": "basic",
             "half": "ending",
             "units": 2,
-            "cadence": "none"
+            "cadence": "none",
+            "expect": {
+              "harmony": [
+                {
+                  "restate": true,
+                  "type": "omt.vocabulary.prolongational"
+                }
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "appoggiatura",
+                    "ninth_downbeat"
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "consequent contrasting idea",
@@ -147,7 +510,63 @@
             "slot": "contrasting",
             "half": "ending",
             "units": 2,
-            "cadence": "final"
+            "cadence": "final",
+            "expect": {
+              "jobs": [
+                [
+                  "contrast",
+                  "running",
+                  "syncopated",
+                  "variant",
+                  "long"
+                ],
+                [
+                  "cadence"
+                ]
+              ],
+              "harmony": [
+                {
+                  "chords": [
+                    "II6 V7@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "IV V7@2",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                },
+                {
+                  "chords": [
+                    "V7",
+                    "I"
+                  ],
+                  "type": "omt.vocabulary.cadential"
+                }
+              ],
+              "climax": [
+                0
+              ],
+              "sounds": [
+                {
+                  "unit": 0,
+                  "kinds": [
+                    "sus4_dominant",
+                    "leading_tone",
+                    "appoggiatura"
+                  ]
+                },
+                {
+                  "unit": 1,
+                  "kinds": [
+                    "ninth_downbeat"
+                  ]
+                }
+              ]
+            }
           }
         ]
       },
@@ -168,6 +587,23 @@
           "source": "schoenberg",
           "chapter": "VII",
           "note": "the consequent returns to the antecedent's start and closes"
+        },
+        {
+          "source": "omt",
+          "part": "III",
+          "chapter": 2,
+          "note": "the antecedent ends on a half cadence and the consequent on an authentic one"
+        },
+        {
+          "source": "schoenberg",
+          "chapter": "VIII",
+          "note": "liquidation: the motive's characteristic features are removed toward the cadence"
+        },
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "references.md (her references' sounds and climax places) and taste-profile.md",
+          "note": "the sounds she hears in her references (a ninth or an appoggiatura on the downbeat, a suspended fourth before the dominant, a leading tone into the tonic) and the bar where the line peaks"
         }
       ],
       "status": "active",
@@ -198,7 +634,7 @@
           ]
         }
       ],
-      "version": 1
+      "version": 2
     },
     {
       "id": "omt.theme-type.antecedent-continuation",

@@ -69,7 +69,7 @@ static void test_message(void) {
         size_t length = critic_message(rule->message, &finding, &fields, out, sizeof(out));
         assert(length == strlen(out) && length > 0 && strchr(out, '{') == NULL && strchr(out, '}') == NULL);
     }
-    assert(rules == 12);
+    assert(rules == 14);
     /* the values as text */
     critic_message("bars {first} to {last} in {bar} at {beat}: {value} of {limit}, {count}", &finding, &fields, out, sizeof(out));
     assert(strcmp(out, "bars 2 to 4 in 3 at 3/2: 3/4 of 1/2, 5") == 0);

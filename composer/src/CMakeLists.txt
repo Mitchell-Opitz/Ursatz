@@ -103,6 +103,7 @@ add_library(ursatz_composer_engine STATIC
     motive/motive_random_pitch.c
     motive/motive_random_rhythm.c
     motive/motive_random_segments.c
+    motive/motive_random_blueprint.c
     motive/variant_registry.c
     motive/variant_chain.c
     motive/variant_functions.c
@@ -121,12 +122,15 @@ add_library(ursatz_composer_engine STATIC
     preferences/preferences_development.c
     preferences/preferences_critic.c
     preferences/preferences_harmony.c
+    preferences/preferences_blueprint.c
+    preferences/preferences_preset.c
     check/form_hear.c
     structure/form_record.c
     structure/form_spec.c
     structure/form_builtin.c
     check/return_hear.c
     grow/grow_blueprint.c
+    grow/grow_blueprint_generate.c
     grow/grow_request.c
     grow/grow_apply.c
     grow/grow_contrast.c
@@ -194,6 +198,21 @@ add_custom_command(
     COMMENT "Embedding the form documents"
     VERBATIM)
 target_sources(ursatz_composer_engine PRIVATE ${COMPOSER_FORM_DATA})
+# The presets built in (R-754): presets/<name>.json, embedded the same way. Adding a preset is a file in presets/ and a name here.
+set(COMPOSER_PRESETS ff7 hollow-knight)
+set(COMPOSER_PRESET_FILES)
+foreach(preset ${COMPOSER_PRESETS})
+    list(APPEND COMPOSER_PRESET_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../presets/${preset}.json)
+endforeach()
+set(COMPOSER_PRESET_DATA ${CMAKE_CURRENT_BINARY_DIR}/preset/preset_builtin_data.c)
+add_custom_command(
+    OUTPUT ${COMPOSER_PRESET_DATA}
+    COMMAND ${CMAKE_COMMAND} -DOUTPUT=${COMPOSER_PRESET_DATA} "-DFILES=${COMPOSER_PRESET_FILES}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedPresets.cmake
+    DEPENDS ${COMPOSER_PRESET_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedPresets.cmake
+    COMMENT "Embedding the preset documents"
+    VERBATIM)
+target_sources(ursatz_composer_engine PRIVATE ${COMPOSER_PRESET_DATA})
 # The Composer's composition key (R-626): a hash of the sources that compose a piece (the Composer's sources and forms, and the
 # library groups it is made of, with the vendored cJSON), stamped in every plan the Composer writes (composer_composition_key).
 # A change to a test, a doc or an app leaves it as it was.

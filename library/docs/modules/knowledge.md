@@ -79,6 +79,19 @@ const FormalFunction *fragment = type->ideas[2].function;
 
 A harmony id that is no progression-type entry, a contrast target that is no formal function, a beginning or ending of idea level or an idea of any other level refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. Grow does not read the entries until P67 B5 and B6; the test `test_theme_shape_entries` pins the Composer's table to them.
 
+### Slot expectations (K8, P69c B1, R-749)
+
+An idea of the sentence and the period carries an optional `expect` object (`ThemeTypeIdea.expect`, `present` false for the seven hybrids, which have none). Each list is per unit of the idea, so its length is the idea's `units`:
+
+| Field | Meaning |
+|---|---|
+| `jobs` | one list of one to five words per unit: `motif`, `variant`, `contrast`, `running`, `long`, `syncopated`, `liquidation`, `cadence` (bits `THEME_JOB_*`; the first listed word of a unit is its lowest bit, not its place in the file) |
+| `harmony` | one to six alternatives: `chords` (one text per unit, the own-harmony syntax, "IV V@2") or `restate` (the basic idea's texts), each with a `type`, one of the idea function's `harmony` entries |
+| `climax` | the units that may hold the line's highest note (bit k: unit k) |
+| `sounds` | per unit, the kinds it may take: `ninth_downbeat`, `sus4_dominant`, `appoggiatura`, `major_seventh`, `leading_tone` (bits `THEME_SOUND_*`) |
+
+A `jobs` or `chords` list whose length is not the idea's `units`, a unit at or past `units`, an unknown or repeated word, or a harmony type that is not in the idea function's `harmony` list refuses the build with the entry id and the idea name; `tools/ci/check-knowledge.py` makes the same checks. The Composer reads the expectations from P69c B3 (`composer/docs/blueprint-generator.md`).
+
 ## The rule kind (K13, R-717)
 
 `theory/knowledge/rule_entry.h` holds a `RuleEntry`: a judgment of a candidate, or a limit on it, as an entry a person can read, cite and change. The kind has three subtypes:
@@ -94,7 +107,7 @@ const RuleEntry *rule = knowledge_snapshot_rule(snapshot, "michelle.rule.rhythmi
 /* rule->subtype == RULE_EVALUATOR, rule->default_weight == 1, parameter "run" == 3 */
 ```
 
-The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 19 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.
+The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 21 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.
 
 ## The pattern kind and the sus types (K11, P69b B1, R-744, R-745)
 

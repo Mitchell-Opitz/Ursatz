@@ -125,7 +125,7 @@ static void test_rank_on(void) {
         cJSON *document = api_grow_result_json(&setup, &run, NULL);
         const cJSON *kept = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
         const cJSON *judgment = cJSON_GetObjectItemCaseSensitive(kept, "critic");
-        assert(cJSON_IsObject(judgment) && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(judgment, "evaluators")) == 8);
+        assert(cJSON_IsObject(judgment) && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(judgment, "evaluators")) == 10);
         const cJSON *rejected = cJSON_GetObjectItemCaseSensitive(document, "rejected");
         assert(cJSON_IsArray(rejected));
         double best = ratio(cJSON_GetObjectItemCaseSensitive(judgment, "score"));
@@ -138,7 +138,7 @@ static void test_rank_on(void) {
             unsigned long rejected_seed = (unsigned long)cJSON_GetObjectItemCaseSensitive(candidate, "seed")->valuedouble;
             assert(best >= ratio(cJSON_GetObjectItemCaseSensitive(candidate, "score")));
             assert(rejected_seed >= seed && rejected_seed < seed + 64 && rejected_seed != kept_seed);
-            assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(candidate, "evaluators")) == 8);
+            assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(candidate, "evaluators")) == 10);
             first_among = first_among || rejected_seed == first_off;
         }
         assert(cJSON_GetArraySize(rejected) == 3 && first_among);

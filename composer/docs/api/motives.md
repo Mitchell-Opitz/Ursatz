@@ -136,13 +136,14 @@ range are drawn from defaults in the Composer.
 | `meter` | `"4/4"`, `"3/4"`, `"2/4"`, `"6/8"` or any meter, or `"random"`. Required |
 | `key` | `"D minor"`; its mode must be the material (`/key`). Default C major or A minor |
 | `form` | `"full"` (default), `"rhythm"` or `"contour"` |
-| `strategy` | `"segments"` (default) or `"drawn"`: how the motive is made (below). Anything else is a refusal with `/strategy` |
+| `strategy` | `"segments"` (default), `"drawn"` or `"blueprint"` (API 4.9, R-753: a two-bar motif from the K8 expectations of the sentence's basic idea and the `blueprint` preferences, [cli-random-motive.md](../../../cli/docs/cli-random-motive.md#the-blueprint-strategy-r-753)): how the motive is made (below). Anything else is a refusal with `/strategy` |
 | `role` | `"melodic"` or `"accompaniment"` |
 | `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `URSATZ_ERR_UNSATISFIABLE` with `/style` |
 | `style_without` | up to 8 style categories read without; needs `style` |
 | `count` | 1 to 16, default 1 |
 | `seed` | 0 to 4294967295, default from the clock |
 | `avoid` | since 4.3: up to 64 motive documents (the motive JSON format), read at `/avoid/<i>`; with `preferences.candidates.variety` above 0 none is kept and each motive is chosen for being unlike them ([preferences.md](../preferences.md#the-candidates-group-r-673)) |
+| `preset` | a preset name or null (API 4.9, R-754, [presets.md](../presets.md)): its settings apply under `preferences`. An unknown name is a refusal with `/preset` |
 | `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12; the L2 rhythm, ending and long non-chord tone members since 1.15, the L3 syncopation, skip and chord plan members since 1.17; the L4 melody and contrast members since 1.19, accepted and echoed here). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences`, and a given `motif.plan` that does not fit the meter, bars, shapes or endings allowed with `URSATZ_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that to the run) |
 
 **Strategy.** `"segments"` builds each motive the way a motive is made, from segments (Schoenberg's motives): one to three

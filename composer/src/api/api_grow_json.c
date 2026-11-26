@@ -608,7 +608,8 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->has_density = composer_style_density(setup->style, &out->density);
     out->without = setup->without;
     out->without_count = setup->without_count;
-    out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
+    out->development = setup->material ? api_setup_development_name(setup) : NULL; /* a theme's, not a grow's */
+    out->preset = setup->material ? setup->preset : NULL;
 }
 
 /* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
@@ -751,6 +752,11 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
     }
     if (ok && theme->judged && setup->critic) {
         ok = cJSON_AddItemToObject(object, "critic", api_critic_json(&theme->judgment, setup->critic));
+    }
+    if (ok && theme->generated) {
+        const GrowGenerated *generated = theme->generated;
+        ok = api_add(object, "blueprint", grow_blueprint_write(&generated->blueprint, generated->rhythm, generated->known, &setup->pairing,
+                                                               &setup->meter, &setup->key));
     }
     if (!ok) {
         cJSON_Delete(score);

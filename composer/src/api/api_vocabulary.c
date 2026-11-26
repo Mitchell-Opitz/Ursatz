@@ -114,7 +114,7 @@ static const char *const CADENCE_LABELS[PLAN_CADENCE_COUNT] = {"Perfect authenti
                                                                "Half cadence", "Deceptive cadence", "Plagal cadence"};
 static const char *const MOTIVE_FORM_LABELS[] = {"Full", "Rhythm only", "Contour only"};
 static const char *const ROLE_LABELS[] = {"Melodic", "Accompaniment"};
-static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn"};
+static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn", "Blueprint"};
 static const char *const PART_LABELS[PIECE_PART_COUNT] = {"Intro", "Loop body", "Turnaround", "Ending"};
 static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme"};
 
@@ -376,7 +376,7 @@ static bool add_library_lists(cJSON *root) {
             return false;
         }
     }
-    for (int strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS; strategy <= MOTIVE_RANDOM_STRATEGY_DRAWN; strategy++) {
+    for (int strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS; strategy <= MOTIVE_RANDOM_STRATEGY_BLUEPRINT; strategy++) {
         if (!add_choice(strategies, motive_random_strategy_name((MotiveRandomStrategy)strategy),
                         RANDOM_STRATEGY_LABELS[strategy - MOTIVE_RANDOM_STRATEGY_SEGMENTS])) {
             return false;
@@ -610,7 +610,10 @@ static bool add_preference_limits(cJSON *limits) {
            cJSON_AddNumberToObject(item, "keep_max", MELODY_KEEP_MAX) &&
            cJSON_AddNumberToObject(item, "rhythm_repeat_bars_max", COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX) &&
            cJSON_AddNumberToObject(item, "pool_min", COMPOSER_PREFERENCES_POOL_MIN) &&
-           cJSON_AddNumberToObject(item, "pool_max", COMPOSER_PREFERENCES_POOL_MAX);
+           cJSON_AddNumberToObject(item, "pool_max", COMPOSER_PREFERENCES_POOL_MAX) &&
+           cJSON_AddNumberToObject(item, "blueprint_range_min", COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MIN) &&
+           cJSON_AddNumberToObject(item, "blueprint_range_max", COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MAX) &&
+           cJSON_AddNumberToObject(item, "blueprint_candidates_max", COMPOSER_PREFERENCES_BLUEPRINT_CANDIDATES_MAX);
 }
 
 /* The default preferences, the document a listening session edits. */
@@ -716,12 +719,28 @@ static bool add_theme_developments(cJSON *root) {
         {"melody", "Melody", "The theme repeats the motif and stays close to it (Schoenberg ch. XI)."},
         {"balanced", "Balanced", "The theme repeats and develops by turns; what a request without the member reads as."},
         {"theme", "Theme", "The theme develops the motif, with the construction a theme of that kind has (Schoenberg ch. XI)."},
+        {"blueprint", "Blueprint", "The Composer writes the theme's blueprint from the motif (the K8 slot expectations and the blueprint preferences) and realizes it: an 8-bar sentence or period."},
     };
     cJSON *list = add_list(root, "theme_developments");
     for (size_t i = 0; list && i < sizeof(DEVELOPMENTS) / sizeof(DEVELOPMENTS[0]); i++) {
         cJSON *entry = cJSON_CreateObject();
         if (!entry || !cJSON_AddStringToObject(entry, "value", DEVELOPMENTS[i].word) || !cJSON_AddStringToObject(entry, "label", DEVELOPMENTS[i].label) ||
             !cJSON_AddStringToObject(entry, "help", DEVELOPMENTS[i].help) || !cJSON_AddItemToArray(list, entry)) {
+            cJSON_Delete(entry);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The presets (API 4.9, R-754): name, label and where the settings come from, in the order the Composer holds them. */
+static bool add_presets(cJSON *root) {
+    cJSON *list = add_list(root, "presets");
+    for (size_t i = 0; list && i < composer_preset_count(); i++) {
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddStringToObject(entry, "name", composer_preset_name(i)) ||
+            !cJSON_AddStringToObject(entry, "label", composer_preset_label(i)) ||
+            !cJSON_AddStringToObject(entry, "source", composer_preset_source(i)) || !cJSON_AddItemToArray(list, entry)) {
             cJSON_Delete(entry);
             return false;
         }
@@ -792,7 +811,7 @@ static bool add_defaults(cJSON *root) {
     return motif && theme && cJSON_AddStringToObject(defaults, "meter", "4/4") && cJSON_AddStringToObject(motif, "form", "full") &&
            cJSON_AddStringToObject(motif, "notes", "C4:q") && cJSON_AddStringToObject(motif, "pickup", "0") &&
            cJSON_AddStringToObject(theme, "into", "sentence") && cJSON_AddNumberToObject(theme, "bars", 8) &&
-           cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "balanced");
+           cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "blueprint");
 }
 
 /*
@@ -826,7 +845,7 @@ bool api_vocabulary_build(cJSON *root, const KnowledgeSnapshot *knowledge, const
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_accompaniment_patterns(root, knowledge) &&
-           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_lanes(root) &&
+           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_presets(root) && add_lanes(root) &&
            add_preferences(root) && add_preference_keys(root) && add_rules(root) && add_limits(root);
 }
 

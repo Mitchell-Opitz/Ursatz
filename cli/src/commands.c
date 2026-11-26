@@ -64,7 +64,7 @@ static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--ro
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_HARMONIZE[] = {"--count", "--format", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
 static const char *const FLAGS_RENDER[] = {"--midi", "--musicxml", "--plain-midi", "--tempo", NULL};
-static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--blueprint", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--plans", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
+static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--blend-weight", "--blend-weights", "--blueprint", "--check", "--count", "--development", "--into", "--material", "--meter", "--motif", "--out-dir", "--plans", "--preset", "--print-settings", "--round", "--seed", "--session", "--settings", "--strategy", "--style", "--taste", "--tempo", "--theme-request", "--what", NULL};
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
@@ -208,7 +208,8 @@ const CliCommand CLI_COMMANDS[] = {
     "  --material is major or minor (required; random draws it from the seed; --mode is the same option). --meter\n"
     "  is required; random draws 4/4, 3/4, 2/4 or 6/8 from the seed. --key defaults to C major or A minor and its\n"
     "  mode must be --material. --form is full (the default), rhythm or contour. --strategy is segments (the\n"
-    "  default: a harmony plan and repeated segments) or drawn (a rhythm drawn note by note). --style: draw 8\n"
+    "  default: a harmony plan and repeated segments), drawn (a rhythm drawn note by note) or blueprint (two bars\n"
+    "  from the basic idea's expectations of a sentence). --style: draw 8\n"
     "  candidates for each motive and keep the closest. --style-without is repeatable, at most 8, and needs\n"
     "  --style. --count is 1 to 16 (default 1). --seed is a whole number from 0, default from the clock; the seed\n"
     "  is printed. --format json prints {\"seed\", \"motives\"}, each motive as the motive command's JSON document.\n"
@@ -530,7 +531,7 @@ const CliCommand CLI_COMMANDS[] = {
     "critique item:<id>[@v<n>] [--settings <file>] [--note <text>] [--format text|json]\n"
     "critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]",
      "Judge candidates with the critic, in her words",
-    "Judges candidate files with the critic (docs/critic.md): eight evaluators of what she has said about a melody give each candidate a\n"
+    "Judges candidate files with the critic (docs/critic.md): ten evaluators of what she has said about a melody give each candidate a\n"
     "score (minus the weighted sum of their penalties), and the Composer's hearing of a theme against its plan gives observations in plain\n"
     "words. A file is a listen sample (its motive, or the plan of its first theme: make themes with listen --plans), a plan or a motive\n"
     "document. The files of one call are one set, which the critic compares (one_rhythm). See cli/docs/cli-critique.md.\n"
@@ -555,7 +556,7 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz critique --verdict obs-1c9e agree item:itm-3f2a",
      FLAGS_CRITIQUE, 0, 16, run_critique},
     {"listen",
-    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--motif <file>] [--theme-request <file>] [--blueprint <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
+    "listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--plans] [--preset <name>] [--motif <file>] [--theme-request <file>] [--blueprint <file>] [--session <ses-id> --round <n> --batch <name> [--taste <name>]]\n"
     "listen --print-settings",
      "Make batches of motifs or themes from fixed seeds for listening",
     "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n"
@@ -574,15 +575,17 @@ const CliCommand CLI_COMMANDS[] = {
     "  document (docs/preferences.md); absent: none is sent. --material is major (default), minor or a church mode (--mode is the\n"
     "  same option). --meter is beats over a beat unit (default 4/4). --style: draw 8 candidates for each motif and\n"
     "  keep the closest; themes prefer it too. --blend, --blend-weight and --blend-weights are for themes. --tempo\n"
-    "  is quarter notes per minute from 20 to 400. --strategy is segments (default) or drawn, for motifs and for\n"
+    "  is quarter notes per minute from 20 to 400. --strategy is segments (default), drawn or blueprint, for motifs and for\n"
     "  the generated motif of a theme.\n"
-    "  Themes only: --into is sentence (default) or period; --development is melody, balanced (default) or theme;\n"
+    "  Themes only: --into is sentence (default) or period; --development is melody, balanced, theme or blueprint (default, where the theme fits it);\n"
     "  --bars is 4 or 8 (default 8); --check passes over a seed whose analysis contradicts the plan; --motif is the\n"
     "  motif of every theme, anything the motive command reads (default: a generated motif for each sample);\n"
     "  --theme-request is a theme request (docs/theme-request.md) with the sample's seed, instead of a motif.\n"
     "  --blueprint is a theme request with a blueprint (docs/blueprints.md), as JSON or as Ursatz Text, made as --theme-request is; it\n"
     "  cannot be given with --motif or --theme-request.\n"
     "  --plans puts each theme's plan in its JSON (themes[0].plan), for ursatz critique; the files' notes stay the same.\n"
+    "  --preset names a preset of the Composer (ff7 or hollow-knight): the settings of her listening and, for themes, the\n"
+    "  accompaniment that goes with them; --settings and the session's settings apply over it. It applies to motifs and themes.\n"
     "\n"
     "Exit status: 0 at least one sample was written; 1 usage, an invalid option or an unreadable file; 2 none could\n"
     "be composed; 3 an output file could not be written.\n"

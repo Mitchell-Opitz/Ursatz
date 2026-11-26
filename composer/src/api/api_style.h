@@ -42,7 +42,8 @@ typedef struct {
     Rational density;
     const char *const *without;
     size_t without_count;
-    const char *development;  /* "melody", "balanced" or "theme" for a theme; NULL for none (not echoed) */
+    const char *development;  /* "melody", "balanced", "theme" or "blueprint" for a theme; NULL for none (not echoed) */
+    const char *preset;       /* the preset a theme request names (R-754); NULL for none (not echoed) */
 } GrowBrief;
 
 /* "melody", "balanced" or "theme". */

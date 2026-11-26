@@ -722,7 +722,7 @@ static void expect_development(const char *value, const char *expected) {
 }
 
 static void test_development_setting(void) {
-    expect_development(NULL, "balanced");
+    expect_development(NULL, "blueprint");
     expect_development("\"balanced\"", "balanced");
     expect_development("\"melody\"", "melody");
     expect_development("\"theme\"", "theme");
@@ -852,7 +852,7 @@ static void test_refused(void) {
     expect_refused("ideas", "{\"repetition\": \"B\"}", URSATZ_ERR_REQUEST, "/ideas/repetition", "which the request does not have");
     expect_refused("chords", "[{\"bar\": 9, \"text\": \"I\"}]", URSATZ_ERR_REQUEST, "/chords/0", "the theme has bars 0 to 7");
     expect_refused("style", "\"no-such-style.json\"", URSATZ_ERR_UNSATISFIABLE, "/style", "cannot read style");
-    expect_refused("development", "\"wild\"", URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced or theme");
+    expect_refused("development", "\"wild\"", URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced, theme or blueprint");
     expect_refused("development", "3", URSATZ_ERR_REQUEST, "/development", "development");
     expect_refused("tempo", "500", URSATZ_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
     expect_refused("explain", "\"xml\"", URSATZ_ERR_REQUEST, "/explain", "explain must be");

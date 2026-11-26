@@ -68,8 +68,9 @@ endfunction()
 # --- overrides (R-672) -------------------------------------------------------------------
 
 # One theme at a seed with a settings document (or none): the file it wrote is <dir>/01.mid.
+# The balanced development: the seeds that case measured (R-672) were measured on it, and a blueprint (the default since R-756) is not the same theme.
 function(theme_with seed settings dir)
-    set(arguments listen --what themes --count 1 --seed ${seed} --out-dir ${dir})
+    set(arguments listen --what themes --count 1 --seed ${seed} --development balanced --out-dir ${dir})
     if(NOT settings STREQUAL "")
         list(APPEND arguments --settings ${settings})
     endif()
@@ -79,8 +80,8 @@ endfunction()
 
 if(CASE STREQUAL "plans")
     # --plans (R-721) puts each theme's plan in its JSON and changes nothing else: the files of the same sample are the same bytes.
-    run("${COMPOSER}" listen --what themes --count 1 --seed 5 --out-dir without)
-    run("${COMPOSER}" listen --what themes --count 1 --seed 5 --plans --out-dir with)
+    run("${COMPOSER}" listen --what themes --development balanced --count 1 --seed 5 --out-dir without)
+    run("${COMPOSER}" listen --what themes --development balanced --count 1 --seed 5 --plans --out-dir with)
     expect_samples(without 1)
     expect_samples(with 1)
     compare_files(TRUE without/01.mid with/01.mid)
@@ -165,9 +166,9 @@ if(CASE STREQUAL "theme_variety")
     # the first two themes are the same and the third is another.
     file(WRITE "${WORK}/zero.json" "{\"candidates\": {\"variety\": 0}}")
     file(WRITE "${WORK}/varied.json" "{\"candidates\": {\"variety\": 20, \"pool\": 8}}")
-    expect_status(0 listen --what themes --count 3 --seed 20 --out-dir plain)
-    expect_status(0 listen --what themes --count 3 --seed 20 --settings zero.json --out-dir zero)
-    expect_status(0 listen --what themes --count 3 --seed 20 --settings varied.json --out-dir varied)
+    expect_status(0 listen --what themes --development balanced --count 3 --seed 20 --out-dir plain)
+    expect_status(0 listen --what themes --development balanced --count 3 --seed 20 --settings zero.json --out-dir zero)
+    expect_status(0 listen --what themes --development balanced --count 3 --seed 20 --settings varied.json --out-dir varied)
     foreach(i 1 2 3)
         compare_files(TRUE plain/0${i}.mid zero/0${i}.mid)
         compare_files(TRUE plain/0${i}.musicxml zero/0${i}.musicxml)
@@ -176,8 +177,8 @@ if(CASE STREQUAL "theme_variety")
     compare_files(TRUE plain/02.mid varied/02.mid)
     compare_files(FALSE plain/03.mid varied/03.mid)
     # a theme made from a motif the user gave has no generated motif to vary
-    expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --out-dir fixed-plain)
-    expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --settings varied.json --out-dir fixed-varied)
+    expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --out-dir fixed-plain)
+    expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77-chords.json" --settings varied.json --out-dir fixed-varied)
     compare_files(TRUE fixed-plain/02.mid fixed-varied/02.mid)
     return()
 endif()
@@ -255,6 +256,28 @@ foreach(i 01 02 03)
         compare_files(TRUE motifs-a/${i}.${extension} motifs-b/${i}.${extension})
     endforeach()
 endforeach()
+
+# The blueprint strategy (P69c, R-753): two motifs of two bars from the sentence's basic idea, the same seed giving the same files.
+expect_status(0 listen --what motifs --count 2 --seed 5 --strategy blueprint --out-dir motifs-bp)
+expect_samples(motifs-bp 2)
+expect_status(0 listen --what motifs --count 2 --seed 5 --strategy blueprint --out-dir motifs-bp2)
+foreach(i 01 02)
+    foreach(extension mid musicxml json)
+        compare_files(TRUE motifs-bp/${i}.${extension} motifs-bp2/${i}.${extension})
+    endforeach()
+endforeach()
+expect_status(1 listen --what motifs --count 1 --strategy wild --out-dir motifs-bad)
+
+# A preset (P69c B5, R-754): a theme made from the u51 motif with --preset ff7 names it in the manifest, and an unknown one is a usage error.
+expect_status(0 listen --what themes --count 1 --seed 1 --development blueprint --preset ff7 --motif "${FIXTURES}/continuation/u51-chords.json" --out-dir themes-preset)
+expect_samples(themes-preset 1)
+file(STRINGS "${WORK}/themes-preset/listen.jsonl" preset_lines)
+list(GET preset_lines 0 preset_line)
+string(JSON preset_named GET "${preset_line}" preset)
+if(NOT preset_named STREQUAL "ff7")
+    message(FATAL_ERROR "the manifest does not name the preset: ${preset_line}")
+endif()
+expect_status(1 listen --what motifs --count 1 --preset nothing --out-dir motifs-bad-preset)
 
 # --- settings ----------------------------------------------------------------------------
 
@@ -343,11 +366,11 @@ if(NOT CASE STREQUAL "motifs" AND NOT CASE STREQUAL "theme_settings")
 # --- themes ------------------------------------------------------------------------------
 
 # A generated motif for each sample.
-expect_status(0 listen --what themes --count 2 --seed 1 --out-dir themes-generated)
+expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --out-dir themes-generated)
 expect_samples(themes-generated 2)
 
 # A motif file, in 6/8.
-expect_status(0 listen --what themes --count 1 --seed 1 --meter 6/8 --motif "${FIXTURES}/motifs/test-motif-6-8.json"
+expect_status(0 listen --what themes --development balanced --count 1 --seed 1 --meter 6/8 --motif "${FIXTURES}/motifs/test-motif-6-8.json"
               --out-dir themes-motif)
 expect_samples(themes-motif 1)
 file(STRINGS "${WORK}/themes-motif/listen.jsonl" lines)
@@ -360,7 +383,7 @@ endif()
 # A motif file of eighth triplets (R-442): its notes text writes with triplet values, the theme request is built from it, and
 # both samples are composed.
 file(WRITE "${WORK}/triplet-motif.txt" "C4:e3 D4:e3 E4:e3 G4:q E4:e3 D4:e3 C4:e3 E4:q G4:h C5:h\n")
-expect_status(0 listen --what themes --count 2 --seed 1 --meter 4/4 --motif triplet-motif.txt --out-dir themes-triplets)
+expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --meter 4/4 --motif triplet-motif.txt --out-dir themes-triplets)
 expect_samples(themes-triplets 2)
 file(STRINGS "${WORK}/themes-triplets/listen.jsonl" lines)
 foreach(line IN LISTS lines)
@@ -379,7 +402,7 @@ if(NOT CASE STREQUAL "motifs" AND NOT CASE STREQUAL "themes")
 file(WRITE "${WORK}/l3-development.json"
      "{\"development\": {\"continuation\": {\"every_segment\": true, \"fragment_lengths\": {\"segment\": 1, \"half_bar\": 1, "
      "\"beat\": 1}, \"diminish\": true, \"liquidate\": true, \"faster_harmony\": true}, \"basic_as_written\": true}}")
-expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77.json"
+expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77.json"
               --settings l3-development.json --out-dir themes-l3)
 expect_samples(themes-l3 2)
 
@@ -388,7 +411,7 @@ expect_samples(themes-l3 2)
 file(WRITE "${WORK}/l4-settings.json"
      "{\"melody\": {\"closure\": {\"final\": 20, \"first\": 10}, \"rhythm_repeat_bars\": 3, \"leaps\": 10, \"register\": 10}, "
      "\"development\": {\"contrast\": {\"distance\": {\"similar\": 1, \"distant\": 1}, \"new_material\": 1}}}")
-expect_status(0 listen --what themes --count 2 --seed 1 --into period --bars 8 --settings l4-settings.json --out-dir themes-l4)
+expect_status(0 listen --what themes --development balanced --count 2 --seed 1 --into period --bars 8 --settings l4-settings.json --out-dir themes-l4)
 file(STRINGS "${WORK}/themes-l4/listen.jsonl" lines)
 list(GET lines 0 first)
 string(JSON l4_final GET "${first}" preferences melody closure final)

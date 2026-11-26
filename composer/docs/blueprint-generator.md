@@ -1,0 +1,49 @@
+# The blueprint generator (P69c, R-751, R-752)
+
+With `development` `blueprint` the Composer writes the theme's blueprint itself, from the motif, the K8 slot expectations of the sentence and the period (R-749) and the blueprint preferences ([preferences-blueprint.md](preferences-blueprint.md)), and then realizes it through the path of a request's blueprint ([blueprints.md](blueprints.md)). The code is `composer/src/grow/grow_blueprint_generate.c`; `grow_one` (`api/api_grow.c`) runs it for each seed.
+
+## What a request must be
+
+`generate_refusal` in `api/api_theme.c` is NULL when the request fits: `bars` 8; `into` sentence or period; no `construction`, `hybrid`, `blueprint`, `chords`, `ideas`, `style` or `voicing`; every slot but `basic` absent or null; `slots.basic` a full motive (not a rhythm or a contour) of at most 2 bars; the material `omt.material.major` or `omt.material.natural-minor`; the meter 4/4, 3/4 or 6/8. With `development` `blueprint` and a reason, the request is refused at `/development` (`URSATZ_ERR_REQUEST`): "development blueprint writes an 8-bar sentence or period from a motif of up to 2 bars in a major or minor key in 4/4, 3/4 or 6/8: <reason>" (the reason is, for example, "the request gives chords" or "the theme has 4 bars"). Pieces are not themes and do not go through it.
+
+## The draw of one seed
+
+The run draws with `fill_rng_seed(seed + 11)`, in four steps; any `GROW_ERR_STUCK` lets the run try the next seed, as a stuck stage does.
+
+1. **The blueprint, `grow_blueprint_generate`.** The theme type is `omt.theme-type.sentence` or `.period` (by the pairing); idea k covers the bars after the units before it (a unit is a bar in 8 bars).
+   - *Chords.* The basic idea's bars read the basic motive's own harmony at each harmony cell (a cell takes the chord sounding at its start, one with the chord of the cell before adds nothing; a motive with no harmony is `I` in each bar; a 1-bar motive's bar 1 takes the chord sounding at its end). Every other idea with `expect.harmony` draws one alternative uniformly among those that fit the meter's cells (`restate` copies the basic idea's texts); a template's `@k` is the k-th cell of the bar, written as the meter writes an onset (`@2` in 4/4, `@3` in 6/8; 3/4 has one cell a bar, so only the one-chord alternatives fit). The bass check: a chord's bass is its root, or its third, fifth or seventh by the figure, on the key's scale (the minor key's V and V7 take the raised seventh degree); two neighbouring chords whose basses make an augmented or diminished interval fail the draw, up to 16 draws of all drawn ideas, then `GROW_ERR_STUCK` ("no blueprint chords fit the bass").
+   - *Rhythms.* A bar of an idea with `expect.jobs` that is not a basic-slot idea (the repetition and the consequent basic idea restate the motif). A unit whose jobs are only `liquidation` or only `cadence` takes it. Otherwise the candidates are the unit's jobs among running, long, syncopated, variant and contrast whose weight in `jobs[<function>]` is above 0, drawn in proportion to it; none above 0 takes the unit's lowest-bit job. A running, long, syncopated or cadence bar draws a K11 rhythm cell of the meter with that job, each cell weighted 1, or 1 + `sounds.long_weak` when it holds a note of a beat or longer off the downbeat; a cell that begins with a half note is skipped when the bar before ends with one. A job with no cell in the meter is not a candidate (3/4 has no syncopated cell). The bar is written as the job `GROW_JOB_ENTRY` with the cell's entry; variant, contrast and liquidation are written as their jobs for the draw of a request's blueprint.
+2. **The checks and the draw.** `grow_blueprint_check_ideas` takes the blueprint (the basic slot is the request's), then `grow_blueprint_draw` makes every bar's rhythm as it does for a request.
+3. **The climax and the sounds, `grow_blueprint_generate_marks`.**
+   - *Climax.* One of the K8 climax units (bar 5 or 6 of a sentence, drawn by `climax.m6` and `climax.m7`; bar 6 of a period), on the longest note of that bar's rhythm that starts at least a beat in (else its first note); its pitch is the lowest tone of the chord sounding there that is at least 8 semitones above the basic motive's highest note and not above the melody's top (the request's `melody.range.high`, else 84). None: stuck. The run's melody range narrows to the climax at the top and `max(blueprint.range, climax - the motif's lowest note)` below it, never wider than it was.
+   - *Sounds.* The K8 sound places in bar order, the basic-slot ideas left out (the motif stays as written). Each draws one kind among its allowed kinds with weight above 0 against none (weight 2); ninth, suspended fourth, major seventh and leading tone at most once a theme, the appoggiatura any number of times; a bar takes one sound. A sound that cannot be realized is dropped. Each is written as anchors (pitches on note onsets, kept under the climax and inside the range), events and a changed chord text: **appoggiatura** a scale step above a chord tone on the bar's first note, resolving to the second note of the same chord; **ninth_downbeat** over a major or minor triad in root position held a beat or more, the chord gaining `add9` (`iadd9` in the case of its quality); **major_seventh** on the bar's longest note over I or IV (major) or III or VI (minor), the chord gaining `maj7`; **sus4_dominant** over a dominant that fills the bar: `Vsus4` for the first cell and the dominant after it, the first note the tonic, the first note of the second cell the leading tone; **leading_tone** on the bar's last note over V or V7, with the final tonic a semitone above it on the next bar's first note.
+4. **The chords are read** (`api_blueprint_chords`, the reader a request's blueprint uses), the melody range is set, and the plan is built and run as a request's blueprint is.
+
+## The default (R-756)
+
+A theme request that names no `development` is written as a blueprint when `generate_refusal` finds nothing against it (`generate_blueprint` is then set and the brief and the explanation say `blueprint`); a request that does not fit, or one that names `melody`, `balanced` or `theme`, is composed as it was. When no blueprint could be written and composed for a request that did not ask for one (every seed stuck), `composer_api_theme` composes it again as `balanced` rather than refusing it. The GUI's form default and `ursatz listen`'s are `blueprint` (the vocabulary's `defaults.theme.development`); `listen` names no development unless `--development` is given, so a sample that does not fit is balanced. Pieces are not themes: their sections do not go through it. The snapshot tests pin `balanced` in their requests (`theme/one-motive.json`, `period-contrast.json`) and `theme-blueprint` records the default.
+
+## Ranking
+
+`blueprint.candidates` above 1 makes `api_grow_run` collect that many themes for each one kept (`critic.candidates` instead when `critic.rank` is on and larger) and rank them with the critic ([critic.md](critic.md#ranking-blueprint-candidates-r-755)); `api_theme.c` sets the run's critic settings to the request's, or the defaults, whenever a blueprint is generated. The kept theme's `critic` and the `rejected` candidates are in the response; with `candidates` 1 neither is.
+
+## The echo
+
+Each theme of the response has `blueprint`, in the form a request's `blueprint` reads: each bar's `chords`; for every bar outside the basic-slot ideas its drawn `rhythm`, with `anchors` and `events` (the onsets in beats, the pitches as note names); the `climax`. Sent back with the same motif, `development` `balanced`, the theme's `seed` and the melody range of the run (the climax at the top), it renders the same notes. The brief and the explanation say `blueprint`; the vocabulary's `theme_developments` has the fourth row. `listen --development blueprint` asks for it.
+
+## The motif strategy
+
+`strategy` `blueprint` of the random motive and `listen --strategy blueprint` draw a two-bar motif from the same expectations: the basic idea's chords and rhythm jobs, a ninth or an appoggiatura on the downbeat. The rhythm helpers the generator and the strategy share (`composer_rhythm_cells`, `composer_rhythm_cell_notes`, `composer_rhythm_draw_cell`, `composer_rhythm_variant`, `composer_rhythm_contrast`, `composer_draw_weighted`) are in `motive_blueprint.c`. See [cli-random-motive.md](../../cli/docs/cli-random-motive.md#the-blueprint-strategy-r-753).
+
+## Measured (P69c, gate 2)
+
+`test_blueprint_generator_sweep` ([testing/theme-quality.md](testing/theme-quality.md#the-blueprint-generator-sweep-p69c-gate-2-of-r-757)), seeds 1 to 10, default development, `blueprint.candidates` 1:
+
+| Fixture (key C) | Sentence | Period |
+|---|---|---|
+| `continuation/s77-chords` (major, 4/4) | 10 of 10 | 10 of 10 |
+| `continuation/u51-chords` (minor, 4/4) | 10 of 10 | 10 of 10 |
+| `rates/two-bar-3-4` (minor, 3/4) | 10 of 10 | 10 of 10 |
+| `motifs/motive-d-minor-arpeggio` (minor, 4/4) | 10 of 10 | 10 of 10 |
+
+In every composed theme the fixed items of the echoed blueprint hold, the range, climax, half-note and rhythm checks pass. Gate 3 is a `Listen Ursatz` round after the pull request merges.

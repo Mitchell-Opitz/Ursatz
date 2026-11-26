@@ -56,18 +56,18 @@ const sentence = T.bodyFromForm({ ...filled(), into: "sentence", hybrid: "cbi+ca
 check(!("hybrid" in sentence.request) && !("first_cadence" in sentence.request), "a sentence has no pairing and no first cadence");
 
 /* development setting */
-check(T.emptyState("x").development === "balanced" && T.themeOfBody(body).form.development === "balanced", "the default development is balanced");
+check(T.emptyState("x").development === "blueprint" && T.themeOfBody(body).form.development === "blueprint", "the default development is blueprint");
 const developed = T.bodyFromForm({ ...filled(), development: "theme" });
 check(T.themeOfBody(developed).form.development === "theme", "bodyFromForm writes the development");
 check(T.formFromBody(developed, "thm-1").development === "theme", "a stored body with a development reads it back");
 const older = JSON.parse(JSON.stringify(developed));
 delete older.request.development;
-check(T.formFromBody(older, "thm-1").development === "balanced", "a stored body without a development reads as balanced");
+check(T.formFromBody(older, "thm-1").development === "blueprint", "a stored body without a development reads as blueprint");
 const odd = JSON.parse(JSON.stringify(developed));
 odd.request.development = "wild";
-check(T.formFromBody(odd, "thm-1").development === "balanced", "an unknown stored development reads as balanced");
-check(T.themeOfBody(T.bodyFromForm({ ...filled(), development: "wild" })).form.development === "balanced", "an unknown development is written as balanced");
-check(same(T.developmentChoices().map((entry) => entry.value), ["melody", "balanced", "theme"]) && T.developmentChoices().every((entry) => entry.label && entry.help), "the development choices come from the vocabulary");
+check(T.formFromBody(odd, "thm-1").development === "blueprint", "an unknown stored development reads as blueprint");
+check(T.themeOfBody(T.bodyFromForm({ ...filled(), development: "wild" })).form.development === "blueprint", "an unknown development is written as blueprint");
+check(same(T.developmentChoices().map((entry) => entry.value), ["melody", "balanced", "theme", "blueprint"]) && T.developmentChoices().every((entry) => entry.label && entry.help), "the development choices come from the vocabulary");
 check(T.chordBars() === 16 && T.maxExtensions() === 3, "the chord row and the extensions follow the vocabulary");
 check(T.fieldForPath("/development") === "development", "/development marks the development");
 check(T.tabOfField("development") === "structure", "the development is on the structure tab");

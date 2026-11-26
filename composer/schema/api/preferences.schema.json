@@ -967,7 +967,9 @@
               "stray_syncopation",
               "one_rhythm",
               "repeated_notes",
-              "wide_range"
+              "wide_range",
+              "register_shift",
+              "half_notes"
             ]
           },
           "description": "Evaluators whose penalty counts for a candidate instead of against it."
@@ -1024,6 +1026,18 @@
               "minimum": 0,
               "maximum": 20,
               "description": "A range wider than a tenth. Weight 0 to 20; default 1."
+            },
+            "register_shift": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A shift of register of more than a fifth from one bar to the next. Weight 0 to 20; default 1."
+            },
+            "half_notes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Half notes one after another. Weight 0 to 20; default 1."
             }
           }
         }
@@ -1081,6 +1095,242 @@
               "description": "The K2 chord type ids a color type is drawn from, among those that fit the chord. Default the ten persichetti types."
             }
           }
+        }
+      }
+    },
+    "blueprint": {
+      "type": "object",
+      "description": "The settings of the blueprint generator (docs/preferences-blueprint.md, R-750).",
+      "additionalProperties": false,
+      "properties": {
+        "sounds": {
+          "type": "object",
+          "description": "How often the generator draws a sound against none, and the weight of a rhythm cell holding a long note off the downbeat (R-750). Weights 0 to 20.",
+          "additionalProperties": false,
+          "properties": {
+            "ninth_downbeat": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A ninth over the chord on a bar's downbeat. Default 3."
+            },
+            "sus4_dominant": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A suspended fourth before the dominant chord. Default 2."
+            },
+            "appoggiatura": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "An appoggiatura on a bar's downbeat. Default 3."
+            },
+            "major_seventh": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A major seventh on the longest note of a tonic or subdominant bar. Default 1."
+            },
+            "leading_tone": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "The leading tone into the final tonic. Default 2."
+            },
+            "long_weak": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "The extra weight of a rhythm cell holding a note of a beat or longer off the downbeat. Default 2."
+            }
+          }
+        },
+        "jobs": {
+          "type": "object",
+          "description": "The weight of each rhythm job a unit of an idea may take, per formal function (R-750).",
+          "additionalProperties": false,
+          "properties": {
+            "basic": {
+              "type": "object",
+              "description": "The basic idea's second bar (the motif strategy blueprint reads it). Defaults running 2, long 3, syncopated 1, variant 2, contrast 1.",
+              "additionalProperties": false,
+              "properties": {
+                "running": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job running. Weight 0 to 20."
+                },
+                "long": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job long. Weight 0 to 20."
+                },
+                "syncopated": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job syncopated. Weight 0 to 20."
+                },
+                "variant": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job variant. Weight 0 to 20."
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job contrast. Weight 0 to 20."
+                }
+              }
+            },
+            "fragment": {
+              "type": "object",
+              "description": "The sentence's first fragment. Defaults running 3, long 0, syncopated 2, variant 1, contrast 1.",
+              "additionalProperties": false,
+              "properties": {
+                "running": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job running. Weight 0 to 20."
+                },
+                "long": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job long. Weight 0 to 20."
+                },
+                "syncopated": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job syncopated. Weight 0 to 20."
+                },
+                "variant": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job variant. Weight 0 to 20."
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job contrast. Weight 0 to 20."
+                }
+              }
+            },
+            "contrasting": {
+              "type": "object",
+              "description": "The contrasting idea of a period and its consequent. Defaults running 1, long 1, syncopated 1, variant 0, contrast 3.",
+              "additionalProperties": false,
+              "properties": {
+                "running": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job running. Weight 0 to 20."
+                },
+                "long": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job long. Weight 0 to 20."
+                },
+                "syncopated": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job syncopated. Weight 0 to 20."
+                },
+                "variant": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job variant. Weight 0 to 20."
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job contrast. Weight 0 to 20."
+                }
+              }
+            },
+            "cadential": {
+              "type": "object",
+              "description": "The sentence's cadential idea's first bar. Defaults running 2, long 2, syncopated 1, variant 1, contrast 0.",
+              "additionalProperties": false,
+              "properties": {
+                "running": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job running. Weight 0 to 20."
+                },
+                "long": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job long. Weight 0 to 20."
+                },
+                "syncopated": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job syncopated. Weight 0 to 20."
+                },
+                "variant": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job variant. Weight 0 to 20."
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "description": "The weight of the job contrast. Weight 0 to 20."
+                }
+              }
+            }
+          }
+        },
+        "climax": {
+          "type": "object",
+          "description": "The weight of the climax in bar 5 (m6) and bar 6 (m7) of a sentence (R-750). Weights 0 to 20; both 0 takes the last.",
+          "additionalProperties": false,
+          "properties": {
+            "m6": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "The climax in bar 5. Default 1."
+            },
+            "m7": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "The climax in bar 6. Default 2."
+            }
+          }
+        },
+        "range": {
+          "type": "integer",
+          "minimum": 12,
+          "maximum": 24,
+          "description": "The semitones the melody spans below the climax. 12 to 24; default 16."
+        },
+        "candidates": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "description": "The themes drawn for one request, of which the critic keeps one. 1 to 8; default 3."
         }
       }
     }

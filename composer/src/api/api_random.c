@@ -116,7 +116,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return URSATZ_ERR_REQUEST;
     }
     if (present && !motive_random_strategy_parse(strategy_text, &out->strategy)) {
-        return api_fail(error, URSATZ_ERR_REQUEST, "/strategy", "strategy must be segments or drawn, not '%s'",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/strategy", "strategy must be segments, drawn or blueprint, not '%s'",
                         strategy_text);
     }
     if (!api_member_string(request, "role", &role_text, has_role, error)) {
@@ -126,11 +126,12 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return api_fail(error, URSATZ_ERR_REQUEST, "/role", "role must be melodic or accompaniment, not '%s'", role_text);
     }
     /* The motif group steers the segments strategy; the drawn strategy keeps its constants (R-304). */
-    if (!api_read_preferences(request, preferences, has_preferences, error)) {
+    if (!api_read_preferences_with_preset(request, preferences, has_preferences, NULL, 0, error)) {
         return URSATZ_ERR_REQUEST;
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;
     out->color = *has_preferences ? &preferences->harmony.color : NULL;
+    out->blueprint = *has_preferences ? &preferences->blueprint : NULL;
     /* The candidates group (R-673): variety 0, the default, draws as it always did. */
     out->variety = *has_preferences ? preferences->candidates.variety : 0;
     out->pool = *has_preferences ? preferences->candidates.pool : 4;

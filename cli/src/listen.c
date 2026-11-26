@@ -39,8 +39,10 @@ typedef struct {
     const char *style_path;
     const char *tempo_text;
     const char *strategy_text;
+    const char *preset_text; /* --preset: a preset of the Composer (R-754), for motifs and themes */
     const char *into_text;
     const char *development_text;
+    bool development_given; /* --development was on the command line: a request names no development otherwise, and the Composer writes a blueprint when it can (R-756) */
     const char *bars_text;
     const char *motif_path;
     const char *theme_request_path;
@@ -83,6 +85,7 @@ static const CliOptionRow ROWS[] = {
     {"--style", offsetof(Options, style_path), false},
     {"--tempo", offsetof(Options, tempo_text), false},
     {"--strategy", offsetof(Options, strategy_text), false},
+    {"--preset", offsetof(Options, preset_text), false},
     {"--into", offsetof(Options, into_text), false},
     {"--development", offsetof(Options, development_text), false},
     {"--bars", offsetof(Options, bars_text), false},
@@ -136,8 +139,9 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--into must be sentence or period, not '%s'", options->into_text);
     }
     if (options->development_text && strcmp(options->development_text, "melody") != 0 &&
-        strcmp(options->development_text, "balanced") != 0 && strcmp(options->development_text, "theme") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--development must be melody, balanced or theme, not '%s'", options->development_text);
+        strcmp(options->development_text, "balanced") != 0 && strcmp(options->development_text, "theme") != 0 &&
+        strcmp(options->development_text, "blueprint") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--development must be melody, balanced, theme or blueprint, not '%s'", options->development_text);
     }
     if (options->bars_text && strcmp(options->bars_text, "4") != 0 && strcmp(options->bars_text, "8") != 0) {
         return cli_fail(CLI_EXIT_USAGE, "--bars must be 4 or 8, not '%s'", options->bars_text);
@@ -145,8 +149,9 @@ static int check_options(Options *options) {
     if (!options->into_text) {
         options->into_text = "sentence";
     }
+    options->development_given = options->development_text != NULL;
     if (!options->development_text) {
-        options->development_text = "balanced";
+        options->development_text = "blueprint";
     }
     if (!options->bars_text) {
         options->bars_text = "8";
@@ -175,8 +180,9 @@ static int check_options(Options *options) {
     if (!options->strategy_text) {
         options->strategy_text = "segments";
     }
-    if (strcmp(options->strategy_text, "segments") != 0 && strcmp(options->strategy_text, "drawn") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--strategy must be segments or drawn, not '%s'", options->strategy_text);
+    if (strcmp(options->strategy_text, "segments") != 0 && strcmp(options->strategy_text, "drawn") != 0 &&
+        strcmp(options->strategy_text, "blueprint") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--strategy must be segments, drawn or blueprint, not '%s'", options->strategy_text);
     }
     return 0;
 }
@@ -330,6 +336,7 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
                                               : cJSON_AddNullToObject(line, "blend") != NULL);
     ok = ok && (manifest->options->settings_path ? cJSON_AddStringToObject(line, "settings", manifest->options->settings_path)
                                                  : cJSON_AddNullToObject(line, "settings"));
+    ok = ok && (!manifest->options->preset_text || cJSON_AddStringToObject(line, "preset", manifest->options->preset_text) != NULL);
     ok = ok && (manifest->preferences ? cJSON_AddItemToObject(line, "preferences", cJSON_Duplicate(manifest->preferences, true))
                                       : cJSON_AddNullToObject(line, "preferences") != NULL);
     ok = ok && cJSON_AddItemToObject(line, "files", files) && cJSON_AddStringToObject(line, "status", sample->status);
@@ -369,6 +376,7 @@ static cJSON *random_motive_request(const Options *options, unsigned long seed, 
     bool ok = request && cJSON_AddStringToObject(request, "material", options->material_text) &&
               cJSON_AddStringToObject(request, "meter", options->meter_text) &&
               cJSON_AddStringToObject(request, "strategy", options->strategy_text) && cJSON_AddNumberToObject(request, "count", 1) &&
+              (!options->preset_text || cJSON_AddStringToObject(request, "preset", options->preset_text)) &&
               cJSON_AddStringToObject(request, "seed", seed_text(seed, number, sizeof number)) &&
               (!options->style_path || cJSON_AddStringToObject(request, "style", options->style_path)) &&
               (!preferences || cJSON_AddItemToObject(request, "preferences", cJSON_Duplicate(preferences, true))) &&
@@ -482,6 +490,7 @@ static bool add_brief(cJSON *request, const Options *options) {
                  {"blend", options->blend_path},
                  {"blend_weight", options->blend_weight_text},
                  {"blend_weights", options->blend_weights_text},
+                 {"preset", options->preset_text},
                  {"tempo", options->tempo_text}};
     for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
         ok = !texts[i].text || set_member(request, texts[i].name, cJSON_CreateString(texts[i].text));
@@ -578,7 +587,7 @@ static cJSON *theme_request_from_motive(const Options *options, const cJSON *doc
          cJSON_AddStringToObject(request, "into", options->into_text) && cJSON_AddStringToObject(request, "key", "C") &&
          cJSON_AddStringToObject(request, "material", options->material_text) && cJSON_AddStringToObject(request, "meter", meter_text) &&
          cJSON_AddNumberToObject(request, "bars", options->bars_text[0] - '0') &&
-         cJSON_AddStringToObject(request, "development", options->development_text) &&
+         (!options->development_given || cJSON_AddStringToObject(request, "development", options->development_text)) &&
          cJSON_AddStringToObject(entry, "id", "M1") && cJSON_AddStringToObject(entry, "form", "full") &&
          cJSON_AddStringToObject(entry, "degrees", degrees->valuestring) &&
          cJSON_AddStringToObject(entry, "pickup", cJSON_IsString(pickup) ? pickup->valuestring : "0") &&

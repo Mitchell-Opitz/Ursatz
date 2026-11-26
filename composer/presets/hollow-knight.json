@@ -1,0 +1,56 @@
+{
+  "schema": "ursatz-preset",
+  "schema_version": 1,
+  "name": "hollow-knight",
+  "label": "Hollow Knight",
+  "source": "Claude Master references.md ref-4-hollowknight (rated 5) and taste-profile.md, style none",
+  "preferences": {
+    "motif": {
+      "durations": {
+        "half_beat": 4,
+        "beat": 2,
+        "two_beats": 2,
+        "long_short": 2
+      },
+      "features": {
+        "dotted": 3,
+        "leap": 0,
+        "repeat": 0
+      },
+      "rung_moves": {
+        "step": 6,
+        "skip": 0
+      },
+      "decorations": {
+        "chord_tone": 0,
+        "passing": 4,
+        "neighbor": 4,
+        "appoggiatura": 2,
+        "escape": 0
+      },
+      "avoid_repeats": true,
+      "leaps_per_motif": 0,
+      "accented_one_in": 1
+    },
+    "melody": {
+      "cadence_long": true
+    },
+    "blueprint": {
+      "sounds": {
+        "ninth_downbeat": 6,
+        "sus4_dominant": 4,
+        "appoggiatura": 1,
+        "major_seventh": 6,
+        "leading_tone": 0,
+        "long_weak": 4
+      },
+      "climax": {
+        "m6": 1,
+        "m7": 1
+      }
+    }
+  },
+  "accompaniment": {
+    "pattern": "michelle.pattern.arpeggio-wave"
+  }
+}

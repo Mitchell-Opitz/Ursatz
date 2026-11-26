@@ -71,7 +71,9 @@
                     "stray_syncopation",
                     "one_rhythm",
                     "repeated_notes",
-                    "wide_range"
+                    "wide_range",
+                    "register_shift",
+                    "half_notes"
                   ]
                 },
                 "penalty": {

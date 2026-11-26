@@ -77,6 +77,46 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
                                        Motive *out, MotiveError *error);
 
 /*
+ * The rhythms of a blueprint's bars (R-745), as the draws of the blueprint generator (R-751) and of the blueprint motif strategy (R-753)
+ * share them. A rhythm is the PlanNote list of one bar: offsets from the bar's start, a gap a rest, the pitches not read; the list holds
+ * at most COMPOSER_RHYTHM_NOTES_MAX notes and every `out` below has room for that many.
+ */
+#define COMPOSER_RHYTHM_NOTES_MAX 63
+
+/* The K11 rhythm cells of the meter that have the job's bit (PATTERN_JOB_*; a mask of 0: every one), up to `capacity`. */
+size_t composer_rhythm_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity);
+
+/* The rhythm of a K11 cell as one bar of the meter; false when its text does not fill a bar exactly or has no note. */
+bool composer_rhythm_cell_notes(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, PlanNote *out,
+                                size_t *out_count);
+
+/*
+ * The variant of a rhythm (R-745): one note split in two equal halves or two neighbours joined, one draw (fill_rng_below) among all of
+ * them. False, with nothing drawn, for a rhythm with none (no notes).
+ */
+bool composer_rhythm_variant(const PlanNote *base, size_t count, FillRng *rng, PlanNote *out, size_t *out_count);
+
+/*
+ * The contrast to a rhythm (R-745): a cell of the meter whose rhythm is at most half as similar to `base` as similarity_rhythm_score
+ * measures it, one draw among those; none that far takes the least similar one with no draw. False when the meter has no cell.
+ */
+bool composer_rhythm_contrast(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, const PlanNote *base, size_t count, FillRng *rng,
+                              PlanNote *out, size_t *out_count);
+
+/* The index of a draw in proportion to the weights (fill_rng_below on their sum); `count` when every weight is 0 (no draw is made). */
+size_t composer_draw_weighted(FillRng *rng, const unsigned *weights, size_t count);
+
+/*
+ * One K11 cell of the meter with the job (PATTERN_JOB_*), drawn in proportion to its weight: 1, or 1 + `long_weak` when it holds a note of a
+ * beat or longer that starts off the downbeat (a beat: the beat unit, a dotted quarter in 6/8); a cell whose first note is exactly a half
+ * note has weight 0 when `previous_ends_half` (the bar before ends with exactly a half note). The cell and its rhythm in out/out_count; NULL,
+ * with no draw, when none has weight. With `commit` false nothing is drawn: the first cell is answered when one has weight, NULL when none.
+ */
+const PatternEntry *composer_rhythm_draw_cell(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned pattern_job,
+                                              bool previous_ends_half, unsigned long_weak, bool commit, FillRng *rng, PlanNote *out,
+                                              size_t *out_count);
+
+/*
  * Attaches a rhythm-only motive (R-746): the motive's notes (their pitches are not read: a rhythm sounds degree 1) as a Given motive
  * node under parent at start, as motive_attach does, with a motive_tones constraint that labels every note "rhythm". The melody stage
  * then places them as notes of its own (melody_context.c), and the harmony stage does not read the constraint's chords: the motive's
@@ -85,5 +125,51 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
  */
 PlanResult composer_rhythm_motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                          NodeId *out_node, LaneSpanId *out_span);
+
+/*
+ * The blueprint preferences (R-750, composer/docs/preferences-blueprint.md): what the blueprint generator and the blueprint motif strategy
+ * draw from. The weights are whole numbers 0 to 20 (0 never draws it). sounds: how often a sound is drawn against none (ninth on the
+ * downbeat, suspended fourth before the dominant, appoggiatura, major seventh, leading tone into the tonic) and `long_weak`, the extra
+ * weight of a rhythm cell holding a note of a beat or longer off the downbeat. jobs: per formal function of an idea, the weight of each
+ * rhythm job a unit may take. climax: the weight of the climax in bar 5 (m6) and in bar 6 (m7) of a sentence. range: the semitones
+ * the melody spans below the climax (12 to 24). candidates: the themes drawn for one request to rank (1 to 8).
+ */
+typedef enum {
+    BLUEPRINT_SOUND_NINTH_DOWNBEAT,
+    BLUEPRINT_SOUND_SUS4_DOMINANT,
+    BLUEPRINT_SOUND_APPOGGIATURA,
+    BLUEPRINT_SOUND_MAJOR_SEVENTH,
+    BLUEPRINT_SOUND_LEADING_TONE,
+    BLUEPRINT_SOUND_LONG_WEAK,
+    BLUEPRINT_SOUND_COUNT
+} BlueprintSound;
+
+typedef enum {
+    BLUEPRINT_FUNCTION_BASIC,
+    BLUEPRINT_FUNCTION_FRAGMENT,
+    BLUEPRINT_FUNCTION_CONTRASTING,
+    BLUEPRINT_FUNCTION_CADENTIAL,
+    BLUEPRINT_FUNCTION_COUNT
+} BlueprintFunction;
+
+typedef enum {
+    BLUEPRINT_JOB_RUNNING,
+    BLUEPRINT_JOB_LONG,
+    BLUEPRINT_JOB_SYNCOPATED,
+    BLUEPRINT_JOB_VARIANT,
+    BLUEPRINT_JOB_CONTRAST,
+    BLUEPRINT_JOB_COUNT
+} BlueprintJob;
+
+typedef struct {
+    unsigned sounds[BLUEPRINT_SOUND_COUNT];
+    unsigned jobs[BLUEPRINT_FUNCTION_COUNT][BLUEPRINT_JOB_COUNT];
+    unsigned climax[2]; /* m6 (bar 5), m7 (bar 6) */
+    unsigned range;
+    unsigned candidates;
+} BlueprintPreferences;
+
+/* Writes the defaults of R-750 into *out (composer/src/preferences/preferences_blueprint.c). */
+void blueprint_preferences_default(BlueprintPreferences *out);
 
 #endif

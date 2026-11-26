@@ -17,6 +17,7 @@
 #include <ursatz_composer/grow.h>
 #include "api_seed.h"
 #include "api_style.h"
+#include "grow/grow_internal.h"
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
@@ -89,6 +90,9 @@ typedef struct {
     PlanVoicing voicing;
     Rational style_weight;
     GrowDevelopment development;
+    const char *preset;                      /* the preset the request names (R-754), echoed in the brief; NULL for none; not owned */
+    bool generate_blueprint;                 /* development "blueprint" (R-752): the Composer writes the theme's blueprint from the motif (R-751) */
+    const BlueprintPreferences *blueprint_preferences; /* NULL for the defaults; not owned */
     const GrowContinuation *continuation;    /* NULL for the defaults; not owned */
     bool basic_as_written;                   /* a motif as long as the basic idea is it as written, over its own chords */
     const GrowContrast *contrast;            /* NULL for the defaults; not owned */
@@ -123,6 +127,20 @@ typedef struct {
     const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */
 } GrowSetup;
 
+/* The word of the setup's development as a brief and an explanation give it: "blueprint" when the Composer writes the blueprint, else the grow development's. */
+const char *api_setup_development_name(const GrowSetup *setup);
+
+/* What the development blueprint made for a theme and the theme keeps (R-751): the blueprint, its chords read, the run's melody range and the rhythms drawn. */
+typedef struct GrowGenerated {
+    GrowBlueprint blueprint;
+    GivenChord chords[GROW_EXT_CHORDS];
+    char numerals[GROW_EXT_CHORDS][PLAN_ROMAN_NUMERAL_MAX];
+    size_t chord_count;
+    MelodyFillParams melody;
+    GrowBlueprintLine rhythm[GROW_BLUEPRINT_BARS];
+    bool known[GROW_BLUEPRINT_BARS];
+} GrowGenerated;
+
 /* A theme made, with what the output of it needs. */
 typedef struct {
     Plan *plan;
@@ -134,6 +152,7 @@ typedef struct {
     size_t passed_before; /* how many of the seeds passed over came before this theme */
     bool judged;          /* the run ranked: the critic's judgment of the theme and its observations */
     CriticJudgment judgment;
+    GrowGenerated *generated; /* the blueprint the Composer wrote for the theme (development blueprint), else NULL; owned */
 } GrowTheme;
 
 typedef struct {
@@ -148,6 +167,15 @@ typedef struct {
     size_t rejected_count;
     bool ranked;                                   /* the run chose among candidates by the critic */
 } GrowRun;
+
+/*
+ * The chords of a blueprint's bars (R-744), each bar's text read as an entry of the request's "chords" is, into out (`capacity` of them,
+ * numerals alongside) and *count; a refusal names the bar's "chords" at /blueprint/bars/<bar>/chords. Shared by a request's blueprint and
+ * the generated one (R-751).
+ */
+UrsatzStatus api_blueprint_chords(const ComposerChords *chords, const struct GrowBlueprint *blueprint, const PlanMeter *meter,
+                                  const SpelledKey *key, size_t bars, GivenChord *out, char numerals[][PLAN_ROMAN_NUMERAL_MAX],
+                                  size_t capacity, size_t *count, UrsatzError *error);
 
 /*
  * Sets the tempo (from "option_tempo", else the style) and the mode of the key (mode "style" takes the style's) in out,

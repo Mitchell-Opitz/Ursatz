@@ -27,7 +27,7 @@ set(failed "")
 
 # The cases a comparing run snapshots: not read by any API test (motive, random-motive-segments, theme-one-motive-check) and
 # one front-end case per command the API tests cover.
-set(COMPARED_CASES theme-one-motive piece-theme-fill plan-binary grow-sentence motive-notes variants-basic
+set(COMPARED_CASES theme-one-motive theme-blueprint piece-theme-fill plan-binary grow-sentence motive-notes variants-basic
     counterpoint-species-1 progression motive random-motive-segments theme-one-motive-check)
 # Cases a comparing run only runs, without snapshots: a refusal case reads their plan (fill.plan.json).
 set(SETUP_CASES fill)
@@ -121,6 +121,9 @@ foreach(case one-motive period-contrast chords fast-minor)
              --out theme-${case}.plan.json --midi theme-${case}.mid --musicxml theme-${case}.musicxml)
 endforeach()
 run_case(theme-one-motive-check txt theme "${theme_one-motive}" --seed 2 --check)
+# A request with no development is written as a blueprint (R-756): the Composer's own blueprint for the one-motive theme, at seed 1.
+run_case(theme-blueprint json theme "${FIXTURES}/theme/blueprint-default.json" --seed 1 --format json
+         --out theme-blueprint.plan.json --midi theme-blueprint.mid --musicxml theme-blueprint.musicxml)
 
 # --- piece ---------------------------------------------------------------------------
 

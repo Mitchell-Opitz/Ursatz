@@ -7,7 +7,7 @@ include_directories(${CMAKE_SOURCE_DIR}/tests/support)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Helpers the tests share (tests/support).
-ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c
+ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c support/test_blueprint_check.c
     support/voice_hear.c LIBS ursatz_composer_engine ursatz_test_support cjson INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
@@ -65,6 +65,17 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DFORMS_DIR=${PROJECT_SOURCE_DIR}/forms
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_form_schema.cmake
+        LABELS schema)
+endif()
+
+# Every built-in preset validates against the preset schema, which references the preferences schema (R-754).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_preset_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/preset.schema.json
+                     -DPREFERENCES=${PROJECT_SOURCE_DIR}/schema/api/preferences.schema.json
+                     -DPRESETS_DIR=${PROJECT_SOURCE_DIR}/presets
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_preset_schema.cmake
         LABELS schema)
 endif()
 
@@ -636,6 +647,25 @@ ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTOR
 
 # Theme blueprints (R-743): every refusal with its path, a written period rendered note for note, a skeleton composed on seed 1.
 ursatz_test(test_theme_blueprint LIBS ursatz_composer_engine composer_test_support cjson)
+
+# The blueprint generator (P69c B3, R-751, R-752): the drawn blueprints of the four motifs, the preference weights, development blueprint through the
+# theme entry and the requests it refuses. It writes a request and a response for test_api_schema.
+ursatz_test(test_blueprint_generate LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+
+# Gate 2 of P69c (R-757): the four motif fixtures as sentences and periods, seeds 1 to 10, no development, through composer_api_theme; the composed count is pinned.
+# Slow: see test_blueprint_generator_sweep.c; the smoke test runs seed 1 of every case.
+ursatz_test_executable(test_blueprint_generator_sweep LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_blueprint_generator_sweep TARGET test_blueprint_generator_sweep LABELS slow)
+ursatz_test(test_blueprint_generator_sweep_smoke TARGET test_blueprint_generator_sweep ARGS fast)
+
+# The presets (P69c B5, R-754): each reads over the defaults, a request's settings layer over a preset's, a theme request names one, an unknown one is refused.
+ursatz_test(test_presets LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 
 # Gate 2 of P69b (R-740): the full blueprint of each reference theme in fixtures/references renders the reference's notes on seed 1.
 ursatz_test(test_reference_blueprints LIBS ursatz_composer_engine composer_test_support cjson

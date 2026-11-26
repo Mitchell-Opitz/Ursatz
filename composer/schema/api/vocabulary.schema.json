@@ -46,6 +46,7 @@
     "voicings",
     "schemas",
     "theme_developments",
+    "presets",
     "lanes",
     "limits"
   ],
@@ -73,6 +74,33 @@
             "minLength": 1
           },
           "help": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "presets": {
+      "type": "array",
+      "description": "The presets (API 4.9, R-754): settings of her listening, built in, which a theme or random motive request names with `preset`, in the order the Composer holds them.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
             "type": "string",
             "minLength": 1
           }
@@ -839,7 +867,10 @@
         "attempts_max",
         "keep_max",
         "pool_min",
-        "pool_max"
+        "pool_max",
+        "blueprint_range_min",
+        "blueprint_range_max",
+        "blueprint_candidates_max"
       ],
       "additionalProperties": false,
       "properties": {
@@ -944,6 +975,18 @@
           "minimum": 1
         },
         "pool_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_range_min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_range_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_candidates_max": {
           "type": "integer",
           "minimum": 1
         }

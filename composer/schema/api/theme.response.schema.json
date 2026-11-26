@@ -145,6 +145,10 @@
         },
         "development": {
           "type": "string"
+        },
+        "preset": {
+          "type": "string",
+          "description": "The preset the request names (R-754), when it names one."
         }
       }
     },
@@ -311,7 +315,9 @@
                     "stray_syncopation",
                     "one_rhythm",
                     "repeated_notes",
-                    "wide_range"
+                    "wide_range",
+                    "register_shift",
+                    "half_notes"
                   ]
                 },
                 "penalty": {
@@ -829,7 +835,9 @@
                       "stray_syncopation",
                       "one_rhythm",
                       "repeated_notes",
-                      "wide_range"
+                      "wide_range",
+                      "register_shift",
+                      "half_notes"
                     ]
                   },
                   "penalty": {
@@ -916,6 +924,142 @@
               }
             }
           }
+        },
+        "blueprint": {
+          "type": "object",
+          "description": "The blueprint the Composer wrote for the theme (development blueprint): the chords of each bar, the drawn rhythm of each bar outside the basic idea's restatements, its anchors and events, and the climax. Sent back as the request's blueprint with the same motif it composes the theme again.",
+          "additionalProperties": false,
+          "properties": {
+            "bars": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "description": "The theme's bars, the first bar first.",
+              "items": {
+                "$ref": "#/$defs/blueprintBar"
+              }
+            },
+            "climax": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "required": [
+                "bar",
+                "at",
+                "pitch"
+              ],
+              "additionalProperties": false,
+              "description": "The theme's one highest note: its bar (from 0), its onset in beats of the beat unit and its pitch.",
+              "properties": {
+                "bar": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 15
+                },
+                "at": {
+                  "$ref": "#/$defs/blueprintAt"
+                },
+                "pitch": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "bars"
+          ]
+        }
+      }
+    },
+    "blueprintAt": {
+      "type": [
+        "string",
+        "integer"
+      ],
+      "pattern": "^[0-9]+(/[1-9][0-9]*)?$",
+      "minimum": 0,
+      "description": "An onset from the bar start in beats of the beat unit, as a chord onset writes it: \"0\", \"2\", \"3/2\"."
+    },
+    "blueprintBar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chords": {
+          "type": "string",
+          "description": "The chord text of the bar (R-744): \"I\", \"II6 V7@2\"."
+        },
+        "melody": {
+          "type": "string",
+          "description": "A note list of one bar (note-list syntax: \"D5:q. C5:e r:e\"), rests allowed, ending on a rest if it likes. Given melody; refused with rhythm, job, anchors and events."
+        },
+        "rhythm": {
+          "type": "string",
+          "description": "A rhythm text of one bar (\"x:q. x:e x:h\", rests r, ties ~); refused with melody and job."
+        },
+        "job": {
+          "type": "string",
+          "description": "A K11 rhythm job (motif, variant, contrast, running, long, syncopated, liquidation, cadence) or the id of a K11 rhythm entry; refused with melody and rhythm."
+        },
+        "anchors": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "pitch"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/blueprintAt"
+              },
+              "pitch": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/blueprintAt"
+              },
+              "type": {
+                "enum": [
+                  "appoggiatura",
+                  "suspension",
+                  "passing",
+                  "neighbor",
+                  "escape",
+                  "anticipation",
+                  "retardation"
+                ]
+              }
+            }
+          }
+        },
+        "bass": {
+          "type": "string",
+          "description": "A note list of one bar (note-list syntax: \"D5:q. C5:e r:e\"), rests allowed, ending on a rest if it likes. Given in every bar or none; a rest only where the melody is given."
+        },
+        "inner": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string"
+          },
+          "description": "The inner voices, one note list each (voice 1 first), as many in every bar."
         }
       }
     }

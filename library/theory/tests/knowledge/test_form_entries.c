@@ -7,7 +7,8 @@
 /*
  * The K7 formal function and K8 theme type entries (R-708): the nine theme types found by the codes of their beginning and ending,
  * the sentence's fragment with its fields as the build embeds them, the contrasting idea's contrast target, and user files whose
- * links name nothing the loader accepts, each refused with the file, the id and the field.
+ * links name nothing the loader accepts, each refused with the file, the id and the field. The sentence and the period carry the K8
+ * slot expectations of R-749 (jobs, harmony alternatives, climax units and sounds per unit); the seven hybrids carry none.
  */
 
 static KnowledgeSnapshot *build(void) {
@@ -91,6 +92,57 @@ static void test_contrast(void) {
     knowledge_snapshot_destroy(snapshot);
 }
 
+static void test_expectations(void) {
+    KnowledgeSnapshot *snapshot = build();
+    const ThemeType *sentence = knowledge_snapshot_theme_type_of(snapshot, "presentation", "continuation");
+    const ThemeType *period = knowledge_snapshot_theme_type_of(snapshot, "antecedent", "consequent");
+    for (size_t i = 0; i < sentence->idea_count; i++) {
+        assert(sentence->ideas[i].expect.present);
+    }
+    for (size_t i = 0; i < period->idea_count; i++) {
+        assert(period->ideas[i].expect.present);
+    }
+    const ThemeTypeExpect *fragment = &sentence->ideas[3].expect;
+    assert(strcmp(sentence->ideas[3].name, "fragment 2") == 0);
+    assert(fragment->job_count == 1 && fragment->jobs[0] == THEME_JOB_LIQUIDATION && fragment->climax == 1u);
+    const ThemeTypeExpect *repetition = &sentence->ideas[1].expect;
+    assert(repetition->harmony_count == 2 && repetition->harmony[0].restate && !repetition->harmony[1].restate);
+    assert(repetition->harmony[0].chord_count == 0 && repetition->job_count == 0);
+    const ThemeTypeExpect *basic = &sentence->ideas[0].expect;
+    assert(basic->job_count == 2 && basic->harmony_count == 4 && basic->climax == 0);
+    assert(basic->jobs[0] == (THEME_JOB_LONG | THEME_JOB_RUNNING | THEME_JOB_SYNCOPATED));
+    assert(strcmp(basic->harmony[2].chords[0], "I V@2") == 0 && strcmp(basic->harmony[2].chords[1], "I") == 0);
+    assert(basic->sounds[0] == (THEME_SOUND_NINTH_DOWNBEAT | THEME_SOUND_APPOGGIATURA) && basic->sounds[1] == 0);
+    const ThemeTypeExpect *cadential = &sentence->ideas[4].expect;
+    assert(cadential->jobs[1] == THEME_JOB_CADENCE && cadential->climax == 1u && cadential->sounds[1] == THEME_SOUND_NINTH_DOWNBEAT);
+    assert(strcmp(cadential->harmony[0].type->code, "cadential") == 0);
+    const ThemeTypeExpect *sequence = &sentence->ideas[2].expect;
+    assert(strcmp(sequence->harmony[2].chords[0], "VI II@2") == 0 && strcmp(sequence->harmony[2].type->code, "sequence") == 0);
+    assert(period->ideas[2].expect.harmony_count == 1 && period->ideas[2].expect.harmony[0].restate);
+    for (const ThemeType *type = sentence; type != NULL; type = type == sentence ? period : NULL) {
+        for (size_t i = 0; i < type->idea_count; i++) {
+            const ThemeTypeExpect *expect = &type->ideas[i].expect;
+            assert(expect->job_count == 0 || expect->job_count == (size_t)type->ideas[i].units);
+            for (size_t k = 0; k < expect->harmony_count; k++) {
+                assert(expect->harmony[k].restate ? expect->harmony[k].chord_count == 0
+                                                  : expect->harmony[k].chord_count == (size_t)type->ideas[i].units);
+                assert(expect->harmony[k].type != NULL);
+            }
+        }
+    }
+    static const char *const HYBRIDS[][2] = {{"antecedent", "continuation"}, {"antecedent", "cadential"}, {"compound-basic-idea", "continuation"},
+                                             {"compound-basic-idea", "consequent"}, {"compound-basic-idea", "cadential"},
+                                             {"presentation", "consequent"}, {"presentation", "cadential"}};
+    for (size_t h = 0; h < 7; h++) {
+        const ThemeType *type = knowledge_snapshot_theme_type_of(snapshot, HYBRIDS[h][0], HYBRIDS[h][1]);
+        assert(type != NULL && type != sentence && type != period);
+        for (size_t i = 0; i < type->idea_count; i++) {
+            assert(!type->ideas[i].expect.present && type->ideas[i].expect.harmony_count == 0);
+        }
+    }
+    knowledge_snapshot_destroy(snapshot);
+}
+
 static void refused(const char *entries, const char *path, const char *id, const char *field) {
     char text[2048];
     snprintf(text, sizeof(text), "{\"schema\":\"ursatz-knowledge\",\"schema_version\":1,\"source\":\"user\",\"entries\":[%s]}", entries);
@@ -107,6 +159,14 @@ static void refused(const char *entries, const char *path, const char *id, const
     "\"content\":{\"code\":\"odd\",\"core\":\"medial\",\"level\":\"idea\",\"harmonic_rhythm\":\"any\","               \
     "\"rhythmic_activity\":\"any\",\"motive_harmony\":\"keep\","
 #define FUNCTION_TAIL "},\"citations\":[],\"status\":\"reference\",\"version\":1}"
+
+#define THEME_HEAD                                                                                                       \
+    "{\"id\":\"user.theme-type.odd\",\"kind\":\"theme-type\",\"name\":\"odd\",\"content\":{\"code\":\"odd\","                    \
+    "\"beginning\":\"omt.function.presentation\",\"ending\":\"omt.function.continuation\",\"ideas\":["                         \
+    "{\"name\":\"a\",\"function\":\"omt.function.basic-idea\",\"slot\":\"basic\",\"half\":\"beginning\","
+#define THEME_TAIL                                                                                                       \
+    "{\"name\":\"b\",\"function\":\"omt.function.cadential-idea\",\"slot\":\"cadential\",\"half\":\"ending\",\"units\":6,"   \
+    "\"cadence\":\"final\"}]},\"citations\":[],\"status\":\"reference\",\"version\":1}"
 
 static void test_refusals(void) {
     refused(FUNCTION_HEAD "\"harmony\":[\"user.vocabulary.nothing\"]" FUNCTION_TAIL, "mine.json", "user.function.odd", "content.harmony");
@@ -132,12 +192,25 @@ static void test_refusals(void) {
             "\"cadence\":\"none\"},{\"name\":\"b\",\"function\":\"omt.function.cadential-idea\",\"slot\":\"cadential\","
             "\"half\":\"ending\",\"units\":4,\"cadence\":\"final\"}]},\"citations\":[],\"status\":\"reference\",\"version\":1}",
             "mine.json", "user.theme-type.odd", "content.ideas");
+    refused(THEME_HEAD "\"units\":2,\"cadence\":\"none\",\"expect\":{\"harmony\":[{\"chords\":[\"I\",\"V\"],"
+                       "\"type\":\"omt.vocabulary.cadential\"}]}}," THEME_TAIL,
+            "mine.json", "user.theme-type.odd", "harmony type omt.vocabulary.cadential is not one of omt.function.basic-idea's");
+    refused(THEME_HEAD "\"units\":2,\"cadence\":\"none\",\"expect\":{\"harmony\":[{\"chords\":[\"I\"],"
+                       "\"type\":\"omt.vocabulary.prolongational\"}]}}," THEME_TAIL,
+            "mine.json", "user.theme-type.odd", "content.ideas");
+    refused(THEME_HEAD "\"units\":2,\"cadence\":\"none\",\"expect\":{\"jobs\":[[\"long\"]]}}," THEME_TAIL, "mine.json",
+            "user.theme-type.odd", "content.ideas");
+    refused(THEME_HEAD "\"units\":2,\"cadence\":\"none\",\"expect\":{\"jobs\":[[\"long\"],[\"dancing\"]]}}," THEME_TAIL, "mine.json",
+            "user.theme-type.odd", "content.ideas");
+    refused(THEME_HEAD "\"units\":2,\"cadence\":\"none\",\"expect\":{\"climax\":[2]}}," THEME_TAIL, "mine.json",
+            "user.theme-type.odd", "content.ideas");
 }
 
 int main(void) {
     test_theme_types();
     test_fragment();
     test_contrast();
+    test_expectations();
     test_refusals();
     return 0;
 }

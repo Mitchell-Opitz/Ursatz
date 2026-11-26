@@ -390,6 +390,36 @@ def check_formal_function(path, entry, progression_ids, functions, theme_types):
                 number, example.get("idea")))
 
 
+def check_idea_expect(path, entry, idea, functions):
+    """K8 slot expectations (R-749): `jobs` and each `chords` list have one item per unit of the idea, a climax or sound unit lies in
+    the idea, and a harmony template's type is one of the idea function's progression types."""
+    expect = idea.get("expect")
+    units = idea.get("units")
+    if not isinstance(expect, dict) or not isinstance(units, int):
+        return
+    where = "content.ideas: idea '%s'" % idea.get("name")
+    jobs = expect.get("jobs")
+    if isinstance(jobs, list) and len(jobs) != units:
+        problem(path, entry["id"], "%s: expect.jobs has %d lists, not one per unit (%d)" % (where, len(jobs), units))
+    for number, template in enumerate(expect.get("harmony", []) if isinstance(expect.get("harmony"), list) else [], 1):
+        if not isinstance(template, dict):
+            continue
+        chords = template.get("chords")
+        if isinstance(chords, list) and len(chords) != units:
+            problem(path, entry["id"], "%s: expect.harmony %d has %d chord texts, not one per unit (%d)" % (
+                where, number, len(chords), units))
+        function = functions.get(idea.get("function"))
+        allowed = function[1].get("content", {}).get("harmony", []) if function is not None else []
+        if template.get("type") not in allowed:
+            problem(path, entry["id"], "%s: harmony type %s is not one of %s's" % (where, template.get("type"), idea.get("function")))
+    for unit in expect.get("climax", []) if isinstance(expect.get("climax"), list) else []:
+        if isinstance(unit, int) and unit >= units:
+            problem(path, entry["id"], "%s: expect.climax unit %d is outside the idea's %d units" % (where, unit, units))
+    for place in expect.get("sounds", []) if isinstance(expect.get("sounds"), list) else []:
+        if isinstance(place, dict) and isinstance(place.get("unit"), int) and place["unit"] >= units:
+            problem(path, entry["id"], "%s: expect.sounds unit %d is outside the idea's %d units" % (where, place["unit"], units))
+
+
 def check_theme_type(path, entry, functions):
     """Beginning and ending are formal functions above idea level, each idea's function is of idea level, the units sum to 8 and
     each example's ideas follow in order with bars = units x bars / 8."""
@@ -405,6 +435,8 @@ def check_theme_type(path, entry, functions):
         if level_of(functions, idea.get("function")) != "idea":
             problem(path, entry["id"], "content.ideas: the function '%s' of '%s' is not a formal function of idea level" % (
                 idea.get("function"), idea.get("name")))
+    for idea in ideas:
+        check_idea_expect(path, entry, idea, functions)
     units = [idea.get("units") for idea in ideas]
     if all(isinstance(unit, int) for unit in units) and sum(units) != 8:
         problem(path, entry["id"], "content.ideas: the units sum to %d, not 8" % sum(units))

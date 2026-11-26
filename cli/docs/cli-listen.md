@@ -3,7 +3,7 @@
 The `listen` command of `ursatz`: a batch of motifs or themes from fixed seeds and one settings file, written as files a listening session plays and reads. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--blueprint <file>]
+ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--preset <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--blueprint <file>]
 ursatz listen --print-settings
 ```
 
@@ -24,9 +24,10 @@ ursatz listen --print-settings
 | `--style <file>` | A style model file ([style.md](../../composer/docs/style.md)). Motifs: 8 candidates are drawn for each and the closest kept. Themes: the style is preferred. |
 | `--blend <file>`, `--blend-weight`, `--blend-weights` | Themes: the second style model and its shares, as `grow`'s ([cli-grow.md](cli-grow.md)). Need `--style`. |
 | `--tempo <bpm>` | The tempo of the MIDI and MusicXML files, 20 to 400. |
-| `--strategy segments\|drawn` | How a generated motif is made (default `segments`). |
+| `--strategy segments\|drawn\|blueprint` | How a generated motif is made (default `segments`). |
 | `--into sentence\|period` | Themes: the pairing (default `sentence`). |
-| `--development melody\|balanced\|theme` | Themes: how far the theme strays from the motif (default `balanced`). |
+| `--preset <name>` | A preset of the Composer (`ff7` or `hollow-knight`, [presets.md](../../composer/docs/presets.md)): the settings of her listening and, for themes, the accompaniment that goes with them; `--settings` and the session's settings apply over it. Motifs and themes (the manifest line records it as `preset`; an unknown name exits 1). |
+| `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `blueprint` where the theme fits it, else `balanced`: the request names no development unless the option is given, R-756); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
 | `--bars 4\|8` | Themes: the length (default 8). |
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
 | `--motif <file>` | Themes: the motif of every sample, anything the [`motive`](cli-motive.md) command reads (a note list, MusicXML, MIDI, a motive document). It is read in key C and the mode. Absent: a generated motif for each sample, made with the sample's seed, the mode, meter, strategy, style and settings. |

@@ -52,10 +52,11 @@
  * 4.7 accepts the church modes as the material of a key (R-725): a request names "dorian", "lydian", "mixolydian", "phrygian" or "locrian".
  * 4.8 adds the theme request's blueprint (R-743): the theme given bar by bar, its chords (R-744), melody, rhythms or rhythm jobs, anchors,
  * events, bass and inner voices, its climax and accompaniment.
+ * 4.9 adds blueprints from a motif (R-751, R-752): the preferences' blueprint group.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 8
+#define COMPOSER_API_VERSION_MINOR 9
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

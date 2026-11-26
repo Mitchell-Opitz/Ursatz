@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/preset.schema.json",
+  "title": "Composer preset",
+  "description": "A named settings document (R-754): the preferences a style of her listening sets, with the accompaniment pattern it travels with. A request names it with `preset`; its own `preferences` apply over it.",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "name",
+    "label",
+    "source",
+    "preferences"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "ursatz-preset"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 31
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the settings come from: the references and the listening rounds."
+    },
+    "preferences": {
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json"
+    },
+    "accompaniment": {
+      "type": "object",
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The accompaniment pattern the preset travels with (an id of a K11 accompaniment entry); the request's own accompaniment wins."
+        }
+      }
+    }
+  }
+}

@@ -73,6 +73,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     critic_settings_default(&out->critic);
     composer_mixture_default(&out->harmony.mixture);
     composer_color_default(&out->harmony.color);
+    blueprint_preferences_default(&out->blueprint);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -808,9 +809,14 @@ static bool read_candidates(const cJSON *group, CandidatePreferences *candidates
 
 bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
                                size_t message_size) {
+    composer_preferences_default(out);
+    return composer_preferences_apply(object, out, path, path_size, message, message_size);
+}
+
+bool composer_preferences_apply(const cJSON *object, ComposerPreferences *out, char *path, size_t path_size, char *message,
+                                size_t message_size) {
     Refusal refusal = {path, path_size, message, message_size};
     const cJSON *item;
-    composer_preferences_default(out);
     if (path && path_size > 0) {
         path[0] = '\0';
     }
@@ -843,6 +849,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             }
         } else if (strcmp(item->string, "harmony") == 0) {
             if (!preferences_read_harmony(item, out, &refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "blueprint") == 0) {
+            if (!preferences_read_blueprint(item, out, &refusal)) {
                 return false;
             }
         } else {
@@ -1056,6 +1066,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *blueprint = preferences_write_blueprint(preferences);
+    if (!blueprint || !cJSON_AddItemToObject(document, "blueprint", blueprint)) {
+        cJSON_Delete(blueprint);
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -1065,7 +1081,7 @@ static const char *const WORDS_NCT[] = {"passing", "neighbor", "appoggiatura", "
 static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-outline",      "no-crossing", "parallel-octaves",
                                           "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
 static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
-                                                   "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
+                                                   "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", "register_shift", "half_notes", NULL};
 static const char *const WORDS_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter", "two steps darker", "two steps brighter", NULL};
 static const char *const WORDS_COLOR_TYPES[] = {"persichetti.chord-type.add9",          "persichetti.chord-type.minor-add9",
                                                 "persichetti.chord-type.add6",          "persichetti.chord-type.minor-add6",
@@ -1224,10 +1240,42 @@ static const ComposerPreferenceKey KEYS[] = {
     {"critic.weights.one_rhythm", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.register_shift", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.half_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
     {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM},
     {"harmony.color.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
-    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES}};
+    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES},
+    {"blueprint.sounds.ninth_downbeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.sus4_dominant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.major_seventh", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.leading_tone", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.long_weak", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.climax.m6", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.climax.m7", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.range", COMPOSER_KEY_INTEGER, COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MIN, COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MAX, false, NULL},
+    {"blueprint.candidates", COMPOSER_KEY_INTEGER, 1, COMPOSER_PREFERENCES_BLUEPRINT_CANDIDATES_MAX, false, NULL}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {
@@ -1265,7 +1313,9 @@ static const ComposerRule RULES[] = {
     {"stray_syncopation", false, "critic.weights.stray_syncopation"},
     {"one_rhythm", false, "critic.weights.one_rhythm"},
     {"repeated_notes", false, "critic.weights.repeated_notes"},
-    {"wide_range", false, "critic.weights.wide_range"}};
+    {"wide_range", false, "critic.weights.wide_range"},
+    {"register_shift", false, "critic.weights.register_shift"},
+    {"half_notes", false, "critic.weights.half_notes"}};
 
 const ComposerRule *composer_preferences_rules(size_t *count) {
     if (count) {

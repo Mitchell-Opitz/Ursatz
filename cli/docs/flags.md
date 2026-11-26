@@ -38,7 +38,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--data <dir>` | global: the data folder (or the environment variable URSATZ_DATA); stands before the subcommand | every command (stands before it) |
 | `--degree <n>` | restate: move the first note to scale degree n | `develop` |
 | `--depth <n>` | the most operations in the chain, 1 to 4 | `recognize` |
-| `--development <name>` | how a theme develops: melody, balanced or theme | `listen` |
+| `--development <name>` | how a theme develops: melody, balanced, theme or blueprint (the default, where the theme fits) | `listen` |
 | `--distance <d>` | how far the variants are from the motive: close, medium or far; explore: how many settings move from your taste, 1 to 8 | `variants`, `explore` |
 | `--drop <n>` | liquidate: how many notes to drop at each step | `develop` |
 | `--dry-run` | migrate: report every planned move and rewrite, and write nothing | `migrate` |
@@ -98,6 +98,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--plans` | listen: put each theme's plan in its JSON, for critique | `listen` |
 | `--port <n>` | global: the HTTP port of the workshop, 1 to 65535; stands before the subcommand | every command (stands before it) |
 | `--position <where>` | fragment: leading, trailing or middle | `develop` |
+| `--preset <name>` | listen: a preset of settings from her listening (ff7 or hollow-knight); --settings apply over it | `listen` |
 | `--print-settings` | print the default preferences document and exit | `listen` |
 | `--rated <file>` | critique: a rated set (ursatz-rated-set 1) to judge pair by pair against her ratings | `critique` |
 | `--rating <r>` | rate: <batch>=<1-5> for a sample of a session, or <1-5> for an item version; repeatable | `rate` |
@@ -116,7 +117,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--session <id>` | listen: record the batch in this listening session (needs --round and --batch) | `listen` |
 | `--settings <file>` | a preferences document | `critique`, `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
-| `--strategy <name>` | how motifs are made: segments or drawn | `random-motive`, `listen` |
+| `--strategy <name>` | how motifs are made: segments, drawn or blueprint | `random-motive`, `listen` |
 | `--style <file>` | a style model file from the Ursatz Analyzer; prefer the harmony and melody closest to it | `random-motive`, `grow`, `plan`, `fill`, `listen` |
 | `--style-weight <n/d>` | how strongly the style is preferred | `grow`, `plan`, `fill` |
 | `--style-without <category>` | read the style without this category; repeatable | `random-motive`, `grow`, `plan`, `fill` |
