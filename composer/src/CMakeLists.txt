@@ -108,6 +108,7 @@ add_library(ursatz_composer_engine STATIC
     motive/variant_functions.c
     motive/variant_recognize.c
     motive/motive_tones.c
+    motive/motive_blueprint.c
     motive/motive_connect.c
     melody/melody_check.c
     melody/melody_context.c
