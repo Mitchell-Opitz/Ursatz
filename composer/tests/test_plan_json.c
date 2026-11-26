@@ -352,6 +352,12 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         }
         return true;
     }
+    case PLAN_CONSTRAINT_ANCHOR:
+        return rational_cmp(a->params.anchor.offset, b->params.anchor.offset) == 0 && a->params.anchor.midi == b->params.anchor.midi;
+    case PLAN_CONSTRAINT_EVENT:
+        return rational_cmp(a->params.event.offset, b->params.event.offset) == 0 && a->params.event.type == b->params.event.type;
+    case PLAN_CONSTRAINT_CLIMAX:
+        return rational_cmp(a->params.climax.offset, b->params.climax.offset) == 0 && a->params.climax.midi == b->params.climax.midi;
     }
     return false;
 }

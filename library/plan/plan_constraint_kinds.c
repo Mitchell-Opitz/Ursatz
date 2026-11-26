@@ -1042,6 +1042,141 @@ static bool read_contrast(JsonReader *reader, const cJSON *item, const char *pat
     return true;
 }
 
+/* ------------------------------------------------------------ the melody constraints (R-746) */
+
+static const char *const EVENT_NAMES[] = {"appoggiatura", "suspension", "passing", "neighbor",
+                                          "escape",       "anticipation", "retardation"};
+_Static_assert(COUNT_OF(EVENT_NAMES) == PLAN_EVENT_RETARDATION + 1, "a name for every event type");
+
+static bool valid_offset(Rational offset) {
+    return offset.den > 0 && offset.num >= 0 && offset.num <= TIME_LIMIT && offset.den <= TIME_LIMIT;
+}
+
+static bool valid_midi(int midi) {
+    return midi >= 0 && midi <= 127;
+}
+
+static bool write_offset(cJSON *object, Rational offset) {
+    char text[64];
+    snprintf(text, sizeof(text), "%lld/%lld", offset.num, offset.den);
+    return plan_json_add(object, "offset", cJSON_CreateString(text));
+}
+
+/* The offset member: a fraction of a whole note "n/d" from 0. */
+static bool read_offset(JsonReader *reader, const cJSON *item, const char *path, Rational *out) {
+    return read_tones_time(reader, item, path, "offset", 0, out);
+}
+
+static bool valid_anchor(const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return valid_offset(constraint->params.anchor.offset) && valid_midi(constraint->params.anchor.midi);
+}
+
+static bool write_anchor(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return write_offset(object, constraint->params.anchor.offset) &&
+           plan_json_add(object, "midi", cJSON_CreateNumber(constraint->params.anchor.midi));
+}
+
+static bool read_anchor(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    long midi;
+    return read_offset(reader, item, path, &out->params.anchor.offset) &&
+           json_read_int_member(reader, item, path, "midi", 0, 127, &midi) && ((out->params.anchor.midi = (int)midi), true);
+}
+
+static bool valid_event(const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return valid_offset(constraint->params.event.offset) && constraint->params.event.type >= PLAN_EVENT_APPOGGIATURA &&
+           constraint->params.event.type <= PLAN_EVENT_RETARDATION;
+}
+
+static bool write_event(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return write_offset(object, constraint->params.event.offset) &&
+           plan_json_add(object, "type", cJSON_CreateString(EVENT_NAMES[constraint->params.event.type]));
+}
+
+static bool read_event(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    int type;
+    if (!read_offset(reader, item, path, &out->params.event.offset) ||
+        !json_read_enum_member(reader, item, path, "type", EVENT_NAMES, COUNT_OF(EVENT_NAMES), &type)) {
+        return false;
+    }
+    out->params.event.type = (PlanEventType)type;
+    return true;
+}
+
+static bool valid_climax(const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return valid_offset(constraint->params.climax.offset) && valid_midi(constraint->params.climax.midi);
+}
+
+static bool write_climax(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
+    (void)plan;
+    return write_offset(object, constraint->params.climax.offset) &&
+           plan_json_add(object, "midi", cJSON_CreateNumber(constraint->params.climax.midi));
+}
+
+static bool read_climax(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    long midi;
+    return read_offset(reader, item, path, &out->params.climax.offset) &&
+           json_read_int_member(reader, item, path, "midi", 0, 127, &midi) && ((out->params.climax.midi = (int)midi), true);
+}
+
+static bool melody_kind(PlanConstraintKind kind) {
+    return kind == PLAN_CONSTRAINT_ANCHOR || kind == PLAN_CONSTRAINT_EVENT || kind == PLAN_CONSTRAINT_CLIMAX;
+}
+
+static Rational melody_offset(const PlanConstraint *constraint) {
+    switch (constraint->kind) {
+    case PLAN_CONSTRAINT_ANCHOR:
+        return constraint->params.anchor.offset;
+    case PLAN_CONSTRAINT_EVENT:
+        return constraint->params.event.offset;
+    default:
+        return constraint->params.climax.offset;
+    }
+}
+
+const char *constraint_melody_refusal(const Plan *plan, LaneSpanId span_id, const PlanConstraint *constraint) {
+    if (!constraint || !melody_kind(constraint->kind)) {
+        return NULL;
+    }
+    const char *const NOT_MELODY[] = {"anchor: on a melody span only", "event: on a melody span only",
+                                      "climax: on a melody span only"};
+    const char *const PAST_END[] = {"anchor: the offset is at or past the span's end",
+                                    "event: the offset is at or past the span's end",
+                                    "climax: the offset is at or past the span's end"};
+    const size_t index = (size_t)(constraint->kind - PLAN_CONSTRAINT_ANCHOR);
+    if (span_id == PLAN_LANE_SPAN_NONE || plan_lane_span_lane(plan, span_id) != PLAN_LANE_MELODY) {
+        return NOT_MELODY[index];
+    }
+    const Rational offset = melody_offset(constraint);
+    if (offset.den <= 0 || rational_cmp(offset, plan_lane_span_span(plan, span_id).length) >= 0) {
+        return PAST_END[index];
+    }
+    /* One anchor and one event to an offset on a span: the constraints the span holds already. */
+    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, span_id); i++) {
+        const PlanConstraint *held = plan_lane_span_constraint_at(plan, span_id, i);
+        if (held->kind == constraint->kind && constraint->kind != PLAN_CONSTRAINT_CLIMAX &&
+            rational_cmp(melody_offset(held), offset) == 0) {
+            return constraint->kind == PLAN_CONSTRAINT_ANCHOR ? "anchor: two anchors at one offset on a span"
+                                                              : "event: two events at one offset on a span";
+        }
+    }
+    /* At most one climax in a plan. */
+    if (constraint->kind == PLAN_CONSTRAINT_CLIMAX) {
+        for (LaneSpanId other = 1; other <= plan_lane_span_count(plan); other++) {
+            for (size_t i = 0; i < plan_lane_span_constraint_count(plan, other); i++) {
+                if (plan_lane_span_constraint_at(plan, other, i)->kind == PLAN_CONSTRAINT_CLIMAX) {
+                    return "climax: at most one in a plan";
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
 /* ------------------------------------------------------------------ the table */
 
 static const ConstraintKindRow ROWS[] = {
@@ -1061,9 +1196,12 @@ static const ConstraintKindRow ROWS[] = {
     {PLAN_CONSTRAINT_PICKUP, "pickup", write_pickup, read_pickup, valid_pickup},
     {PLAN_CONSTRAINT_MOTIVE_TONES, "motive_tones", write_motive_tones, read_motive_tones, valid_motive_tones},
     {PLAN_CONSTRAINT_CONTRAST, "contrast", write_contrast, read_contrast, valid_contrast},
+    {PLAN_CONSTRAINT_ANCHOR, "anchor", write_anchor, read_anchor, valid_anchor},
+    {PLAN_CONSTRAINT_EVENT, "event", write_event, read_event, valid_event},
+    {PLAN_CONSTRAINT_CLIMAX, "climax", write_climax, read_climax, valid_climax},
 };
 
-_Static_assert(sizeof(ROWS) / sizeof(ROWS[0]) == PLAN_CONSTRAINT_CONTRAST + 1, "a row for every constraint kind");
+_Static_assert(sizeof(ROWS) / sizeof(ROWS[0]) == PLAN_CONSTRAINT_CLIMAX + 1, "a row for every constraint kind");
 
 const ConstraintKindRow *constraint_kind_row(PlanConstraintKind kind) {
     return (int)kind >= 0 && (size_t)kind < COUNT_OF(ROWS) ? &ROWS[kind] : NULL;
