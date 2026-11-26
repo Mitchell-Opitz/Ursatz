@@ -45,7 +45,7 @@ static UrsatzStatus fail(UrsatzError *error, const char *path, const char *forma
 static const char *const JOB_WORDS[] = {"motif", "variant", "contrast", "running", "long", "syncopated", "liquidation", "cadence"};
 
 /* A time in beats of the meter's beat unit, as a chord onset writes it ("3/2", "2"). */
-static void beats_text(Rational time, const PlanMeter *meter, char *out, size_t size) {
+void grow_blueprint_beats_text(Rational time, const PlanMeter *meter, char *out, size_t size) {
     Rational beats = {0, 1};
     if (rational_mul_int(time, meter->beat_unit, &beats) != RATIONAL_OK) {
         beats = time;
@@ -102,8 +102,8 @@ static UrsatzStatus read_line(const char *text, bool rhythm, const KnowledgeSnap
     if (rational_cmp(end->onset, bar_length) != 0) {
         char have[32];
         char want[32];
-        beats_text(end->onset, meter, have, sizeof(have));
-        beats_text(bar_length, meter, want, sizeof(want));
+        grow_blueprint_beats_text(end->onset, meter, have, sizeof(have));
+        grow_blueprint_beats_text(bar_length, meter, want, sizeof(want));
         return fail(error, path, "bar %zu %s: the notes fill %s beats; a bar has %s", bar, what, have, want);
     }
     line->count = motive.note_count - 1;
@@ -1169,7 +1169,7 @@ GrowResult grow_blueprint_check_climax(const GrowBlueprint *blueprint, const Gro
     }
     size_t at_bar = blueprint->climax_bar;
     char at[32];
-    beats_text(blueprint->climax_at, meter, at, sizeof(at));
+    grow_blueprint_beats_text(blueprint->climax_at, meter, at, sizeof(at));
     if (!drawn->known[at_bar] || !starts_at(&drawn->rhythm[at_bar], blueprint->climax_at)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax/at", "bar %zu climax at %s: no note starts there", at_bar, at);
     }
@@ -1215,7 +1215,7 @@ GrowResult grow_blueprint_check_marks(const GrowBlueprint *blueprint, const Grow
             }
             char at[32];
             char path[96];
-            beats_text(offset, meter, at, sizeof(at));
+            grow_blueprint_beats_text(offset, meter, at, sizeof(at));
             snprintf(path, sizeof(path), "/blueprint/bars/%zu/%s/%zu/at", bar, anchor ? "anchors" : "events",
                      anchor ? k : k - this->anchor_count);
             return drawn->known[bar]

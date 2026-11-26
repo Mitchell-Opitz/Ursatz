@@ -824,6 +824,22 @@ GrowResult grow_blueprint_generate(const GrowRequest *request, const BlueprintPr
                                    GrowRefusal *refusal);
 
 /*
+ * The climax and the sounds of a generated blueprint (R-751), once grow_blueprint_draw has made every bar's rhythm (drawn->rhythm,
+ * drawn->known) with the blueprint's jobs: the climax in a bar of the K8 climax units, drawn by climax.m6 and climax.m7, on the longest note
+ * a beat or more into the bar, the lowest chord tone at least 8 semitones above the basic motive's highest note and not above the melody's
+ * high; then the sounds of the K8 sound places in bar order (a ninth, a major seventh, a suspended fourth, an appoggiatura or the leading
+ * tone), each as anchors, events and a changed chord text of its bar, the sounds of a basic-slot idea left out (the motif stays as written).
+ * On entry *melody_low and *melody_high are the melody's range; on return the range the run is narrowed to: the climax at the top, and below
+ * it the least of preferences->range and the climax's distance above the motive's lowest note. GROW_ERR_STUCK, with the reason in refusal,
+ * when no chord tone of the climax's chord lies in reach; the next seed draws other chords and another climax bar.
+ */
+GrowResult grow_blueprint_generate_marks(const GrowRequest *request, const BlueprintPreferences *preferences, const GrowBlueprintDraw *drawn,
+                                         FillRng *rng, GrowBlueprint *out, int *melody_low, int *melody_high, GrowRefusal *refusal);
+
+/* A time in beats of the meter's beat unit as a chord onset or an anchor writes it ("3/2", "2"). */
+void grow_blueprint_beats_text(Rational time, const PlanMeter *meter, char *out, size_t size);
+
+/*
  * The checks of the climax against the draw (R-743): a note of the bar's rhythm starts at its onset, a Given melody note there is
  * its pitch, and no other Given note or anchor reaches it ("the climax Ab5 is not the theme's highest note: bar 3 has A5").
  */

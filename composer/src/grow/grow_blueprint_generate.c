@@ -13,6 +13,7 @@
 
 #include "grow/grow_internal.h"
 #include "structure/plan_util.h"
+#include "util/util.h"
 
 /*
  * The blueprint generator (R-751, docs/blueprint-generator.md): from the motif and the K8 slot expectations of the sentence or the period
@@ -84,19 +85,6 @@ static bool cells_of(const PlanMeter *meter, Cells *out) {
            rational_div_int(out->bar, (long long)out->cells, &out->cell) == RATIONAL_OK;
 }
 
-/* An onset in whole notes from a bar's start as the own-harmony syntax writes it: in beats of the meter's beat unit ("2", "3/2"). */
-static void onset_text(Rational time, const PlanMeter *meter, char *out, size_t size) {
-    Rational beats = time;
-    if (rational_mul_int(time, meter->beat_unit, &beats) != RATIONAL_OK) {
-        beats = time;
-    }
-    if (beats.den == 1) {
-        snprintf(out, size, "%lld", (long long)beats.num);
-    } else {
-        snprintf(out, size, "%lld/%lld", (long long)beats.num, (long long)beats.den);
-    }
-}
-
 /* The index of the motive's chord sounding at the time (the last whose onset is not after it); -1 for a motive with none. */
 static long chord_index_at(const Motive *motive, Rational time) {
     long found = -1;
@@ -155,7 +143,7 @@ static void basic_texts(const GrowRequest *request, const Cells *cells, size_t b
                 snprintf(text + used, GROW_BLUEPRINT_TEXT - used, "%s%s", used ? " " : "", numeral);
             } else {
                 char at[24];
-                onset_text(within, &request->meter, at, sizeof at);
+                grow_blueprint_beats_text(within, &request->meter, at, sizeof at);
                 snprintf(text + used, GROW_BLUEPRINT_TEXT - used, " %s@%s", numeral, at);
             }
             previous = index;
@@ -190,7 +178,7 @@ static bool template_text(const char *source, const Cells *cells, const PlanMete
                 return false;
             }
             *mark = '\0';
-            onset_text(within, meter, at, sizeof at);
+            grow_blueprint_beats_text(within, meter, at, sizeof at);
             snprintf(out + used, size - used, "%s%s@%s", used ? " " : "", token, at);
         } else {
             snprintf(out + used, size - used, "%s%s", used ? " " : "", token);
@@ -568,4 +556,457 @@ GrowResult grow_blueprint_generate(const GrowRequest *request, const BlueprintPr
         return chords;
     }
     return draw_rhythms(request, &layout, &cells, preferences, rng, out, refusal);
+}
+
+/* --------------------------------------------------------------------------------------------- the climax and the sounds */
+
+#define CLIMAX_ABOVE_MOTIF 8
+#define SOUND_NONE_WEIGHT 2
+
+/* A bar's chords as the own-harmony syntax parsed them, and the tones of one. */
+typedef struct {
+    Motive *keyed; /* a motive with the request's key, for the chord tones */
+    const GrowRequest *request;
+} Reading;
+
+static size_t read_chords(const Reading *reading, const char *text, MotiveSketchChord *out) {
+    size_t count = 0;
+    MotiveError detail;
+    if (motive_harmony_parse(text, &reading->request->meter, out, &count, &detail) != MOTIVE_OK) {
+        return 0;
+    }
+    return count;
+}
+
+/* The index of the chord sounding at the offset (the last whose onset is not after it). */
+static size_t sounding(const MotiveSketchChord *chords, size_t count, Rational offset) {
+    size_t at = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (rational_cmp(chords[i].onset, offset) <= 0) {
+            at = i;
+        }
+    }
+    return at;
+}
+
+/* The notes of the key: the tonic's pitch class, and whether a pitch class is of the chord. */
+static int tonic_pc(const GrowRequest *request) {
+    return spelled_key_tonic_pitch_class(&request->key);
+}
+
+/* The pitch of a pitch class: the octave nearest the mean, moved by octaves into [low, high]; -1 when none lies there. */
+static int place_pc(int pc, int mean, int low, int high) {
+    int pitch = pc + 12 * ((mean - pc + (mean >= pc ? 6 : -6)) / 12);
+    while (pitch > high) {
+        pitch -= 12;
+    }
+    while (pitch < low) {
+        pitch += 12;
+    }
+    return pitch >= low && pitch <= high ? pitch : -1;
+}
+
+/* What the marks know of the theme while they are placed. */
+typedef struct {
+    const GrowRequest *request;
+    const BlueprintPreferences *preferences;
+    const GrowBlueprintDraw *drawn;
+    const Layout *layout;
+    GrowBlueprint *out;
+    Motive keyed;
+    int mean;      /* the mean pitch of the basic motive's notes */
+    int low;       /* the lowest an anchor may lie */
+    int high;      /* the highest: one below the climax */
+    Rational beat; /* a beat of the meter */
+    Cells cells;
+    bool taken[GEN_BARS];
+    bool once[BLUEPRINT_SOUND_COUNT];
+} Marks;
+
+/* Whether an anchor or an event at the offset of a bar could still be added. */
+static bool room(const GrowBlueprintBar *bar, size_t anchors, size_t events) {
+    return bar->anchor_count + anchors <= GROW_BLUEPRINT_ANCHORS && bar->event_count + events <= GROW_BLUEPRINT_EVENTS;
+}
+
+static void add_anchor(GrowBlueprintBar *bar, Rational offset, int midi) {
+    bar->anchors[bar->anchor_count].offset = offset;
+    bar->anchors[bar->anchor_count++].midi = midi;
+}
+
+static void add_event(GrowBlueprintBar *bar, Rational offset, PlanEventType type) {
+    bar->events[bar->event_count].offset = offset;
+    bar->events[bar->event_count++].type = type;
+}
+
+/* The index of the note of the bar's drawn rhythm that starts at the offset; -1 for none. */
+static long note_at_offset(const Marks *marks, size_t bar, Rational offset) {
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    for (size_t i = 0; marks->drawn->known[bar] && i < line->count; i++) {
+        if (rational_cmp(line->notes[i].offset, offset) == 0) {
+            return (long)i;
+        }
+    }
+    return -1;
+}
+
+/* The longest note of the bar's rhythm, the first of equals, from `from` on; -1 when there is none. */
+static long longest_note(const Marks *marks, size_t bar, Rational from) {
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    long best = -1;
+    for (size_t i = 0; marks->drawn->known[bar] && i < line->count; i++) {
+        if (rational_cmp(line->notes[i].offset, from) >= 0 && (best < 0 || rational_cmp(line->notes[i].duration, line->notes[best].duration) > 0)) {
+            best = (long)i;
+        }
+    }
+    return best;
+}
+
+/* The chord tones of a parsed chord, as the pitch classes of the sounding chord. */
+static size_t tones_of(Marks *marks, const MotiveSketchChord *chord, int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX]) {
+    return motive_sketch_chord_tones(&marks->keyed, chord, pcs);
+}
+
+/* Whether the chord is a major (4) or a minor (3) triad: the interval of its third; 0 for another. */
+static int triad_third(Marks *marks, const MotiveSketchChord *chord) {
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+    size_t count = tones_of(marks, chord, pcs);
+    if (count != 3 || chord->inversion != 0 || chord->seventh || chord->color || chord->alteration != 0) {
+        return 0;
+    }
+    int third = ((pcs[1] - pcs[0]) % 12 + 12) % 12;
+    int fifth = ((pcs[2] - pcs[0]) % 12 + 12) % 12;
+    return fifth == 7 && (third == 3 || third == 4) ? third : 0;
+}
+
+/* Rewrites the first chord of the bar's text with a suffix, the numeral in the case of its quality ("I" and "add9" in minor: "iadd9"). */
+static void suffix_first_chord(char *text, int third, const char *suffix) {
+    char rest[GROW_BLUEPRINT_TEXT - 24];
+    size_t length = strcspn(text, " ");
+    char numeral[16];
+    snprintf(numeral, sizeof numeral, "%.*s", (int)(length < 15 ? length : 15), text);
+    snprintf(rest, sizeof rest, "%s", text + length);
+    for (char *c = numeral; third == 3 && *c; c++) {
+        *c = (char)((*c >= 'A' && *c <= 'Z') ? *c + ('a' - 'A') : *c);
+    }
+    snprintf(text, GROW_BLUEPRINT_TEXT, "%s%s%s", numeral, suffix, rest);
+}
+
+/* The step above a pitch class in the key's natural scale, in semitones. */
+static int step_above(const Marks *marks, int pc) {
+    int rel = ((pc - tonic_pc(marks->request)) % 12 + 12) % 12;
+    for (int up = 1; up <= 3; up++) {
+        if (pitch_material_contains(marks->request->key.material, rel + up)) {
+            return up;
+        }
+    }
+    return 2;
+}
+
+/* The pitch of the chord tone nearest the mean pitch (placed by the octave rule, with `above` semitones of room under the top), the chord's pcs given. */
+static int nearest_tone(const Marks *marks, const int pcs[], size_t count, int above, int *pc_out) {
+    int best = -1;
+    for (size_t i = 0; i < count; i++) {
+        int pitch = place_pc(pcs[i], marks->mean, marks->low, marks->high - above);
+        if (pitch >= 0 && (best < 0 || abs(pitch - marks->mean) < abs(best - marks->mean))) {
+            best = pitch;
+            *pc_out = pcs[i];
+        }
+    }
+    return best;
+}
+
+/* An appoggiatura on the bar's first note, resolving to the second (the same chord span): the chord tone c nearest the mean, the first note a scale step above it. */
+static bool sound_appoggiatura(Marks *marks, size_t bar) {
+    GrowBlueprintBar *this = &marks->out->bars[bar];
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+    if (count == 0 || !marks->drawn->known[bar] || line->count < 2 || !room(this, 2, 1) ||
+        sounding(chords, count, line->notes[1].offset) != sounding(chords, count, line->notes[0].offset)) {
+        return false;
+    }
+    size_t members = tones_of(marks, &chords[sounding(chords, count, line->notes[0].offset)], pcs);
+    int pc = 0;
+    int tone = nearest_tone(marks, pcs, members, 3, &pc);
+    int step = step_above(marks, pc);
+    if (tone < 0 || tone + step > marks->high) {
+        return false;
+    }
+    add_anchor(this, line->notes[0].offset, tone + step);
+    add_anchor(this, line->notes[1].offset, tone);
+    add_event(this, line->notes[0].offset, PLAN_EVENT_APPOGGIATURA);
+    return true;
+}
+
+/* A ninth on the downbeat over a major or minor triad in root position held a beat or more: the chord gains add9, the first note the ninth, the second the root. */
+static bool sound_ninth(Marks *marks, size_t bar) {
+    GrowBlueprintBar *this = &marks->out->bars[bar];
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
+    if (count == 0 || !marks->drawn->known[bar] || line->count < 1 || !room(this, 2, 1) || line->notes[0].offset.num != 0 ||
+        rational_cmp(line->notes[0].duration, marks->beat) < 0) {
+        return false;
+    }
+    int third = triad_third(marks, &chords[0]);
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+    if (third == 0 || tones_of(marks, &chords[0], pcs) < 1) {
+        return false;
+    }
+    int root = place_pc(pcs[0], marks->mean, marks->low, marks->high - 2);
+    if (root < 0) {
+        return false;
+    }
+    add_anchor(this, line->notes[0].offset, root + 2);
+    add_event(this, line->notes[0].offset, PLAN_EVENT_APPOGGIATURA);
+    if (line->count > 1 && sounding(chords, count, line->notes[1].offset) == 0) {
+        add_anchor(this, line->notes[1].offset, root);
+    }
+    suffix_first_chord(this->chords, third, "add9");
+    return true;
+}
+
+/* A major seventh on the bar's longest note: over I or IV in major, III or VI in minor in root position, the chord gains maj7. */
+static bool sound_major_seventh(Marks *marks, size_t bar) {
+    GrowBlueprintBar *this = &marks->out->bars[bar];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
+    bool minor = pitch_material_third(marks->request->key.material) == 3;
+    long note = longest_note(marks, bar, (Rational){0, 1});
+    if (count == 0 || note < 0 || !room(this, 1, 0)) {
+        return false;
+    }
+    int degree = chords[0].degree;
+    int third = triad_third(marks, &chords[0]);
+    bool fits = minor ? (degree == 3 || degree == 6) : (degree == 1 || degree == 4);
+    int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+    if (!fits || third != 4 || tones_of(marks, &chords[0], pcs) < 1) {
+        return false;
+    }
+    int seventh = place_pc((pcs[0] + 11) % 12, marks->mean, marks->low, marks->high);
+    if (seventh < 0) {
+        return false;
+    }
+    add_anchor(this, marks->drawn->rhythm[bar].notes[note].offset, seventh);
+    suffix_first_chord(this->chords, third, "maj7");
+    return true;
+}
+
+/* A suspended fourth over a dominant that fills the bar: Vsus4 for the first cell, the note there the tonic, the first note of the second cell the leading tone. */
+static bool sound_sus4(Marks *marks, size_t bar) {
+    GrowBlueprintBar *this = &marks->out->bars[bar];
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
+    if (count != 1 || chords[0].degree != 5 || chords[0].inversion != 0 || chords[0].alteration != 0 || marks->cells.cells < 2 ||
+        !marks->drawn->known[bar] || !room(this, 2, 0) || note_at_offset(marks, bar, (Rational){0, 1}) < 0) {
+        return false;
+    }
+    Rational second = marks->cells.cell;
+    long next = -1;
+    for (size_t i = 0; i < line->count && next < 0; i++) {
+        if (rational_cmp(line->notes[i].offset, second) >= 0 && rational_cmp(line->notes[i].offset, marks->cells.bar) < 0) {
+            next = (long)i;
+        }
+    }
+    int tonic = place_pc(tonic_pc(marks->request), marks->mean, marks->low, marks->high);
+    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, marks->mean, marks->low, marks->high);
+    if (next < 0 || tonic < 0 || leading < 0) {
+        return false;
+    }
+    char at[24];
+    grow_blueprint_beats_text(second, &marks->request->meter, at, sizeof at);
+    char text[GROW_BLUEPRINT_TEXT];
+    size_t length = strcspn(this->chords, " ");
+    snprintf(text, sizeof text, "%.*ssus4 %.*s@%s", (int)length, this->chords, (int)length, this->chords, at);
+    snprintf(this->chords, GROW_BLUEPRINT_TEXT, "%s", text);
+    add_anchor(this, (Rational){0, 1}, tonic);
+    add_anchor(this, line->notes[next].offset, leading);
+    return true;
+}
+
+/* The leading tone on the bar's last note over V or V7, the final tonic a semitone above it on the next bar's first note. */
+static bool sound_leading_tone(Marks *marks, size_t bar) {
+    GrowBlueprintBar *this = &marks->out->bars[bar];
+    const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
+    if (count == 0 || !marks->drawn->known[bar] || line->count == 0 || bar + 1 >= marks->out->bar_count || !marks->drawn->known[bar + 1] ||
+        marks->drawn->rhythm[bar + 1].count == 0 || marks->taken[bar + 1] || !room(this, 1, 0) || !room(&marks->out->bars[bar + 1], 1, 0)) {
+        return false;
+    }
+    const PlanNote *last = &line->notes[line->count - 1];
+    const MotiveSketchChord *chord = &chords[sounding(chords, count, last->offset)];
+    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, marks->mean, marks->low, marks->high - 1);
+    if (chord->degree != 5 || chord->alteration != 0 || leading < 0) {
+        return false;
+    }
+    add_anchor(this, last->offset, leading);
+    add_anchor(&marks->out->bars[bar + 1], marks->drawn->rhythm[bar + 1].notes[0].offset, leading + 1);
+    marks->taken[bar + 1] = true;
+    return true;
+}
+
+static bool sound_realize(Marks *marks, unsigned kind, size_t bar) {
+    switch (kind) {
+    case THEME_SOUND_NINTH_DOWNBEAT:
+        return sound_ninth(marks, bar);
+    case THEME_SOUND_SUS4_DOMINANT:
+        return sound_sus4(marks, bar);
+    case THEME_SOUND_APPOGGIATURA:
+        return sound_appoggiatura(marks, bar);
+    case THEME_SOUND_MAJOR_SEVENTH:
+        return sound_major_seventh(marks, bar);
+    default:
+        return sound_leading_tone(marks, bar);
+    }
+}
+
+static BlueprintSound sound_index(unsigned kind) {
+    return kind == THEME_SOUND_NINTH_DOWNBEAT ? BLUEPRINT_SOUND_NINTH_DOWNBEAT
+           : kind == THEME_SOUND_SUS4_DOMINANT ? BLUEPRINT_SOUND_SUS4_DOMINANT
+           : kind == THEME_SOUND_APPOGGIATURA ? BLUEPRINT_SOUND_APPOGGIATURA
+           : kind == THEME_SOUND_MAJOR_SEVENTH ? BLUEPRINT_SOUND_MAJOR_SEVENTH
+                                               : BLUEPRINT_SOUND_LEADING_TONE;
+}
+
+/* The sounds of the K8 places in bar order, the basic-slot ideas left out. */
+static void place_sounds(Marks *marks, FillRng *rng) {
+    for (size_t i = 1; i < marks->layout->type->idea_count; i++) {
+        const ThemeTypeIdea *idea = &marks->layout->type->ideas[i];
+        if (is_basic_slot(idea)) {
+            continue;
+        }
+        for (size_t unit = 0; unit < (size_t)idea->units; unit++) {
+            size_t bar = marks->layout->first[i] + unit;
+            unsigned allowed = idea->expect.sounds[unit];
+            unsigned kinds[5];
+            unsigned weights[6];
+            size_t count = 0;
+            for (unsigned bit = THEME_SOUND_NINTH_DOWNBEAT; bit <= THEME_SOUND_LEADING_TONE; bit <<= 1) {
+                BlueprintSound index = sound_index(bit);
+                bool repeats = bit == THEME_SOUND_APPOGGIATURA;
+                if ((allowed & bit) == 0 || (!repeats && marks->once[index]) || marks->preferences->sounds[index] == 0) {
+                    continue;
+                }
+                kinds[count] = bit;
+                weights[count++] = marks->preferences->sounds[index];
+            }
+            if (marks->taken[bar] || count == 0) {
+                continue;
+            }
+            weights[count] = SOUND_NONE_WEIGHT;
+            size_t pick = draw_weighted(rng, weights, count + 1);
+            if (pick < count && sound_realize(marks, kinds[pick], bar)) {
+                marks->once[sound_index(kinds[pick])] = true;
+                marks->taken[bar] = true;
+            }
+        }
+    }
+}
+
+/* The climax bars of the K8 units: a bar index each, with the weight the preferences give (m6 the bar 5, m7 the bar 6). */
+static size_t climax_bars(const Marks *marks, size_t bars[], unsigned weights[]) {
+    size_t count = 0;
+    for (size_t i = 0; i < marks->layout->type->idea_count; i++) {
+        const ThemeTypeIdea *idea = &marks->layout->type->ideas[i];
+        for (size_t unit = 0; unit < (size_t)idea->units; unit++) {
+            if ((idea->expect.climax >> unit) & 1u) {
+                size_t bar = marks->layout->first[i] + unit;
+                bars[count] = bar;
+                weights[count++] = bar == 5 ? marks->preferences->climax[0] : bar == 6 ? marks->preferences->climax[1] : 1;
+            }
+        }
+    }
+    return count;
+}
+
+GrowResult grow_blueprint_generate_marks(const GrowRequest *request, const BlueprintPreferences *preferences, const GrowBlueprintDraw *drawn,
+                                         FillRng *rng, GrowBlueprint *out, int *melody_low, int *melody_high, GrowRefusal *refusal) {
+    BlueprintPreferences defaults;
+    Layout layout;
+    Marks *marks = NULL;
+    if (!request || !request->motive || !drawn || !rng || !out || !melody_low || !melody_high) {
+        return GROW_ERR_NULL;
+    }
+    if (!preferences) {
+        blueprint_preferences_default(&defaults);
+        preferences = &defaults;
+    }
+    if (!layout_of(request, &layout) || request->motive->note_count == 0) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/development", "a blueprint is written for an 8-bar sentence or period");
+    }
+    marks = calloc(1, sizeof(*marks));
+    if (!marks) {
+        return GROW_ERR_ALLOC;
+    }
+    marks->request = request;
+    marks->preferences = preferences;
+    marks->drawn = drawn;
+    marks->layout = &layout;
+    marks->out = out;
+    marks->beat = beat_length(&request->meter);
+    motive_init(&marks->keyed, request->meter);
+    motive_set_key(&marks->keyed, &request->key, MOTIVE_SKETCH_KEY_GIVEN);
+    if (!cells_of(&request->meter, &marks->cells)) {
+        free(marks);
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/development", "a blueprint is written in 4/4, 3/4 or 6/8");
+    }
+    int highest = -1;
+    int lowest = 128;
+    long total = 0;
+    for (size_t i = 0; i < request->motive->note_count; i++) {
+        int pitch = motive_pitch(request->motive, i);
+        highest = pitch > highest ? pitch : highest;
+        lowest = pitch < lowest ? pitch : lowest;
+        total += pitch;
+    }
+    marks->mean = (int)(total / (long)request->motive->note_count);
+    /* The climax. */
+    size_t bars[THEME_TYPE_IDEA_MAX * 2];
+    unsigned weights[THEME_TYPE_IDEA_MAX * 2];
+    size_t count = climax_bars(marks, bars, weights);
+    GrowResult result = GROW_OK;
+    if (count == 0) {
+        result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax", "the theme type has no climax unit");
+    } else {
+        size_t pick = draw_weighted(rng, weights, count);
+        size_t bar = bars[pick < count ? pick : count - 1];
+        long note = longest_note(marks, bar, marks->beat);
+        note = note >= 0 ? note : (drawn->known[bar] && drawn->rhythm[bar].count > 0 ? 0 : -1);
+        MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+        size_t chord_count = note >= 0 ? read_chords(&(Reading){&marks->keyed, request}, out->bars[bar].chords, chords) : 0;
+        if (note < 0 || chord_count == 0) {
+            result = refuse(refusal, GROW_ERR_STUCK, "/blueprint/climax", "no note of bar %zu can hold the climax", bar);
+        } else {
+            Rational at = drawn->rhythm[bar].notes[note].offset;
+            int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+            size_t members = tones_of(marks, &chords[sounding(chords, chord_count, at)], pcs);
+            int climax = -1;
+            for (int midi = highest + CLIMAX_ABOVE_MOTIF; climax < 0 && midi <= *melody_high; midi++) {
+                for (size_t m = 0; m < members; m++) {
+                    climax = util_pitch_class(midi) == (pcs[m] % 12 + 12) % 12 ? midi : climax;
+                }
+            }
+            if (climax < 0) {
+                result = refuse(refusal, GROW_ERR_STUCK, "/blueprint/climax", "no chord tone of bar %zu lies %d to %d semitones above the motif",
+                                bar, CLIMAX_ABOVE_MOTIF, *melody_high - highest);
+            } else {
+                out->has_climax = true;
+                out->climax_bar = bar;
+                out->climax_at = at;
+                out->climax_midi = climax;
+                util_pitch_name(climax, util_key_prefers_flats(tonic_pc(request), request->key.material), out->climax_name, sizeof out->climax_name);
+                int span = (int)preferences->range > climax - lowest ? (int)preferences->range : climax - lowest;
+                *melody_high = climax;
+                *melody_low = climax - span;
+                marks->high = climax - 1;
+                marks->low = *melody_low;
+                place_sounds(marks, rng);
+            }
+        }
+    }
+    free(marks);
+    return result;
 }
