@@ -634,6 +634,9 @@ ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTOR
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# Theme blueprints (R-743): every refusal with its path, a written period rendered note for note, a skeleton composed on seed 1.
+ursatz_test(test_theme_blueprint LIBS ursatz_composer_engine composer_test_support cjson)
+
 # The layers of a composed result (R-634): a theme request with "layers" returns the realization and the reading.
 ursatz_test(test_api_layers LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
