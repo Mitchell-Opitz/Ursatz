@@ -127,6 +127,20 @@ bool composer_preferences_apply(const cJSON *object, ComposerPreferences *out, c
                                 size_t message_size);
 
 /*
+ * The presets (R-754): named settings documents built in (composer/presets), each the preferences a style of her listening sets and the
+ * accompaniment pattern it travels with, in the order the vocabulary lists them. composer_preset_name, _label and _source answer NULL past
+ * composer_preset_count. composer_preset_apply applies the named preset's preferences over *out as composer_preferences_apply does (the
+ * settings the preset leaves out stay as *out has them) and copies its accompaniment pattern into `accompaniment` ("" for none); false,
+ * with a message, for a name that is no preset.
+ */
+size_t composer_preset_count(void);
+const char *composer_preset_name(size_t index);
+const char *composer_preset_label(size_t index);
+const char *composer_preset_source(size_t index);
+bool composer_preset_apply(const char *name, ComposerPreferences *out, char *accompaniment, size_t accompaniment_size, char *message,
+                           size_t message_size);
+
+/*
  * The full document for the preferences, every member present, in the shape docs/preferences.md describes: ratios as
  * "n/d" text and nct_types in the order passing, neighbor, appoggiatura, suspension, anticipation. The caller deletes
  * it with cJSON_Delete. NULL when memory runs out.

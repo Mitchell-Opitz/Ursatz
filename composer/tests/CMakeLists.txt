@@ -68,6 +68,17 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema)
 endif()
 
+# Every built-in preset validates against the preset schema, which references the preferences schema (R-754).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_preset_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/preset.schema.json
+                     -DPREFERENCES=${PROJECT_SOURCE_DIR}/schema/api/preferences.schema.json
+                     -DPRESETS_DIR=${PROJECT_SOURCE_DIR}/presets
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_preset_schema.cmake
+        LABELS schema)
+endif()
+
 ursatz_test(test_render_plan LIBS ursatz_composer_engine composer_test_support DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>")
 add_dependencies(test_render_plan ursatz)
 

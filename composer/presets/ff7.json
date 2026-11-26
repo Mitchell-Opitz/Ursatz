@@ -1,0 +1,69 @@
+{
+  "schema": "ursatz-preset",
+  "schema_version": 1,
+  "name": "ff7",
+  "label": "Final Fantasy VII",
+  "source": "Claude Master references.md ref-2-ff7 (rated 5) and taste-profile.md, style uematsu-ff7 (rounds u1 to u15)",
+  "preferences": {
+    "motif": {
+      "durations": {
+        "half_beat": 4,
+        "beat": 2,
+        "two_beats": 2
+      },
+      "features": {
+        "dotted": 3,
+        "leap": 1,
+        "repeat": 0
+      },
+      "rung_moves": {
+        "step": 6,
+        "skip": 1
+      },
+      "decorations": {
+        "chord_tone": 0,
+        "passing": 2,
+        "neighbor": 2,
+        "appoggiatura": 1,
+        "escape": 1
+      },
+      "bars": {
+        "one": 0,
+        "two": 1
+      },
+      "accented_one_in": 1,
+      "avoid_repeats": true,
+      "leaps_per_motif": 1,
+      "leap_recovery": true,
+      "pickup_from_accent": true,
+      "long_on_weak": 3,
+      "final_long": false,
+      "contrast_fidelity_min": "1/2",
+      "shapes_two_bars": {
+        "repeat": 6,
+        "contrast": 2,
+        "repeat_contrast": 2
+      }
+    },
+    "melody": {
+      "cadence_long": true
+    },
+    "blueprint": {
+      "sounds": {
+        "ninth_downbeat": 6,
+        "sus4_dominant": 4,
+        "appoggiatura": 2,
+        "major_seventh": 4,
+        "leading_tone": 4,
+        "long_weak": 2
+      },
+      "climax": {
+        "m6": 0,
+        "m7": 1
+      }
+    }
+  },
+  "accompaniment": {
+    "pattern": "michelle.pattern.arpeggio-eight"
+  }
+}
