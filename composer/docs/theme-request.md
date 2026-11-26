@@ -102,8 +102,19 @@ The motive of an idea must fit it as a slot motive does (exit 2 when it does not
 the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](../../cli/docs/cli-motive.md)) relative to the bar: Roman
 numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
 the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
-multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. The
-numerals are diatonic (no `b` or `#`).
+multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. A numeral
+with `b` or `#` is a borrowed chord (R-729).
+
+Chord text (R-744). A lower-case numeral names a minor triad (`ii`, `iv`, `v`), `o` a diminished one, `+` an augmented one. Where the
+key's own chord on that degree has that quality it is the plain chord; where it differs (`iv` in C major, `v` in C minor, `#vii` in C
+minor) it is read by the nearest mode on the tonic that holds it, as `bVI` is, and a borrowed tonic, an augmented triad and a seventh with
+an `#` or `b` are refused (`chords bar <n>: that chord is not the key's own and not in a mode on the key's tonic`). An applied chord
+(`V/V`, `V7/V`, `V65/x`, `viio/x`, `viio7/x`) is the plan's applied numeral; it is refused in a modal key (`chords bar <n>: applied
+chords are not given in a modal key`) and for a target the library does not tonicize (`'<text>' is not an applied chord the Composer
+writes`). `maj7` (`IVmaj7`, `IVM7`) is the seventh chord `7` of the key where the key's chord on the degree is a major seventh, else
+refused (`IVmaj7 is not this key's seventh chord; write it as IV7 or with its own quality`). The suffixes `sus2` and `sus4` go on a
+triad of the key like the color suffixes and sound the root, the second or fourth, and the fifth, with no third. Four chords a bar
+and off-cell onsets are not given yet.
 
 The chords are Given: the harmony stage fills only what they leave open, the bass and the melody are written over them, and
 none of them is changed. The harmony and bass operators write chords on the cells of the meter (one for a bar of 2/4 or 3/4,
