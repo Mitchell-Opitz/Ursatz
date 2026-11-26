@@ -87,6 +87,20 @@ static void refused(const char *kind, const char *request, const char *path) {
     composer_response_destroy(&response);
 }
 
+/* A motive request whose harmony reads: the filled request writes the first two chords back as these numerals. */
+static void expect_filled_harmony(const char *request, const char *first, const char *second) {
+    ComposerResponse response;
+    cJSON *document = validated("motive", request, URSATZ_OK, &response);
+    const cJSON *filled = cJSON_GetObjectItemCaseSensitive(document, "request");
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(filled, "harmony");
+    assert(cJSON_IsArray(harmony) && cJSON_GetArraySize(harmony) == 2);
+    const cJSON *a = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(harmony, 0), "numeral");
+    const cJSON *b = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(harmony, 1), "numeral");
+    assert(cJSON_IsString(a) && strcmp(a->valuestring, first) == 0 && cJSON_IsString(b) && strcmp(b->valuestring, second) == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+}
+
 static cJSON *random_request(const char *mode, const char *meter) {
     cJSON *request = cJSON_CreateObject();
     assert(cJSON_AddStringToObject(request, "material", mode) && cJSON_AddStringToObject(request, "meter", meter));
@@ -813,13 +827,15 @@ static void test_harmony(void) {
 }
 
 static void test_refusals(void) {
-    /* The harmony grammar takes upper case numerals; a bad chord is refused at /harmony. */
+    /* The harmony grammar reads lower case and applied numerals (R-744); a bad chord is refused at /harmony. */
     refused("motive",
-            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"i V@3/2\"}",
+            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"I Iv@3\"}",
             "/harmony");
     refused("motive",
-            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"I V7/V@3\"}",
+            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"I V7/@3\"}",
             "/harmony");
+    expect_filled_harmony("{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"i V@3/2\"}", "i", "V");
+    expect_filled_harmony("{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"I V7/V@3\"}", "I", "V7/V");
     refused("motive", "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"5/7\"}", "/meter");
     refused("random_motive", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", "/mode");
     refused("random_motive", "{\"mode\":\"major\",\"meter\":\"random\",\"key\":\"D minor\"}", "/key");

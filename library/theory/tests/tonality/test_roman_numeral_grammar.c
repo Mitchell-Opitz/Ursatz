@@ -181,7 +181,9 @@ static void test_color(void) {
                  {"IV69", "persichetti.chord-type.six-nine"},      {"V9", "persichetti.chord-type.dominant-ninth"},
                  {"ii9", "persichetti.chord-type.minor-ninth"},    {"Imaj9", "persichetti.chord-type.major-ninth"},
                  {"Vq3", "persichetti.chord-type.quartal-three"},  {"iiq4", "persichetti.chord-type.quartal-four"},
-                 {"V9", "persichetti.chord-type.dominant-ninth"}};
+                 {"V9", "persichetti.chord-type.dominant-ninth"}, {"Vsus4", "omt.chord-type.sus4"},
+                 {"iisus2", "omt.chord-type.sus2"},                {"Isus2", "omt.chord-type.sus2"},
+                 {"visus4", "omt.chord-type.sus4"}};
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
         Text text = parsed(CASES[i].text);
         const ChordType *type = NULL;
@@ -199,6 +201,8 @@ static void test_color(void) {
     assert(!standard_tonality_numeral_color_type(snapshot, &text, &type));
     assert(!standard_tonality_numeral_parse("V97", &text) && !standard_tonality_numeral_parse("V9add9", &text) && !standard_tonality_numeral_parse("Vq5", &text));
     assert(!standard_tonality_numeral_color_type(NULL, &text, &type) && !standard_tonality_numeral_color_type(snapshot, NULL, &type));
+    /* A suspended chord is a triad: no seventh figure, and no suffix after a mark. */
+    assert(!standard_tonality_numeral_parse("Vsus47", &text) && !standard_tonality_numeral_parse("V7sus4", &text) && !standard_tonality_numeral_parse("Vsus3", &text));
     Text plain_text = parsed("V7");
     assert(plain_text.color == NULL && !standard_tonality_numeral_color_type(snapshot, &plain_text, &type));
 }

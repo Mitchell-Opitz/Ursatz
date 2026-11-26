@@ -324,7 +324,7 @@ static void test_extras_errors(void) {
         const char *message;
     } cases[] = {
         {"--harmony \"I V6\"", 1, "--harmony 'I V6' at token 2 (column 3)"},
-        {"--harmony \"I iv@1\"", 1, "token 2 (column 3)"},
+        {"--harmony \"I Iv@1\"", 1, "token 2 (column 3)"},
         {"--harmony \"I V@2 I@1\"", 1, "must come after"},
         {"--harmony \"I V@2\" --harmony \"I\"", 1, "--harmony given twice"},
         {"--harmony", 1, "--harmony needs a value"},
