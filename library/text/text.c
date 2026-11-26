@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-static const char *const kKindNames[] = {"json", "plan", "reading", "realization", "knowledge", "knowledge-entry", "commands", "view"};
+static const char *const kKindNames[] = {"json", "plan", "reading", "realization", "knowledge", "knowledge-entry", "commands", "view", "blueprint"};
 
 const char *text_kind_name(TextKind kind) {
     if ((int)kind < 0 || (size_t)kind >= sizeof kKindNames / sizeof kKindNames[0]) {
