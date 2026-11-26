@@ -136,7 +136,7 @@ range are drawn from defaults in the Composer.
 | `meter` | `"4/4"`, `"3/4"`, `"2/4"`, `"6/8"` or any meter, or `"random"`. Required |
 | `key` | `"D minor"`; its mode must be the material (`/key`). Default C major or A minor |
 | `form` | `"full"` (default), `"rhythm"` or `"contour"` |
-| `strategy` | `"segments"` (default) or `"drawn"`: how the motive is made (below). Anything else is a refusal with `/strategy` |
+| `strategy` | `"segments"` (default), `"drawn"` or `"blueprint"` (API 4.9, R-753: a two-bar motif from the K8 expectations of the sentence's basic idea and the `blueprint` preferences, [cli-random-motive.md](../../../cli/docs/cli-random-motive.md#the-blueprint-strategy-r-753)): how the motive is made (below). Anything else is a refusal with `/strategy` |
 | `role` | `"melodic"` or `"accompaniment"` |
 | `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `URSATZ_ERR_UNSATISFIABLE` with `/style` |
 | `style_without` | up to 8 style categories read without; needs `style` |

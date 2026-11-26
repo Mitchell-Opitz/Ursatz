@@ -8,7 +8,7 @@ ursatz random-motive --material <word> --meter <n/m> [--key <key>] [--form <name
 
 Makes random motives from a mode and a meter. Every motive keeps the hard melodic rules of standard counterpoint, the ones motive invention keeps, and the same options and seed always give the same motives.
 
-There are two strategies, `--strategy segments` (the default) and `--strategy drawn`. The length, pickup, number of notes, rhythm and range are not options for either. They are drawn inside defaults named at the top of the strategy's file, which are meant to be tuned there: `src/motive/motive_random_segments.c` for `segments` and `src/motive/motive_random.c` for `drawn`. The segments strategy's draws (bars, pickup, shapes, chord plans, features, leap, rung moves, decorations, note lengths) are settings, in `MotiveRandomPreferences` (`motive_random_preferences_default` has the defaults); see [preferences.md](../../composer/docs/preferences-motif.md). The steps both share (the chord-tone frame, the non-chord tone decorations, the form and the style) are in `src/motive/motive_random_common.c`.
+There are three strategies, `--strategy segments` (the default), `--strategy drawn` and `--strategy blueprint` (below). The length, pickup, number of notes, rhythm and range are not options for either. They are drawn inside defaults named at the top of the strategy's file, which are meant to be tuned there: `src/motive/motive_random_segments.c` for `segments` and `src/motive/motive_random.c` for `drawn`. The segments strategy's draws (bars, pickup, shapes, chord plans, features, leap, rung moves, decorations, note lengths) are settings, in `MotiveRandomPreferences` (`motive_random_preferences_default` has the defaults); see [preferences.md](../../composer/docs/preferences-motif.md). The steps both share (the chord-tone frame, the non-chord tone decorations, the form and the style) are in `src/motive/motive_random_common.c`.
 
 ## The segments strategy
 
@@ -50,6 +50,10 @@ A motive is made of segments, as a theme starts: a first cell, its repeat on the
 
 The segments are the motive's `features`, lettered `a` to `h` in order of first appearance, a later segment with an earlier one's rhythm taking that letter with a `'` for each earlier occurrence. `form` and `style` work as for `drawn`: a rhythm or contour motive keeps the segments and the harmony of the full one.
 
+## The blueprint strategy (R-753)
+
+A two-bar motif drawn the way the blueprint generator draws a theme's bars ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)), from the K8 slot expectations of the sentence's basic idea and the `blueprint` preferences ([preferences-blueprint.md](../../composer/docs/preferences-blueprint.md); the strategy reads `jobs.basic`, `sounds` and `range`): the chords are one of the idea's harmony alternatives that fit the meter, drawn uniformly (4/4, 3/4, 2/4 and 6/8); bar 0 a K11 rhythm cell by the weights of `jobs.basic` among the unit's jobs (long, running, syncopated); bar 1 a cell, a variant of bar 0 or a contrast to it; the downbeat of bar 0 a ninth over the root of the first chord, an appoggiatura on a chord tone or neither, by the `sounds` weights; the notes by `composer_blueprint_motive` in 60 to 60 + `range`. The shared style, variety and avoid choices and the melodic rules apply as for `drawn`. The code is `src/motive/motive_random_blueprint.c`.
+
 ## The drawn strategy
 
 The earlier strategy, kept as it was:
@@ -82,7 +86,7 @@ it is odd; the meter is `4/4`, `3/4`, `2/4` or `6/8` for `(m >> 16) mod 4` of 0,
 | `--meter <n/m>` | Beats over a beat unit, as in `4/4` or `6/8`, or `random`. Required. `random` is drawn from the seed (below). |
 | `--key <key>` | For example `"D minor"`. Its mode must be `--material`. Without it the motive is made in C major or A minor and carries that key, so it can be stored. |
 | `--form <form>` | `full` (pitches and rhythm, the default), `rhythm` (the rhythm of a full motive) or `contour` (its contour, in quarter notes with no pickup). These are read as the [motive command](cli-motive.md) reads them. |
-| `--strategy <name>` | `segments` (the default) or `drawn`: how the motive is made (above). |
+| `--strategy <name>` | `segments` (the default), `drawn` or `blueprint`: how the motive is made (above). |
 | `--role <role>` | `melodic` (the default) or `accompaniment`: the role every motive of the run is given. |
 | `--style <file>` | A style model file. For each motive, 8 candidates are made and the one closest to the style is kept (ties broken by the seed), by the style's closeness on the candidate's melody labels: all of them for a full motive, the durations for a rhythm, the contour for a contour. |
 | `--style-without <category>` | Read the style without this category (repeatable, at most 8; needs `--style`; an unknown name is exit 1). |

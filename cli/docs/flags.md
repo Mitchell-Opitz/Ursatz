@@ -116,7 +116,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--session <id>` | listen: record the batch in this listening session (needs --round and --batch) | `listen` |
 | `--settings <file>` | a preferences document | `critique`, `listen` |
 | `--species <1-4>` | the species of counterpoint | `counterpoint` |
-| `--strategy <name>` | how motifs are made: segments or drawn | `random-motive`, `listen` |
+| `--strategy <name>` | how motifs are made: segments, drawn or blueprint | `random-motive`, `listen` |
 | `--style <file>` | a style model file from the Ursatz Analyzer; prefer the harmony and melody closest to it | `random-motive`, `grow`, `plan`, `fill`, `listen` |
 | `--style-weight <n/d>` | how strongly the style is preferred | `grow`, `plan`, `fill` |
 | `--style-without <category>` | read the style without this category; repeatable | `random-motive`, `grow`, `plan`, `fill` |

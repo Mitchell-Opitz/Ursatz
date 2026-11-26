@@ -22,3 +22,7 @@ The run draws with `fill_rng_seed(seed + 11)`, in four steps; any `GROW_ERR_STUC
 ## The echo
 
 Each theme of the response has `blueprint`, in the form a request's `blueprint` reads: each bar's `chords`; for every bar outside the basic-slot ideas its drawn `rhythm`, with `anchors` and `events` (the onsets in beats, the pitches as note names); the `climax`. Sent back with the same motif, `development` `balanced`, the theme's `seed` and the melody range of the run (the climax at the top), it renders the same notes. The brief and the explanation say `blueprint`; the vocabulary's `theme_developments` has the fourth row. `listen --development blueprint` asks for it.
+
+## The motif strategy
+
+`strategy` `blueprint` of the random motive and `listen --strategy blueprint` draw a two-bar motif from the same expectations: the basic idea's chords and rhythm jobs, a ninth or an appoggiatura on the downbeat. The rhythm helpers the generator and the strategy share (`composer_rhythm_cells`, `composer_rhythm_cell_notes`, `composer_rhythm_draw_cell`, `composer_rhythm_variant`, `composer_rhythm_contrast`, `composer_draw_weighted`) are in `motive_blueprint.c`. See [cli-random-motive.md](../../cli/docs/cli-random-motive.md#the-blueprint-strategy-r-753).

@@ -24,7 +24,7 @@ ursatz listen --print-settings
 | `--style <file>` | A style model file ([style.md](../../composer/docs/style.md)). Motifs: 8 candidates are drawn for each and the closest kept. Themes: the style is preferred. |
 | `--blend <file>`, `--blend-weight`, `--blend-weights` | Themes: the second style model and its shares, as `grow`'s ([cli-grow.md](cli-grow.md)). Need `--style`. |
 | `--tempo <bpm>` | The tempo of the MIDI and MusicXML files, 20 to 400. |
-| `--strategy segments\|drawn` | How a generated motif is made (default `segments`). |
+| `--strategy segments\|drawn\|blueprint` | How a generated motif is made (default `segments`). |
 | `--into sentence\|period` | Themes: the pairing (default `sentence`). |
 | `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `balanced`); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
 | `--bars 4\|8` | Themes: the length (default 8). |
