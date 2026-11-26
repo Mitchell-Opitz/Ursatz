@@ -176,8 +176,9 @@ static int check_options(Options *options) {
     if (!options->strategy_text) {
         options->strategy_text = "segments";
     }
-    if (strcmp(options->strategy_text, "segments") != 0 && strcmp(options->strategy_text, "drawn") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--strategy must be segments or drawn, not '%s'", options->strategy_text);
+    if (strcmp(options->strategy_text, "segments") != 0 && strcmp(options->strategy_text, "drawn") != 0 &&
+        strcmp(options->strategy_text, "blueprint") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--strategy must be segments, drawn or blueprint, not '%s'", options->strategy_text);
     }
     return 0;
 }

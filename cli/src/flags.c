@@ -116,7 +116,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--session", NULL, CLI_FLAG_VALUE, "<id>", "listen: record the batch in this listening session (needs --round and --batch)"},
     {"--settings", NULL, CLI_FLAG_VALUE, "<file>", "a preferences document"},
     {"--species", NULL, CLI_FLAG_VALUE, "<1-4>", "the species of counterpoint"},
-    {"--strategy", NULL, CLI_FLAG_VALUE, "<name>", "how motifs are made: segments or drawn"},
+    {"--strategy", NULL, CLI_FLAG_VALUE, "<name>", "how motifs are made: segments, drawn or blueprint"},
     {"--style", NULL, CLI_FLAG_VALUE, "<file>", "a style model file from the Ursatz Analyzer; prefer the harmony and melody closest to it"},
     {"--style-weight", NULL, CLI_FLAG_VALUE, "<n/d>", "how strongly the style is preferred"},
     {"--style-without", NULL, CLI_FLAG_REPEAT, "<category>", "read the style without this category; repeatable"},
