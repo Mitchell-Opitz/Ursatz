@@ -736,7 +736,7 @@ static void motive_bar(const Motive *motive, size_t bar, Rational bar_length, Gr
 }
 
 /* The cells of K11 of the meter: with the job's bit, or every one for a mask of 0. */
-static size_t meter_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity) {
+size_t grow_blueprint_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity) {
     char want[16];
     size_t count = 0;
     meter_text(meter, want, sizeof(want));
@@ -751,7 +751,7 @@ static size_t meter_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *m
 }
 
 /* The rhythm of a K11 cell as a bar's line; false when it does not read as a bar of the meter. */
-static bool cell_line(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, Rational bar_length,
+bool grow_blueprint_cell_line(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, Rational bar_length,
                       GrowBlueprintLine *out) {
     return read_line(entry->rhythm.rhythm, true, knowledge, meter, bar_length, "", "rhythm", 0, out, NULL) == URSATZ_OK && out->count > 0;
 }
@@ -852,7 +852,7 @@ static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, 
     const char *word = this->job >= GROW_JOB_MOTIF && this->job <= GROW_JOB_CADENCE ? JOB_WORDS[this->job - GROW_JOB_MOTIF] : "entry";
     switch (this->job) {
     case GROW_JOB_ENTRY:
-        if (!cell_line(this->job_entry, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
+        if (!grow_blueprint_cell_line(this->job_entry, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
             return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the rhythm %s is not a bar of %s", bar, this->job_entry->id, meter);
         }
         return GROW_OK;
@@ -860,12 +860,12 @@ static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, 
     case GROW_JOB_LONG:
     case GROW_JOB_SYNCOPATED:
     case GROW_JOB_CADENCE: {
-        size_t count = meter_cells(request->knowledge, &request->meter, job_bit(this->job), cells, CELLS_MAX);
+        size_t count = grow_blueprint_cells(request->knowledge, &request->meter, job_bit(this->job), cells, CELLS_MAX);
         if (count == 0) {
             return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "no %s rhythm in %s", word, meter);
         }
         const PatternEntry *cell = cells[fill_rng_below(rng, count)];
-        if (!cell_line(cell, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
+        if (!grow_blueprint_cell_line(cell, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
             return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the rhythm %s is not a bar of %s", bar, cell->id, meter);
         }
         return GROW_OK;
@@ -896,7 +896,7 @@ static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, 
                        ? GROW_OK
                        : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the basic idea's bar has no variant", bar);
         }
-        size_t count = meter_cells(request->knowledge, &request->meter, 0, cells, CELLS_MAX);
+        size_t count = grow_blueprint_cells(request->knowledge, &request->meter, 0, cells, CELLS_MAX);
         GrowBlueprintLine lines[CELLS_MAX];
         size_t far[CELLS_MAX];
         size_t far_count = 0;
@@ -904,7 +904,7 @@ static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, 
         Rational least_score = {2, 1};
         Rational half = {1, 2};
         for (size_t c = 0; c < count; c++) {
-            if (!cell_line(cells[c], request->knowledge, &request->meter, bar_length, &lines[c])) {
+            if (!grow_blueprint_cell_line(cells[c], request->knowledge, &request->meter, bar_length, &lines[c])) {
                 continue;
             }
             Rational score = rhythm_similarity(motif, &lines[c]);

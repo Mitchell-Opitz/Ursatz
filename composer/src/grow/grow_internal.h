@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_GROW_INTERNAL_H
 
 #include <ursatz_composer/grow_types.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/variant_registry.h>
 
@@ -803,6 +804,24 @@ typedef struct GrowBlueprintDraw {
  * onset (grow_blueprint_check_marks), or the basic motive cannot be drawn.
  */
 GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *out, GrowRefusal *refusal);
+
+/* The K11 rhythm cells of the meter that have the job's bit (a mask of 0: every one), up to `capacity` (grow_blueprint.c). */
+size_t grow_blueprint_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity);
+
+/* The rhythm of a K11 cell as a bar's line; false when it does not read as a bar of the meter (grow_blueprint.c). */
+bool grow_blueprint_cell_line(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, Rational bar_length,
+                              GrowBlueprintLine *out);
+
+/*
+ * The blueprint the Composer writes itself from a motif (R-751, grow_blueprint_generate.c, docs/blueprint-generator.md): an 8-bar sentence
+ * or period (request->pairing) over the basic motive request->motive, from the K8 slot expectations of its theme type and the blueprint
+ * preferences (NULL for the defaults), with rng drawing. Zeroes *out and gives it, bar by bar, the chords (the basic idea's read from the
+ * motive's own harmony, the other ideas' one alternative of the expectations, none with a tritone or other augmented or diminished interval
+ * between neighbouring basses) and the jobs of the bars of the ideas that give rhythms (a K11 cell as a GROW_JOB_ENTRY, or variant,
+ * contrast or liquidation). GROW_ERR_STUCK, with the reason in refusal, when no chords fit; the next seed draws others.
+ */
+GrowResult grow_blueprint_generate(const GrowRequest *request, const BlueprintPreferences *preferences, FillRng *rng, GrowBlueprint *out,
+                                   GrowRefusal *refusal);
 
 /*
  * The checks of the climax against the draw (R-743): a note of the bar's rhythm starts at its onset, a Given melody note there is
