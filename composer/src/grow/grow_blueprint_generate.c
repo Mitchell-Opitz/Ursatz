@@ -822,7 +822,8 @@ static bool sound_sus4(Marks *marks, size_t bar) {
     grow_blueprint_beats_text(second, &marks->request->meter, at, sizeof at);
     char text[GROW_BLUEPRINT_TEXT];
     size_t length = strcspn(this->chords, " ");
-    snprintf(text, sizeof text, "%.*ssus4 %.*s@%s", (int)length, this->chords, (int)length, this->chords, at);
+    size_t letters = strspn(this->chords, "IVXivx"); /* the numeral without its figure: "V" of "V7" */
+    snprintf(text, sizeof text, "%.*ssus4 %.*s@%s", (int)letters, this->chords, (int)length, this->chords, at);
     snprintf(this->chords, GROW_BLUEPRINT_TEXT, "%s", text);
     add_anchor(this, (Rational){0, 1}, tonic);
     add_anchor(this, line->notes[next].offset, leading);
