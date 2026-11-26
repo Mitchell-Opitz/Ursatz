@@ -127,7 +127,8 @@ static bool layout_residue(const MelodyContext *context, Rational start, MelodyC
 /*
  * The notes of the phrase: the motive's, then notes that fill the rest. A motive as long as the phrase (an idea it fills
  * whole) is all there is: its notes are placed as written and nothing is filled after it. A rhythm-only motive's notes are
- * notes of the phrase (motive_index -1): the stage gives them pitches as it does the notes it fills (R-746). A liquidated residue is
+ * notes of the phrase (motive_index -1): the stage gives them pitches as it does the notes it fills (R-746), and fills nothing after
+ * them, so a rest that ends it stays a rest (R-743). A liquidated residue is
  * followed by its own rhythm (layout_residue). With a density the rest is notes of an even length, that many to a cell;
  * without one it is the motive's rhythm over again, each note as long as the time from one onset of the motive to the
  * next, the last as long as it is.
@@ -146,6 +147,14 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     }
     if (context->liquidated) {
         return layout_residue(context, start, out);
+    }
+    /* A rhythm-only motive is the idea's whole rhythm (a blueprint's, R-743): a rest after its last note stays a rest. */
+    if (context->motive_rhythm_only) {
+        for (size_t i = 0; i < out->count; i++) {
+            out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
+            out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
+        }
+        return true;
     }
 
     /* A note that ends the phrase starts with the last chord, so the cadence arrives with it. */
