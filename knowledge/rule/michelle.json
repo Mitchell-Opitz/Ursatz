@@ -255,6 +255,69 @@
       ]
     },
     {
+      "id": "michelle.rule.register-shift",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "a shift of register",
+      "content": {
+        "code": "register_shift",
+        "scope": "line",
+        "function": "critic_register_shift",
+        "message": "the line moves {value} semitones in register from bar {first} to bar {last}, more than {limit}",
+        "default_weight": 1,
+        "parameters": {
+          "limit": 7,
+          "span": 5
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 u15 (s48, s58, s66) and t2 (s12)",
+          "note": "a line whose bars jump a fifth or more from one register to the next sounds broken in two"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "the line moves 12 semitones in register from bar 5 to bar 6, more than 7"
+        }
+      ]
+    },
+    {
+      "id": "michelle.rule.half-notes",
+      "kind": "rule",
+      "subtype": "evaluator",
+      "name": "two half notes in a row",
+      "content": {
+        "code": "half_notes",
+        "scope": "line",
+        "function": "critic_half_notes",
+        "message": "{count} half notes follow a half note, the first in bar {bar}",
+        "default_weight": 1,
+        "parameters": {
+          "span": 2
+        }
+      },
+      "citations": [
+        {
+          "source": "michelle",
+          "chapter": "Listening record",
+          "section": "2026-11-22 u15 (s58)",
+          "note": "half notes one after another stall a line that wants to move"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "message": "2 half notes follow a half note, the first in bar 3"
+        }
+      ]
+    },
+    {
       "id": "michelle.rule.cadence-heard",
       "kind": "rule",
       "subtype": "observation",

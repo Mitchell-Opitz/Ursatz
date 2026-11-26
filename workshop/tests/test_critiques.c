@@ -129,7 +129,7 @@ static void test_critique_and_verdict(int version) {
     cJSON *file = critiques();
     const cJSON *kept = file ? cJSON_GetArrayItem(member(file, "critiques"), 0) : NULL;
     check(kept && strcmp(str(kept, "id"), critique_id) == 0 && strcmp(str(kept, "note"), "first listen") == 0 && strcmp(str(kept, "actor"), "test") == 0 &&
-              cJSON_GetArraySize(member(kept, "evaluators")) == 8 && cJSON_GetArraySize(member(kept, "observations")) == observation_count,
+              cJSON_GetArraySize(member(kept, "evaluators")) == 10 && cJSON_GetArraySize(member(kept, "observations")) == observation_count,
           "the file holds the critique with its evaluators and observations");
     cJSON_Delete(file);
 

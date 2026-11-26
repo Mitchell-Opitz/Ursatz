@@ -51,7 +51,7 @@ static const char *DEFAULT_DEVELOPMENT =
 static const char *DEFAULT_CANDIDATES = "{\"variety\":0,\"pool\":4}";
 static const char *DEFAULT_CRITIC =
     "{\"rank\":false,\"candidates\":4,\"keep_rejected\":8,\"reverse\":[],\"weights\":{\"rhythmic_monotony\":1,\"contrast_distance\":1,"
-    "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1}}";
+    "\"leap_load\":1,\"open_ending\":1,\"stray_syncopation\":1,\"one_rhythm\":1,\"repeated_notes\":1,\"wide_range\":1,\"register_shift\":1,\"half_notes\":1}}";
 static const char *DEFAULT_HARMONY =
     "{\"mixture\":{\"share\":\"0/1\",\"from\":[\"parallel\",\"one step darker\",\"one step brighter\"]},\"color\":{\"share\":\"0/1\",\"types\":["
     "\"persichetti.chord-type.add9\",\"persichetti.chord-type.minor-add9\",\"persichetti.chord-type.add6\",\"persichetti.chord-type.minor-add6\","

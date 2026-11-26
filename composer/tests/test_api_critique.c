@@ -145,7 +145,7 @@ static void test_sets(void) {
     for (int i = 0; i < 2; i++) {
         const cJSON *entry = item(both, i);
         assert(cJSON_GetObjectItemCaseSensitive(entry, "index")->valueint == i);
-        assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "evaluators")) == 8);
+        assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "evaluators")) == 10);
         assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(entry, "score")));
         assert(evaluator(entry, "leap_load") && cJSON_GetObjectItemCaseSensitive(evaluator(entry, "leap_load"), "weight")->valueint == 1);
         assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(evaluator(entry, "leap_load"), "reversed")));
@@ -167,7 +167,8 @@ static void test_sets(void) {
     request = request_of(plan, "");
     cJSON *alone = critique(request, URSATZ_OK, &response);
     assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(alone, "candidates")) == 1);
-    static const char *const OTHERS[] = {"rhythmic_monotony", "contrast_distance", "leap_load", "open_ending", "stray_syncopation", "repeated_notes", "wide_range"};
+    static const char *const OTHERS[] = {"rhythmic_monotony", "contrast_distance", "leap_load", "open_ending", "stray_syncopation", "repeated_notes", "wide_range",
+                                         "register_shift", "half_notes"};
     for (size_t i = 0; i < sizeof OTHERS / sizeof OTHERS[0]; i++) {
         assert(penalty(item(alone, 0), OTHERS[i]) == penalty(item(both, 1), OTHERS[i]));
     }

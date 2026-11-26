@@ -8,7 +8,7 @@
 #include "critic/critic_internal.h"
 
 /*
- * The eight evaluators (R-719). Each is a penalty from 0 to 1 over the melody line, an exact Rational. The code of each, the name of
+ * The ten evaluators (R-719, R-755). Each is a penalty from 0 to 1 over the melody line, an exact Rational. The code of each, the name of
  * its function and its parameters are the data of the entry michelle.rule.<code>; the table below holds the first two, and a test
  * pins it to the entries both ways. Overflow of a Rational is CRITIC_ERR_OVERFLOW.
  */
@@ -20,7 +20,8 @@ static const struct {
     {"rhythmic_monotony", "critic_rhythmic_monotony"}, {"contrast_distance", "critic_contrast_distance"},
     {"leap_load", "critic_leap_load"},                 {"open_ending", "critic_open_ending"},
     {"stray_syncopation", "critic_stray_syncopation"}, {"one_rhythm", "critic_one_rhythm"},
-    {"repeated_notes", "critic_repeated_notes"},       {"wide_range", "critic_wide_range"}};
+    {"repeated_notes", "critic_repeated_notes"},       {"wide_range", "critic_wide_range"},
+    {"register_shift", "critic_register_shift"},       {"half_notes", "critic_half_notes"}};
 
 const char *critic_evaluator_code(CriticEvaluator evaluator) {
     return (int)evaluator >= 0 && evaluator < CRITIC_EVALUATOR_COUNT ? EVALUATORS[evaluator].code : NULL;
@@ -483,6 +484,95 @@ static CriticResult wide_range(const CriticLine *line, const KnowledgeSnapshot *
     return CRITIC_OK;
 }
 
+/* A bar's register: the unweighted mean pitch of the notes that start in it. */
+static CriticResult bar_register(const CriticLine *line, const Bar *bar, Rational *out) {
+    long long sum = 0;
+    for (size_t i = 0; i < bar->count; i++) {
+        sum += line->notes[bar->first + i].pitch;
+    }
+    return share(sum, (long long)bar->count, out);
+}
+
+/* The largest shift of register between neighbouring bars that have notes: (shift - limit) / span, from 0 to 1 (R-755). */
+static CriticResult register_shift(const CriticLine *line, const KnowledgeSnapshot *knowledge, CriticFinding *out) {
+    Rational limit;
+    Rational span;
+    CriticResult status = parameter(knowledge, CRITIC_REGISTER_SHIFT, "limit", &limit);
+    status = status == CRITIC_OK ? parameter(knowledge, CRITIC_REGISTER_SHIFT, "span", &span) : status;
+    if (status != CRITIC_OK) {
+        return status;
+    }
+    Bar *bars = calloc(line->count, sizeof(Bar));
+    if (bars == NULL) {
+        return CRITIC_ERR_ALLOC;
+    }
+    size_t count = line_bars(line, bars);
+    Rational largest = ZERO;
+    size_t at = count;
+    Rational previous = ZERO;
+    for (size_t k = 0; k < count && status == CRITIC_OK; k++) {
+        Rational mean;
+        Rational shift;
+        status = bar_register(line, &bars[k], &mean);
+        if (status == CRITIC_OK && k > 0) {
+            status = rational_sub(mean, previous, &shift) == RATIONAL_OK ? CRITIC_OK : CRITIC_ERR_OVERFLOW;
+            if (status == CRITIC_OK && rational_cmp(shift, ZERO) < 0) {
+                status = rational_sub(ZERO, shift, &shift) == RATIONAL_OK ? CRITIC_OK : CRITIC_ERR_OVERFLOW;
+            }
+            if (status == CRITIC_OK && (at == count || rational_cmp(shift, largest) > 0)) {
+                largest = shift;
+                at = k - 1;
+            }
+        }
+        previous = mean;
+    }
+    if (status == CRITIC_OK && at < count) {
+        Rational over;
+        Rational part;
+        long long rounded = 0;
+        Rational half = {1, 2};
+        Rational shifted;
+        TRY(rational_sub(largest, limit, &over));
+        if (rational_cmp(over, ZERO) > 0) {
+            TRY(rational_div(over, span, &part));
+            out->penalty = clamp01(part);
+        }
+        TRY(rational_add(largest, half, &shifted));
+        TRY(rational_floor(shifted, &rounded));
+        out->value = whole(rounded);
+        out->limit = limit;
+        out->first = bars[at].bar;
+        out->last = bars[at + 1].bar;
+        out->bar = bars[at].bar;
+    }
+    free(bars);
+    return status;
+}
+
+/* Notes of exactly a half note that follow a half note: n / span, from 0 to 1 (R-755). */
+static CriticResult half_notes(const CriticLine *line, const KnowledgeSnapshot *knowledge, CriticFinding *out) {
+    Rational span;
+    Rational half = {1, 2};
+    CriticResult status = parameter(knowledge, CRITIC_HALF_NOTES, "span", &span);
+    if (status != CRITIC_OK) {
+        return status;
+    }
+    long long runs = 0;
+    for (size_t i = 1; i < line->count; i++) {
+        if (rational_cmp(line->notes[i].duration, half) == 0 && rational_cmp(line->notes[i - 1].duration, half) == 0) {
+            out->bar = runs == 0 ? line->notes[i].bar : out->bar;
+            runs++;
+        }
+    }
+    if (runs > 0) {
+        Rational part;
+        TRY(rational_div(whole(runs), span, &part));
+        out->penalty = clamp01(part);
+        out->count = (int)runs;
+    }
+    return CRITIC_OK;
+}
+
 CriticResult critic_evaluate(const CriticLine *line, const CriticLine *const *set, size_t set_count, const KnowledgeSnapshot *knowledge,
                              CriticFinding out[CRITIC_EVALUATOR_COUNT]) {
     if (line == NULL || out == NULL) {
@@ -506,6 +596,8 @@ CriticResult critic_evaluate(const CriticLine *line, const CriticLine *const *se
     status = status == CRITIC_OK ? one_rhythm(line, set, set_count, &out[CRITIC_ONE_RHYTHM]) : status;
     status = status == CRITIC_OK ? repeated_notes(line, &out[CRITIC_REPEATED_NOTES]) : status;
     status = status == CRITIC_OK ? wide_range(line, knowledge, &out[CRITIC_WIDE_RANGE]) : status;
+    status = status == CRITIC_OK ? register_shift(line, knowledge, &out[CRITIC_REGISTER_SHIFT]) : status;
+    status = status == CRITIC_OK ? half_notes(line, knowledge, &out[CRITIC_HALF_NOTES]) : status;
     return status;
 }
 

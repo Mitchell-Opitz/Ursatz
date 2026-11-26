@@ -5,8 +5,8 @@
 #include "theory/knowledge/knowledge_snapshot.h"
 
 /*
- * The K13 rule entries (R-717): the 19 repository entries load with their subtype, scope, weight and parameters (twelve from
- * michelle: eight evaluators with weight 1 and four observations; seven constraints from fux, every one at stage melody with the
+ * The K13 rule entries (R-717): the 21 repository entries load with their subtype, scope, weight and parameters (fourteen from
+ * michelle: ten evaluators with weight 1 and four observations; seven constraints from fux, every one at stage melody with the
  * setting melody.waive). A user file with a rule of an unknown subtype, a weight of 21, a parameter 1/0 or a message placeholder
  * outside the list is refused with the file, the id and the field.
  */
@@ -56,7 +56,7 @@ static void test_counts(void) {
             assert(strcmp(rule->stage, "melody") == 0 && rule->waivable && strcmp(rule->setting, "melody.waive") == 0);
         }
     }
-    assert(evaluators == 8 && observations == 4 && constraints == 7);
+    assert(evaluators == 10 && observations == 4 && constraints == 7);
     knowledge_snapshot_destroy(snapshot);
 }
 

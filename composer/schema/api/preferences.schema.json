@@ -967,7 +967,9 @@
               "stray_syncopation",
               "one_rhythm",
               "repeated_notes",
-              "wide_range"
+              "wide_range",
+              "register_shift",
+              "half_notes"
             ]
           },
           "description": "Evaluators whose penalty counts for a candidate instead of against it."
@@ -1024,6 +1026,18 @@
               "minimum": 0,
               "maximum": 20,
               "description": "A range wider than a tenth. Weight 0 to 20; default 1."
+            },
+            "register_shift": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "A shift of register of more than a fifth from one bar to the next. Weight 0 to 20; default 1."
+            },
+            "half_notes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "Half notes one after another. Weight 0 to 20; default 1."
             }
           }
         }

@@ -1081,7 +1081,7 @@ static const char *const WORDS_NCT[] = {"passing", "neighbor", "appoggiatura", "
 static const char *const WORDS_WAIVE[] = {"forbidden-leap",         "forbidden-outline",      "no-crossing", "parallel-octaves",
                                           "parallel-fifths",        "dissonance-against-bass", "strong-beat-chord-tone", NULL};
 static const char *const WORDS_CRITIC_REVERSE[] = {"rhythmic_monotony", "contrast_distance", "leap_load",      "open_ending",
-                                                   "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", NULL};
+                                                   "stray_syncopation", "one_rhythm",        "repeated_notes", "wide_range", "register_shift", "half_notes", NULL};
 static const char *const WORDS_MIXTURE_FROM[] = {"parallel", "one step darker", "one step brighter", "two steps darker", "two steps brighter", NULL};
 static const char *const WORDS_COLOR_TYPES[] = {"persichetti.chord-type.add9",          "persichetti.chord-type.minor-add9",
                                                 "persichetti.chord-type.add6",          "persichetti.chord-type.minor-add6",
@@ -1240,6 +1240,8 @@ static const ComposerPreferenceKey KEYS[] = {
     {"critic.weights.one_rhythm", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.repeated_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"critic.weights.wide_range", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.register_shift", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"critic.weights.half_notes", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
     {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
     {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM},
     {"harmony.color.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
@@ -1311,7 +1313,9 @@ static const ComposerRule RULES[] = {
     {"stray_syncopation", false, "critic.weights.stray_syncopation"},
     {"one_rhythm", false, "critic.weights.one_rhythm"},
     {"repeated_notes", false, "critic.weights.repeated_notes"},
-    {"wide_range", false, "critic.weights.wide_range"}};
+    {"wide_range", false, "critic.weights.wide_range"},
+    {"register_shift", false, "critic.weights.register_shift"},
+    {"half_notes", false, "critic.weights.half_notes"}};
 
 const ComposerRule *composer_preferences_rules(size_t *count) {
     if (count) {

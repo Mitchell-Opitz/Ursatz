@@ -45,7 +45,7 @@ expect_status(0 critique themes/01.json themes/02.json --format json)
 string(JSON schema GET "${OUT}" schema)
 string(JSON count LENGTH "${OUT}" candidates)
 string(JSON rules LENGTH "${OUT}" candidates 0 evaluators)
-if(NOT schema STREQUAL "ursatz-critique" OR NOT count EQUAL 2 OR NOT rules EQUAL 8)
+if(NOT schema STREQUAL "ursatz-critique" OR NOT count EQUAL 2 OR NOT rules EQUAL 10)
     message(FATAL_ERROR "the JSON answer is not what the critique entry gives: ${OUT}")
 endif()
 

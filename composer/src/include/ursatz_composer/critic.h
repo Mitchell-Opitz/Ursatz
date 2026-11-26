@@ -12,9 +12,10 @@
 #include <ursatz_composer/render.h>
 
 /*
- * The critic (R-716 to R-722, docs/critic.md): a judgment of a candidate in her words. It reads the candidate's melody line, eight
+ * The critic (R-716 to R-722, docs/critic.md): a judgment of a candidate in her words. It reads the candidate's melody line, ten
  * evaluators measure what she has said about a melody (a monotonous rhythm, a contrast too close or too far, too many skips and
- * leaps, an ending that does not end, a stray syncopation, one rhythm across a set, repeated notes, a range wider than a tenth),
+ * leaps, an ending that does not end, a stray syncopation, one rhythm across a set, repeated notes, a range wider than a tenth, a
+ * shift of register from one bar to the next, half notes one after another),
  * and the score is minus the weighted sum of their penalties. Every value is an exact Rational. An evaluator's code, its function
  * name and its parameters are the data of the knowledge entry michelle.rule.<code> (R-717): a test pins the table here to the
  * entries both ways, and the parameters are read from the snapshot, never written in the code.
@@ -39,6 +40,8 @@ typedef enum {
     CRITIC_ONE_RHYTHM,
     CRITIC_REPEATED_NOTES,
     CRITIC_WIDE_RANGE,
+    CRITIC_REGISTER_SHIFT,
+    CRITIC_HALF_NOTES,
     CRITIC_EVALUATOR_COUNT
 } CriticEvaluator;
 
