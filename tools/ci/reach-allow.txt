@@ -42,7 +42,6 @@ composer/src/material/given.c plan_give_chords  # the plain form of plan_give_ch
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
 composer/src/motive/motive_text.c motive_harmony_parse  # the plain form of motive_harmony_parse_in (P69 B8): every application passes its snapshot; its tests call it
-composer/src/motive/motive_blueprint.c composer_event_pitch  # no application places a blueprint event until the melody stage reads the event constraint (P69b B5)
 composer/src/motive/motive_blueprint.c choose  # a helper of composer_blueprint_motive, reached with it (P69b B6)
 composer/src/motive/motive_blueprint.c composer_blueprint_motive  # no application draws a blueprint motive until the theme request reads a blueprint (P69b B6); test_motive_blueprint calls it
 composer/src/motive/motive_blueprint.c event_tone  # a helper of composer_blueprint_motive, reached with it (P69b B6)

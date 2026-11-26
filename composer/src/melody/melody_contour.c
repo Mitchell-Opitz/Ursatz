@@ -11,6 +11,10 @@
 #define SOFT_RULES 4
 
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params) {
+    /* The plan's climax (R-746) is where it is. */
+    if (context->has_climax) {
+        return context->climax.offset;
+    }
     unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
     if (!context->idea) {
         return position_div(position_mul(context->length, (long long)position), CLIMAX_SCALE);
@@ -58,6 +62,17 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
     }
     out->in_motive = true;
     out->cap = top - 1;
+
+    /* The plan's climax in this target (R-746) is the contour's: its note and pitch, in place of a choice. */
+    for (size_t j = 0; context->climax_here && j < melody->count; j++) {
+        if (rational_cmp(melody->notes[j].onset, context->climax.offset) == 0) {
+            out->in_motive = j < first;
+            out->climax = j;
+            out->climax_pitch = context->climax.midi;
+            out->cap = context->climax.midi - 1;
+            return true;
+        }
+    }
 
     /*
      * The climax is the anchor nearest the place asked for, other than the last note, which is the cadence's. A target

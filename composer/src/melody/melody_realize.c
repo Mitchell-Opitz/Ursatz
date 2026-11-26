@@ -247,6 +247,11 @@ bool melody_realize(const MelodyContext *context, const MelodyFillParams *params
         }
     }
     ok = ok && settle(r, keep_figures);
+    /* A motive note where an anchor or the climax is takes its pitch (R-746). */
+    for (size_t k = 0; ok && k < r->count; k++) {
+        int fixed = melody_fixed_pitch(context, out->notes[k].onset);
+        out->notes[k].pitch = fixed >= 0 ? fixed : out->notes[k].pitch;
+    }
     if (ok && keep_figures) {
         ok = survey(r, types, loose);
         for (size_t k = 0; ok && k < r->count; k++) {

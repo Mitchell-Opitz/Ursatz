@@ -40,6 +40,27 @@ void melody_context_zero(MelodyContext *context) {
     context->climax.offset = POSITION_ZERO;
 }
 
+int melody_fixed_pitch(const MelodyContext *context, Rational position) {
+    if (context->climax_here && rational_cmp(context->climax.offset, position) == 0) {
+        return context->climax.midi;
+    }
+    for (size_t i = 0; i < context->anchor_count; i++) {
+        if (rational_cmp(context->anchors[i].offset, position) == 0) {
+            return context->anchors[i].midi;
+        }
+    }
+    return -1;
+}
+
+const PlanEvent *melody_event_at(const MelodyContext *context, Rational position) {
+    for (size_t i = 0; i < context->event_count; i++) {
+        if (rational_cmp(context->events[i].offset, position) == 0) {
+            return &context->events[i];
+        }
+    }
+    return NULL;
+}
+
 /* The length of a note the probes look through: the shortest note the operator writes. */
 static bool probe_length(Rational *out) {
     return rational_make(1, MELODY_FINEST_NOTE_DENOMINATOR, out) == RATIONAL_OK;

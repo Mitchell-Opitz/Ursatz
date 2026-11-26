@@ -188,6 +188,7 @@ typedef struct {
     int motive_index;
     bool strong; /* it starts on a cell */
     size_t chord; /* the chord sounding at its onset */
+    bool event;   /* an event starts with it (R-746): a chosen non-chord tone, placed after the notes around it */
 } MelodyNote;
 
 /* A candidate's payload. */
@@ -217,6 +218,14 @@ void melody_context_zero(MelodyContext *context);
 
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
+
+/*
+ * The pitch a note starting at a position must have (R-746): the climax's when the plan's climax falls there, else an anchor's;
+ * -1 for none.
+ */
+int melody_fixed_pitch(const MelodyContext *context, Rational position);
+/* The event that starts at a position of the target, or NULL. */
+const PlanEvent *melody_event_at(const MelodyContext *context, Rational position);
 
 /* The index of the chord sounding at a position of the phrase. */
 size_t melody_chord_at(const MelodyContext *context, Rational position);
@@ -263,7 +272,9 @@ bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *p
 
 /*
  * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
- * held into the next chord. The others, when non-chord tones are allowed, are filled in between these.
+ * held into the next chord. The others, when non-chord tones are allowed, are filled in between these. A note with a fixed
+ * pitch (an anchor's or the climax's, R-746) is an anchor and so is a note right beside an event; an event's note otherwise
+ * is not, whatever its beat, but for the first and the last note (placed as anchors, then moved to the event's pitch).
  */
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i);
