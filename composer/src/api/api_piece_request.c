@@ -388,7 +388,7 @@ static UrsatzStatus read_brief(PieceSpec *request, const cJSON *root, const char
             return api_fail(error, URSATZ_ERR_REQUEST, path, "an accompaniment of pattern \"motive\" is not available in a piece");
         }
         UrsatzStatus status =
-            api_read_accompaniment(pattern, NULL, request->meter_text, &piece->meter, &piece->accompaniment, error);
+            api_read_accompaniment(pattern, NULL, request->meter_text, &piece->meter, NULL, &piece->accompaniment, error);
         if (status != URSATZ_OK) {
             snprintf(error->path, sizeof error->path, "%s", path);
             return status;

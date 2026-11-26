@@ -35,15 +35,33 @@ const char *api_accompaniment_name(PlanAccompanimentPattern pattern) {
     return API_ACCOMPANIMENT_PATTERNS[pattern].value;
 }
 
+const char *api_accompaniment_text(const PlanAccompaniment *accompaniment) {
+    return accompaniment->pattern == PLAN_ACCOMPANIMENT_ENTRY ? accompaniment->pattern_id : api_accompaniment_name(accompaniment->pattern);
+}
+
 UrsatzStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
-                                      const PlanMeter *meter, PlanAccompaniment *out, UrsatzError *error) {
+                                      const PlanMeter *meter, const KnowledgeSnapshot *knowledge, PlanAccompaniment *out,
+                                      UrsatzError *error) {
+    const PatternEntry *entry = NULL;
     out->pattern = PLAN_ACCOMPANIMENT_ANY;
     out->texture = -1;
+    out->pattern_id[0] = '\0';
     if (pattern_text) {
         bool found = false;
         for (int p = 0; p < 5 && !found; p++) {
             found = request_equals_ignore_case(pattern_text, API_ACCOMPANIMENT_PATTERNS[p].value);
             out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
+        }
+        /* An id of K11 has a dot (author.pattern.name); a word with none is a name that is not one of the five. */
+        if (!found && knowledge && strchr(pattern_text, '.')) {
+            entry = strlen(pattern_text) < sizeof(out->pattern_id) ? knowledge_snapshot_pattern(knowledge, pattern_text) : NULL;
+            if (!entry || entry->is_rhythm) {
+                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/pattern",
+                                "accompaniment.pattern: '%s' is not an accompaniment pattern", pattern_text);
+            }
+            out->pattern = PLAN_ACCOMPANIMENT_ENTRY;
+            memcpy(out->pattern_id, pattern_text, strlen(pattern_text) + 1);
+            found = true;
         }
         if (!found) {
             return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment",
@@ -71,6 +89,10 @@ UrsatzStatus api_read_accompaniment(const char *pattern_text, const char *textur
     }
     if (out->pattern == PLAN_ACCOMPANIMENT_ALBERTI && meter->beat_unit == 8) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment", "accompaniment alberti needs a simple meter, not %s",
+                        meter_text);
+    }
+    if (entry && !entry->accompaniment.compound && meter->beat_unit == 8) {
+        return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment", "accompaniment %s needs a simple meter, not %s", entry->id,
                         meter_text);
     }
     return URSATZ_OK;
@@ -373,7 +395,7 @@ UrsatzStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Ursa
         }
         out->has_accompaniment = true;
         UrsatzStatus read = api_read_accompaniment(motive_word ? NULL : text->accompaniment, text->texture, text->meter,
-                                                     &out->meter, &out->accompaniment, error);
+                                                     &out->meter, out->knowledge, &out->accompaniment, error);
         if (read != URSATZ_OK) {
             return read;
         }

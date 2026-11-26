@@ -452,7 +452,7 @@ static UrsatzStatus check_request(PlanBuild *state, UrsatzError *error) {
     if (state->accompaniment_text || state->texture_text) {
         state->has_accompaniment = true;
         status = api_read_accompaniment(state->accompaniment_text, state->texture_text, state->meter_text, &state->meter,
-                                        &state->accompaniment, error);
+                                        state->knowledge, &state->accompaniment, error);
         if (status != URSATZ_OK) {
             return status;
         }
@@ -650,7 +650,7 @@ static cJSON *plan_document(const PlanBuild *state, const Plan *plan) {
     ok = ok && api_add(document, "motive", state->motive_source ? cJSON_CreateString(state->motive_source) : cJSON_CreateNull());
     ok = ok && (!state->seeded || api_add(document, "motive_source", api_seed_json(&state->seed_found)));
     ok = ok && api_add(document, "accompaniment",
-                   state->has_accompaniment ? cJSON_CreateString(api_accompaniment_name(state->accompaniment.pattern)) : cJSON_CreateNull());
+                   state->has_accompaniment ? cJSON_CreateString(api_accompaniment_text(&state->accompaniment)) : cJSON_CreateNull());
     cJSON *list = ok ? cJSON_CreateArray() : NULL;
     for (size_t i = 0; list && i < count; i++) {
         ok = cJSON_AddItemToArray(list, api_section_json(&sections[i]));

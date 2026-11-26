@@ -241,13 +241,23 @@
       ],
       "properties": {
         "pattern": {
-          "enum": [
-            "any",
-            "block",
-            "arpeggiated",
-            "alberti",
-            "oom-pah",
-            "motive"
+          "anyOf": [
+            {
+              "enum": [
+                "any",
+                "block",
+                "arpeggiated",
+                "alberti",
+                "oom-pah",
+                "motive"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9.-]*$",
+              "maxLength": 63,
+              "description": "The id of a K11 accompaniment entry, for example michelle.pattern.arpeggio-wave."
+            }
           ]
         },
         "motive": {
