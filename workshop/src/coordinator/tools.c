@@ -9,6 +9,7 @@
 #include "coordinator/command_schemas.h"
 #include "coordinator/command_text.h"
 #include "coordinator/command_sheet.h"
+#include "items/blueprint_text.h"
 #include "items/views.h"
 #include "coordinator/dispatch.h"
 #include <common/json.h>
@@ -212,6 +213,27 @@ WORKSHOP_HANDLER(workshop_t_text) {
     cJSON *answer = NULL;
     status = workshop_view_input(path, text, view && view[0] ? view : "full", &limits, &answer, error);
     return status == URSATZ_OK ? workshop_reply_tree(reply, answer, error) : status;
+}
+
+/* A blueprint written in Ursatz Text as the theme request JSON (items/blueprint_text.h): param text; the reply is {"request": ...}. */
+WORKSHOP_HANDLER(workshop_t_blueprint_parse) {
+    bool bad = false;
+    const char *text = workshop_param_string(call->params, "text", &bad);
+    if (!text || bad) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/text", "text is required and a string");
+    }
+    cJSON *request = NULL;
+    char message[400];
+    if (!blueprint_text_read(text, &request, message, sizeof message)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/text", "%s", message);
+    }
+    cJSON *answer = cJSON_CreateObject();
+    if (!answer || !cJSON_AddItemToObject(answer, "request", request)) {
+        cJSON_Delete(answer);
+        cJSON_Delete(request);
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    return workshop_reply_tree(reply, answer, error);
 }
 
 /* The command reference generated from the schemas (coordinator/command_sheet.h): params format (sheet, markdown, grammar, json or help) and name (for help). */

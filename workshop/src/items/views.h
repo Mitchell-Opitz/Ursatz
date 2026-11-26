@@ -18,7 +18,9 @@
  * or "schema"; otherwise Ursatz Text, its kind from the header (a text is converted with text_to_json first). *out is
  * {"kind": "<kind>", "text": "<the view>"}, or for "json" {"kind", "json": "<the codec's JSON text>"}. "full" prints the input's layer; the
  * other views read the layer the file is. A file that does not read is URSATZ_ERR_NOT_FOUND at "/params/path"; a text that does not parse is
- * URSATZ_ERR_REQUEST at "/params/text" (or "/params/path" for a file) with "line <n>: <message>".
+ * URSATZ_ERR_REQUEST at "/params/text" (or "/params/path" for a file) with "line <n>: <message>". A blueprint (R-747: the text
+ * "ursatz-text 1 blueprint", or the JSON of a theme request with a "blueprint" member) is kind "blueprint": "json" is the theme request, "full" its
+ * text, any other view is URSATZ_ERR_REQUEST at "/params/view".
  */
 UrsatzStatus workshop_view_input(const char *path, const char *text, const char *view, const TextViewLimits *limits, cJSON **out,
                                  UrsatzError *error);

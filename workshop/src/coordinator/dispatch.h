@@ -130,6 +130,7 @@ WORKSHOP_HANDLER(workshop_q_item_each_op);
 
 /* tools (tools.c): the third call, on files the params name (R-656) */
 WORKSHOP_HANDLER(workshop_t_analyze);
+WORKSHOP_HANDLER(workshop_t_blueprint_parse);
 WORKSHOP_HANDLER(workshop_t_commands);
 WORKSHOP_HANDLER(workshop_t_commands_parse);
 WORKSHOP_HANDLER(workshop_t_composer);
