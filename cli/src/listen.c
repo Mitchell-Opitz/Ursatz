@@ -334,8 +334,7 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
                                               : cJSON_AddNullToObject(line, "blend") != NULL);
     ok = ok && (manifest->options->settings_path ? cJSON_AddStringToObject(line, "settings", manifest->options->settings_path)
                                                  : cJSON_AddNullToObject(line, "settings"));
-    ok = ok && (manifest->options->preset_text ? cJSON_AddStringToObject(line, "preset", manifest->options->preset_text) != NULL
-                                               : cJSON_AddNullToObject(line, "preset") != NULL);
+    ok = ok && (!manifest->options->preset_text || cJSON_AddStringToObject(line, "preset", manifest->options->preset_text) != NULL);
     ok = ok && (manifest->preferences ? cJSON_AddItemToObject(line, "preferences", cJSON_Duplicate(manifest->preferences, true))
                                       : cJSON_AddNullToObject(line, "preferences") != NULL);
     ok = ok && cJSON_AddItemToObject(line, "files", files) && cJSON_AddStringToObject(line, "status", sample->status);
