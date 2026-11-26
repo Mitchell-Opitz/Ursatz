@@ -22,6 +22,7 @@
 #include "check/hearing.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
+#include "piece/request_chords.h"
 #include "structure/plan_util.h"
 #include "structure/request_parse.h"
 #include "util/util.h"
@@ -188,6 +189,35 @@ static long open_bar_with_chords(const Plan *plan, NodeId theme_node, const Plan
         }
     }
     return -1;
+}
+
+/* --- the blueprint's chords ------------------------------------------------------------------------- */
+
+UrsatzStatus api_blueprint_chords(const ComposerChords *chords, const struct GrowBlueprint *blueprint, const PlanMeter *meter,
+                                  const SpelledKey *key, size_t bars, GivenChord *out, char numerals[][PLAN_ROMAN_NUMERAL_MAX],
+                                  size_t capacity, size_t *count, UrsatzError *error) {
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const char *text = blueprint->bars[bar].chords;
+        if (!text[0]) {
+            continue;
+        }
+        cJSON *list = cJSON_CreateArray();
+        cJSON *entry = cJSON_CreateObject();
+        if (!list || !entry || !cJSON_AddNumberToObject(entry, "bar", (double)bar) || !cJSON_AddStringToObject(entry, "text", text) ||
+            !cJSON_AddItemToArray(list, entry)) {
+            cJSON_Delete(list);
+            cJSON_Delete(entry);
+            return api_fail_alloc(error);
+        }
+        UrsatzStatus status = request_read_chords(chords, list, "/blueprint/bars", "the theme", 0, meter, key, (long)bars, out, numerals,
+                                                  capacity, count, error);
+        cJSON_Delete(list);
+        if (status != URSATZ_OK) {
+            snprintf(error->path, sizeof error->path, "/blueprint/bars/%zu/chords", bar);
+            return status;
+        }
+    }
+    return URSATZ_OK;
 }
 
 static void passed_add(GrowRun *run, const ComposeRejection *rejection) {

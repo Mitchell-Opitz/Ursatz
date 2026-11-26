@@ -276,37 +276,6 @@ static UrsatzStatus refuse_idea_beside_part(const GrowMaterial *material, const 
     return URSATZ_OK;
 }
 
-/*
- * The chords of a blueprint's bars (R-744), each bar's text read as an entry of the request's "chords" is, into the material's
- * chords; a refusal names the bar's "chords".
- */
-static UrsatzStatus read_blueprint_chords(const ComposerChords *chords, const GrowSetup *setup, GrowMaterial *material,
-                                          UrsatzError *error) {
-    for (size_t bar = 0; bar < setup->blueprint->bar_count; bar++) {
-        const char *text = setup->blueprint->bars[bar].chords;
-        if (!text[0]) {
-            continue;
-        }
-        cJSON *list = cJSON_CreateArray();
-        cJSON *entry = cJSON_CreateObject();
-        if (!list || !entry || !cJSON_AddNumberToObject(entry, "bar", (double)bar) || !cJSON_AddStringToObject(entry, "text", text) ||
-            !cJSON_AddItemToArray(list, entry)) {
-            cJSON_Delete(list);
-            cJSON_Delete(entry);
-            return api_fail_alloc(error);
-        }
-        UrsatzStatus status = request_read_chords(chords, list, "/blueprint/bars", "the theme", 0, &setup->meter, &setup->key,
-                                                  (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS,
-                                                  &material->chord_count, error);
-        cJSON_Delete(list);
-        if (status != URSATZ_OK) {
-            snprintf(error->path, sizeof error->path, "/blueprint/bars/%zu/chords", bar);
-            return status;
-        }
-    }
-    return URSATZ_OK;
-}
-
 /* Fills the motives of the material once the key and the meter are known (the style has given the mode). */
 static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *theme, const cJSON *request,
                                     const GrowSetup *setup, UrsatzError *error) {
@@ -366,7 +335,8 @@ static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *th
     ComposerChords tones;
     const ComposerChords *chords = composer_chords_init(&tones, setup->knowledge, NULL, 0) ? &tones : NULL;
     if (setup->blueprint) {
-        return read_blueprint_chords(chords, setup, material, error);
+        return api_blueprint_chords(chords, setup->blueprint, &setup->meter, &setup->key, setup->bars, material->chords, material->chord_numerals,
+                                    GROW_EXT_CHORDS, &material->chord_count, error);
     }
     return request_read_chords(chords, cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
                                (long)setup->bars, material->chords, material->chord_numerals, GROW_REQUEST_CHORDS, &material->chord_count,

@@ -150,6 +150,15 @@ typedef struct {
 } GrowRun;
 
 /*
+ * The chords of a blueprint's bars (R-744), each bar's text read as an entry of the request's "chords" is, into out (`capacity` of them,
+ * numerals alongside) and *count; a refusal names the bar's "chords" at /blueprint/bars/<bar>/chords. Shared by a request's blueprint and
+ * the generated one (R-751).
+ */
+UrsatzStatus api_blueprint_chords(const ComposerChords *chords, const struct GrowBlueprint *blueprint, const PlanMeter *meter,
+                                  const SpelledKey *key, size_t bars, GivenChord *out, char numerals[][PLAN_ROMAN_NUMERAL_MAX],
+                                  size_t capacity, size_t *count, UrsatzError *error);
+
+/*
  * Sets the tempo (from "option_tempo", else the style) and the mode of the key (mode "style" takes the style's) in out,
  * after the style is loaded. option_tempo has the tempo given with the request or NULL.
  */
