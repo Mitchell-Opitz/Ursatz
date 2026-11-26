@@ -42,7 +42,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 - [fill-loop.md](fill-loop.md): the engine that fills a plan with seeded, recorded operators.
 - [melody-fill.md](melody-fill.md): the melody operator.
-- [blueprints.md](blueprints.md): theme blueprints: the melody constraints, rhythm-only idea motives and the blueprint motive (R-746).
+- [blueprints.md](blueprints.md): theme blueprints: the request's `blueprint` member (R-743), the melody constraints, rhythm-only idea motives and the blueprint motive (R-746).
 - [modes.md](modes.md): the church modes as a key (R-725): stacked chords, numerals, functions, the phrase model and cadences per mode, and what a modal key does not write.
 - [preferences.md](preferences.md): the settings document (R-411): the melody, development, candidates and critic groups, and how it is read and written.
 - [critic.md](critic.md): the critic: the melody line of a candidate, the eight evaluators of her listening notes and the score (R-719).

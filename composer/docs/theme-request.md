@@ -128,6 +128,13 @@ seeding (a gap between two Given chords nothing connects) exit 2 with `the given
 (path `/chords` in the API), `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
 list as read.
 
+## Blueprint
+
+`blueprint` (API 4.8, R-743) gives the theme bar by bar: each bar's chords, a melody or a rhythm or a rhythm job, anchors,
+events, a bass and inner voices, and the theme's climax and accompaniment; what a bar leaves out is composed. With it
+`motives` and `slots` are optional (only `slots.basic` is read), and `chords`, `accompaniment` and `ideas` are refused. The
+members, every rule and refusal, the jobs and how a blueprint becomes the plan are in [blueprints.md](blueprints.md).
+
 ## Refusals before composing
 
 `composer_api_validate("theme", ...)` builds the plan of the request without seeding and refuses what Compose would refuse

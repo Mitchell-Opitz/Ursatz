@@ -4,7 +4,7 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P69b)
 
-API 4.8 begins (R-744, P69b B2; the version bump is B6's): the chord text of a theme's `chords`, a motive's `harmony` and a section's chords reads lower-case numerals (`iv`, `v` in a minor key), `o`, `+`, `M`/`maj7`, applied chords (`V7/V`) and the suffixes `sus2` and `sus4`; every text that read before reads the same. `MotiveSketchChord` gains `quality_given`, `quality`, `has_target`, `target_degree`, `target_alteration` and `target_minor`.
+API 4.8 (R-743, R-744, P69b B2 and B6): a theme request's `blueprint` ([blueprints.md](blueprints.md)) gives the theme bar by bar (chords, melody, rhythm or job, anchors, events, bass, inner voices, climax, accompaniment), and then `motives` and `slots` are optional. The chord text of a theme's `chords`, a motive's `harmony` and a section's chords reads lower-case numerals (`iv`, `v` in a minor key), `o`, `+`, `M`/`maj7`, applied chords (`V7/V`) and the suffixes `sus2` and `sus4`; every text that read before reads the same. `MotiveSketchChord` gains `quality_given`, `quality`, `has_target`, `target_degree`, `target_alteration` and `target_minor`.
 
 ## Unreleased (phase P69)
 
