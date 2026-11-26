@@ -209,8 +209,9 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
+    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_ENTRY &&
            (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
+           (accompaniment->pattern == PLAN_ACCOMPANIMENT_ENTRY) == (accompaniment->pattern_id[0] != '\0') &&
            accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
            (accompaniment->texture < 0 || standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) &&
            low >= 0 && high <= 127 && low < high &&

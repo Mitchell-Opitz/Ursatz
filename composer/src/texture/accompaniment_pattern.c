@@ -19,8 +19,8 @@ static const int ARPEGGIO[4] = {0, 1, 2, 1};
 static const int ALBERTI[4] = {0, 2, 1, 2};
 
 const char *accomp_pattern_name(PlanAccompanimentPattern pattern) {
-    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
-    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_MOTIVE ? NAMES[pattern] : "?";
+    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry"};
+    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_ENTRY ? NAMES[pattern] : "?";
 }
 
 size_t accomp_pattern_voices(PlanAccompanimentPattern pattern) {
@@ -498,6 +498,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         return true;
     }
     case PLAN_ACCOMPANIMENT_MOTIVE:
+    case PLAN_ACCOMPANIMENT_ENTRY:
     case PLAN_ACCOMPANIMENT_ANY:
         break;
     }

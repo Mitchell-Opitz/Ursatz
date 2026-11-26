@@ -121,7 +121,9 @@ typedef struct {
  * vocabulary; ANY leaves it to the operator, which a texture target narrows. texture is a StandardTexture value
  * (standard-texture's texture_rules.h) the written parts are to be heard as, or -1 for none. low and high are the
  * MIDI pitches the accompaniment keeps to, 0 for the defaults 48 and 67. The pattern MOTIVE restates the motive named
- * by motive_node (the pattern needs the name, and no other pattern takes one).
+ * by motive_node (the pattern needs the name, and no other pattern takes one). The pattern ENTRY is a K11 accompaniment
+ * entry that is not one of the four (R-745), named by pattern_id; it is written as the pattern "entry", and no other pattern
+ * takes an id. ANY never picks it.
  */
 typedef enum {
     PLAN_ACCOMPANIMENT_ANY,
@@ -129,12 +131,14 @@ typedef enum {
     PLAN_ACCOMPANIMENT_ARPEGGIATED,
     PLAN_ACCOMPANIMENT_ALBERTI,
     PLAN_ACCOMPANIMENT_OOM_PAH,
-    PLAN_ACCOMPANIMENT_MOTIVE /* a saved accompaniment motive, restated on each chord; ANY never picks it */
+    PLAN_ACCOMPANIMENT_MOTIVE, /* a saved accompaniment motive, restated on each chord; ANY never picks it */
+    PLAN_ACCOMPANIMENT_ENTRY   /* a K11 accompaniment entry named by pattern_id; ANY never picks it */
 } PlanAccompanimentPattern;
 
 #define PLAN_ACCOMPANIMENT_DEFAULT_LOW 48
 #define PLAN_ACCOMPANIMENT_DEFAULT_HIGH 67
 #define PLAN_ACCOMPANIMENT_NODE_MAX 32
+#define PLAN_PATTERN_ID_MAX 64
 
 typedef struct {
     PlanAccompanimentPattern pattern;
@@ -143,6 +147,8 @@ typedef struct {
     int high;
     /* The name of the material node holding the accompaniment motive (a Given melody span), "" for none. */
     char motive_node[PLAN_ACCOMPANIMENT_NODE_MAX];
+    /* The id of the K11 accompaniment entry of the pattern ENTRY, "" for none (written only when set). */
+    char pattern_id[PLAN_PATTERN_ID_MAX];
 } PlanAccompaniment;
 
 /*

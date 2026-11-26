@@ -236,6 +236,20 @@
           }
         },
         {
+          "if": { "properties": { "kind": { "const": "accompaniment" } } },
+          "then": {
+            "required": ["pattern"],
+            "properties": {
+              "pattern": { "enum": ["any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry"] },
+              "pattern_id": { "type": "string", "minLength": 1, "maxLength": 63, "description": "The id of the K11 accompaniment entry of the pattern entry." },
+              "motive_node": { "type": "string", "minLength": 1, "maxLength": 31 }
+            },
+            "if": { "properties": { "pattern": { "const": "entry" } } },
+            "then": { "required": ["pattern_id"] },
+            "else": { "not": { "required": ["pattern_id"] } }
+          }
+        },
+        {
           "if": { "properties": { "kind": { "const": "length_bars" } } },
           "then": { "required": ["bars"], "properties": { "bars": { "type": "integer", "minimum": 1 } } }
         },

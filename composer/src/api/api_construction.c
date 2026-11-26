@@ -28,6 +28,10 @@
 #include "api_construction.h"
 
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern) {
+    /* "entry" is a name the plan writes, not one a request takes (a request names the entry by its id). */
+    if (pattern == PLAN_ACCOMPANIMENT_ENTRY) {
+        return "entry";
+    }
     return API_ACCOMPANIMENT_PATTERNS[pattern].value;
 }
 

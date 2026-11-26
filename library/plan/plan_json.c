@@ -38,7 +38,7 @@ const char *const plan_json_ARCHETYPE_NAMES[PLAN_JSON_ARCHETYPE_COUNT] = {"sente
 const char *const plan_json_PIECE_PART_NAMES[PLAN_JSON_PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
 
 /* The accompaniment patterns by name, in PlanAccompanimentPattern order (a setting return and an accompaniment constraint). */
-const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
+const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry"};
 
 /* ------------------------------------------------------------------ writing */
 

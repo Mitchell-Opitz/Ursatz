@@ -15,7 +15,7 @@ extern const char *const API_EXTENSION_KINDS[4];
 /* The beginning and ending of a hybrid written "antecedent+continuation"; false for any other text. */
 bool api_parse_hybrid(const char *text, SectionPairing *pairing);
 
-/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
+/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry". */
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern);
 
 /* The accompaniment of the two texts (either may be NULL) for the meter. */

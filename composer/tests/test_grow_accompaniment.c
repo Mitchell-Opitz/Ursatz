@@ -240,7 +240,7 @@ static void test_accompaniment_motive(unsigned long last_seed, bool smoke) {
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         Motive motive = make_motive(&SCENARIOS[s]);
         Motive accompaniment = make_accompaniment_motive(&SCENARIOS[s], ACCOMPANIMENT_MOTIVES[s], true);
-        GrowRequest request = make_request(&SCENARIOS[s], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, ""});
+        GrowRequest request = make_request(&SCENARIOS[s], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, "", ""});
         request.has_accompaniment = false;
         request.accompaniment_motive = &accompaniment;
         for (unsigned long seed = 1; seed <= last_seed; seed++) {
@@ -286,7 +286,7 @@ static void test_accompaniment_motive_requests(void) {
     Motive melodic = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], false);
     Motive accompaniment = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], true);
     Plan *plan = NULL;
-    GrowRequest request = make_request(&SCENARIOS[0], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, ""});
+    GrowRequest request = make_request(&SCENARIOS[0], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, "", ""});
     request.has_accompaniment = false;
 
     /* A melodic-role motive is refused; the accompaniment motive is the accompaniment, in the material as "acc". */

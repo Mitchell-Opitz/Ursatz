@@ -525,9 +525,11 @@ static bool valid_accompaniment(const Plan *plan, const PlanConstraint *constrai
     const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
+    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_ENTRY &&
            (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
+           (accompaniment->pattern == PLAN_ACCOMPANIMENT_ENTRY) == (accompaniment->pattern_id[0] != '\0') &&
            memchr(accompaniment->motive_node, '\0', sizeof(accompaniment->motive_node)) &&
+           memchr(accompaniment->pattern_id, '\0', sizeof(accompaniment->pattern_id)) &&
            accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
            accompaniment->low >= 0 && accompaniment->low <= 127 && accompaniment->high >= 0 &&
            accompaniment->high <= 127 && low < high;
@@ -550,6 +552,9 @@ static bool write_accompaniment(cJSON *object, const Plan *plan, const PlanConst
     }
     if (accompaniment->motive_node[0] != '\0') {
         ok = ok && plan_json_add(object, "motive_node", cJSON_CreateString(accompaniment->motive_node));
+    }
+    if (accompaniment->pattern_id[0] != '\0') {
+        ok = ok && plan_json_add(object, "pattern_id", cJSON_CreateString(accompaniment->pattern_id));
     }
     return ok;
 }
@@ -584,6 +589,15 @@ static bool read_accompaniment(JsonReader *reader, const cJSON *item, const char
             return json_bad_format(reader, at, "expected a node name");
         }
         memcpy(accompaniment->motive_node, node->valuestring, strlen(node->valuestring) + 1);
+    }
+    const cJSON *entry = cJSON_GetObjectItemCaseSensitive(item, "pattern_id");
+    if (entry) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "pattern_id");
+        if (!cJSON_IsString(entry) || entry->valuestring[0] == '\0' || strlen(entry->valuestring) >= sizeof(accompaniment->pattern_id)) {
+            return json_bad_format(reader, at, "expected a pattern entry id");
+        }
+        memcpy(accompaniment->pattern_id, entry->valuestring, strlen(entry->valuestring) + 1);
     }
     return json_read_optional_int(reader, item, path, "low", 0, 127, &accompaniment->low) &&
            json_read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);

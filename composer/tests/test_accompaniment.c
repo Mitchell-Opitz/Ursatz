@@ -303,6 +303,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
         }
         break;
     case PLAN_ACCOMPANIMENT_MOTIVE:
+    case PLAN_ACCOMPANIMENT_ENTRY:
     case PLAN_ACCOMPANIMENT_ANY:
         break;
     }

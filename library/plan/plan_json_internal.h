@@ -51,7 +51,7 @@ bool json_read_int_member(JsonReader *reader, const cJSON *object, const char *p
 /* Reads the "span" member, {"start", "end"}, into a start and a positive length. */
 bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, PlanSpan *out);
 
-#define JSON_ACCOMPANIMENT_COUNT 6
+#define JSON_ACCOMPANIMENT_COUNT 7
 extern const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT];
 
 /* The members of a key as a constraint and a key span write them ("tonic", "material"), and read them. */
