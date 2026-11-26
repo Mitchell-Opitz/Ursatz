@@ -356,6 +356,11 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
         }
         generated->melody.range_low = generated->melody.range_low > low ? generated->melody.range_low : low;
         generated->melody.range_high = generated->melody.range_high < high ? generated->melody.range_high : high;
+        /* The motif's own notes stay inside the range, whatever the default low is (a motif that dips below 60 would leave the melody no way to follow it). */
+        for (size_t n = 0; n < setup->motive->note_count; n++) {
+            int pitch = motive_pitch(setup->motive, n);
+            generated->melody.range_low = pitch < generated->melody.range_low ? pitch : generated->melody.range_low;
+        }
         memcpy(generated->rhythm, drawn->rhythm, sizeof generated->rhythm);
         memcpy(generated->known, drawn->known, sizeof generated->known);
         request.chords = generated->chords;
