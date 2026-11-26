@@ -1,0 +1,86 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "michelle",
+ "entries": [
+  {
+   "id": "michelle.pattern.arpeggio-eight",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "eight-note arpeggio",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     "rest",
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 0
+     }
+    ],
+    "compound": false,
+    "by_meter": {
+     "5/4": [
+      "rest",
+      "chord"
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-2-ff7 (rated 5)",
+     "note": "a flowing arpeggio rising from the bass and falling back"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      }
+     ]
+    }
+   ],
+   "version": 1
+  }
+ ]
+}
