@@ -705,6 +705,54 @@ static void critic_group(void) {
     refused("{\"critic\":[]}", "/critic");
 }
 
+static void blueprint_group(void) {
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    ComposerPreferences defaults;
+    composer_preferences_default(&defaults);
+    assert(defaults.blueprint.sounds[BLUEPRINT_SOUND_NINTH_DOWNBEAT] == 3 && defaults.blueprint.sounds[BLUEPRINT_SOUND_LONG_WEAK] == 2);
+    assert(defaults.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_LONG] == 0 &&
+           defaults.blueprint.jobs[BLUEPRINT_FUNCTION_CONTRASTING][BLUEPRINT_JOB_CONTRAST] == 3);
+    assert(defaults.blueprint.climax[0] == 1 && defaults.blueprint.climax[1] == 2 && defaults.blueprint.range == 16 && defaults.blueprint.candidates == 3);
+    assert(read_text("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":0,\"long_weak\":20},\"jobs\":{\"fragment\":{\"contrast\":7},"
+                     "\"cadential\":{\"running\":0}},\"climax\":{\"m6\":0},\"range\":24,\"candidates\":8}}",
+                     &read, path, message));
+    assert(read.blueprint.sounds[BLUEPRINT_SOUND_NINTH_DOWNBEAT] == 0 && read.blueprint.sounds[BLUEPRINT_SOUND_LONG_WEAK] == 20 &&
+           read.blueprint.sounds[BLUEPRINT_SOUND_APPOGGIATURA] == 3);
+    assert(read.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_CONTRAST] == 7 &&
+           read.blueprint.jobs[BLUEPRINT_FUNCTION_FRAGMENT][BLUEPRINT_JOB_RUNNING] == 3 &&
+           read.blueprint.jobs[BLUEPRINT_FUNCTION_CADENTIAL][BLUEPRINT_JOB_RUNNING] == 0);
+    assert(read.blueprint.climax[0] == 0 && read.blueprint.climax[1] == 2 && read.blueprint.range == 24 && read.blueprint.candidates == 8);
+    assert(!test_preferences_are_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(memcmp(&again.blueprint, &read.blueprint, sizeof(read.blueprint)) == 0);
+    cJSON_Delete(document);
+    assert(read_text("{\"blueprint\":{\"range\":12,\"candidates\":1}}", &read, path, message) && read.blueprint.range == 12 && read.blueprint.candidates == 1);
+    assert(read_text("{\"blueprint\":{\"range\":16,\"candidates\":3}}", &read, path, message) && test_preferences_are_default(&read));
+
+    refused("{\"blueprint\":[]}", "/blueprint");
+    refused("{\"blueprint\":{\"walk\":1}}", "/blueprint/walk");
+    refused("{\"blueprint\":{\"sounds\":[]}}", "/blueprint/sounds");
+    refused("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":21}}}", "/blueprint/sounds/ninth_downbeat");
+    refused("{\"blueprint\":{\"sounds\":{\"ninth_downbeat\":-1}}}", "/blueprint/sounds/ninth_downbeat");
+    refused("{\"blueprint\":{\"sounds\":{\"whistle\":1}}}", "/blueprint/sounds/whistle");
+    refused("{\"blueprint\":{\"jobs\":{\"fragment\":{\"walk\":1}}}}", "/blueprint/jobs/fragment/walk");
+    refused("{\"blueprint\":{\"jobs\":{\"fragment\":{\"long\":21}}}}", "/blueprint/jobs/fragment/long");
+    refused("{\"blueprint\":{\"jobs\":{\"coda\":{}}}}", "/blueprint/jobs/coda");
+    refused("{\"blueprint\":{\"jobs\":{\"basic\":1}}}", "/blueprint/jobs/basic");
+    refused("{\"blueprint\":{\"jobs\":[]}}", "/blueprint/jobs");
+    refused("{\"blueprint\":{\"climax\":{\"m5\":1}}}", "/blueprint/climax/m5");
+    refused("{\"blueprint\":{\"climax\":{\"m7\":21}}}", "/blueprint/climax/m7");
+    refused("{\"blueprint\":{\"range\":11}}", "/blueprint/range");
+    refused("{\"blueprint\":{\"range\":25}}", "/blueprint/range");
+    refused("{\"blueprint\":{\"candidates\":0}}", "/blueprint/candidates");
+    refused("{\"blueprint\":{\"candidates\":9}}", "/blueprint/candidates");
+    refused("{\"blueprint\":{\"candidates\":2.5}}", "/blueprint/candidates");
+}
+
 int main(void) {
     defaults_round_trip();
     l4_members_round_trip();
@@ -714,6 +762,7 @@ int main(void) {
     waive_and_reverse();
     candidates_group();
     critic_group();
+    blueprint_group();
     printf("test_preferences: ok\n");
     return 0;
 }
