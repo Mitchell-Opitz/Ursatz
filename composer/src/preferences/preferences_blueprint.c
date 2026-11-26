@@ -26,6 +26,13 @@ void blueprint_preferences_default(BlueprintPreferences *out) {
     out->candidates = 3;
 }
 
+/* The path of a member under a prefix of the group ("jobs/basic" and "long" make "jobs/basic/long"). */
+static void member_path(char *key, size_t size, const char *prefix, const char *name) {
+    snprintf(key, size, "%s", prefix);
+    size_t used = strlen(key);
+    snprintf(key + used, size - used, "/%s", name);
+}
+
 /* A closed object of weights 0 to 20 whose members are `names`, into `values`; `prefix` is the object's path under the group ("jobs/basic"). */
 static bool read_weights(const cJSON *object, const char *prefix, const char *const *names, size_t count, unsigned *values, const Refusal *refusal) {
     const cJSON *item;
@@ -34,7 +41,7 @@ static bool read_weights(const cJSON *object, const char *prefix, const char *co
     }
     cJSON_ArrayForEach(item, object) {
         char key[COMPOSER_PREFERENCES_PATH_MAX];
-        snprintf(key, sizeof(key), "%s/%s", prefix, item->string);
+        member_path(key, sizeof(key), prefix, item->string);
         size_t at = 0;
         while (at < count && strcmp(item->string, names[at]) != 0) {
             at++;
