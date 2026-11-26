@@ -750,6 +750,7 @@ typedef struct GrowBlueprint {
     size_t climax_bar;
     Rational climax_at; /* from the bar's start */
     int climax_midi;
+    char climax_name[16]; /* the pitch as the request writes it */
     bool has_accompaniment; /* blueprint.accompaniment is given (the request's brief reads it) */
 } GrowBlueprint;
 
@@ -778,5 +779,44 @@ UrsatzStatus grow_blueprint_check_ideas(const GrowBlueprint *blueprint, const Se
  * has a note as voice k + 1 (plan_give_inner_voice). GROW_ERR_BAD_REQUEST, with the bar's path in refusal, when a span does not fit.
  */
 GrowResult grow_blueprint_give_voices(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal);
+
+/*
+ * What a blueprint draws when the plan is built (R-743), with one FillRng seeded with the run's seed + 9: first each bar's job in
+ * bar order, then the basic motive. rhythm[bar] is the bar's rhythm where it is known before the stages run (its melody, its
+ * rhythm, its job's, or the basic idea's bar at its place when its idea restates the basic motive), known[bar] says so. basic is the
+ * basic motive: slots.basic's, else the basic idea's melody as a full motive, else drawn from its bars' rhythm, chords, anchors and
+ * events (composer_blueprint_motive). idea[k] is the rhythm-only motive of an idea after the basic idea whose bars give rhythms.
+ */
+typedef struct GrowBlueprintDraw {
+    GrowBlueprintLine rhythm[GROW_BLUEPRINT_BARS];
+    bool known[GROW_BLUEPRINT_BARS];
+    Motive basic;
+    bool has_idea[GROW_IDEA_COUNT];
+    Motive idea[GROW_IDEA_COUNT];
+} GrowBlueprintDraw;
+
+/*
+ * The draw of the request's blueprint for its seed (request->seed + 9), in the request's key, meter, bars, pairing and construction
+ * (the theme's construction when it is not 4 or 8 bars), with request->knowledge for the K11 cells and the chords. request->motive is
+ * slots.basic's motive when the request gives one (not read otherwise). GROW_ERR_BAD_REQUEST, with the path and the reason in
+ * refusal, when a job has no cell ("no running rhythm in 3/4"), a relation has no rhythm to take, or the basic motive cannot be drawn.
+ */
+GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *out, GrowRefusal *refusal);
+
+/*
+ * The checks of the climax against the draw (R-743): a note of the bar's rhythm starts at its onset, a Given melody note there is
+ * its pitch, and no other Given note or anchor reaches it ("the climax Ab5 is not the theme's highest note: bar 3 has A5").
+ */
+GrowResult grow_blueprint_check_climax(const GrowBlueprint *blueprint, const GrowBlueprintDraw *drawn, const PlanMeter *meter,
+                                       GrowRefusal *refusal);
+
+/* Gives each bar's melody to the theme section, a span a bar (plan_give_melody). */
+GrowResult grow_blueprint_give_melody(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal);
+
+/*
+ * Puts the blueprint's climax on the melody span of the theme section that holds its onset, as a `climax` constraint (R-746), once
+ * the structure stage has made the spans. PLAN_OK when there is no climax or no such span.
+ */
+PlanResult grow_blueprint_place(Plan *plan, NodeId theme, const GrowBlueprint *blueprint);
 
 #endif

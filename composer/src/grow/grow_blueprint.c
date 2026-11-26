@@ -8,7 +8,13 @@
 
 #include <cJSON.h>
 
+#include <analysis/similarity/similarity_scoring.h>
+#include <model/pitch/pitch_arithmetic.h>
+
 #include <ursatz_composer/given.h>
+#include <ursatz_composer/harmony_chords.h>
+#include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/theme_shape.h>
 
@@ -458,6 +464,7 @@ UrsatzStatus grow_blueprint_read(const cJSON *json, const KnowledgeSnapshot *kno
         if (!read_at(at, meter, bar_length, &out->climax_at)) {
             return fail(error, "/blueprint/climax/at", "the climax's \"at\" is an onset in beats inside the bar (\"0\", \"3/2\")");
         }
+        snprintf(out->climax_name, sizeof(out->climax_name), "%.15s", pitch->valuestring);
         if (!read_pitch(pitch->valuestring, knowledge, &out->climax_midi)) {
             return fail(error, "/blueprint/climax/pitch", "'%s' is not a pitch (a note name such as Ab5)", pitch->valuestring);
         }
@@ -642,4 +649,604 @@ GrowResult grow_blueprint_give_voices(Plan *plan, NodeId theme, const GrowBluepr
         }
     }
     return GROW_OK;
+}
+
+GrowResult grow_blueprint_give_melody(Plan *plan, NodeId theme, const GrowBlueprint *blueprint, GrowRefusal *refusal) {
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        if (!this->has_melody) {
+            continue;
+        }
+        GivenResult given = plan_give_melody(plan, theme, bar, this->melody.notes, this->melody.count);
+        if (given != GIVEN_OK) {
+            char path[64];
+            snprintf(path, sizeof(path), "/blueprint/bars/%zu/melody", bar);
+            return given == GIVEN_ERR_PLAN ? GROW_ERR_ALLOC
+                                           : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu melody: %s", bar, given_result_name(given));
+        }
+    }
+    return GROW_OK;
+}
+
+/* ------------------------------------------------------------ the draw */
+
+/* The bars of each place of the theme, from grow_layout_of; count 0 for a place the pairing does not have. */
+typedef struct {
+    size_t first[GROW_PLACE_COUNT];
+    size_t count[GROW_PLACE_COUNT];
+    Rational start[GROW_PLACE_COUNT];
+    Rational length[GROW_PLACE_COUNT];
+    GrowIdea idea[GROW_PLACE_COUNT];
+} PlaceBars;
+
+static bool place_bars(const GrowRequest *request, Rational bar, PlaceBars *out) {
+    GrowThemeRequest theme;
+    GrowLayout layout;
+    memset(&theme, 0, sizeof(theme));
+    memset(out, 0, sizeof(*out));
+    theme.pairing = request->pairing;
+    theme.meter = request->meter;
+    theme.bars = request->bars;
+    theme.bar = bar;
+    if (request->construction) {
+        theme.has_construction = true;
+        theme.construction = *request->construction;
+    }
+    if (!grow_layout_of(&theme, &layout)) {
+        return false;
+    }
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        const ThemeShapeIdea *row = theme_shape_place_in(&request->pairing, (unsigned)place);
+        if (row && idea_bars(layout.start[place], layout.length[place], bar, &out->first[place], &out->count[place])) {
+            out->idea[place] = row->idea;
+            out->start[place] = layout.start[place];
+            out->length[place] = layout.length[place];
+        } else {
+            out->count[place] = 0;
+        }
+    }
+    return true;
+}
+
+/* The place whose bars hold `bar` (the first one, for a bar two half-bar ideas share); GROW_PLACE_COUNT for none. */
+static GrowPlace place_of(const PlaceBars *places, size_t bar) {
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        if (places->count[place] > 0 && bar >= places->first[place] && bar < places->first[place] + places->count[place]) {
+            return (GrowPlace)place;
+        }
+    }
+    return GROW_PLACE_COUNT;
+}
+
+/* The notes of a motive that start in bar `bar` of it, offsets from that bar's start. */
+static void motive_bar(const Motive *motive, size_t bar, Rational bar_length, GrowBlueprintLine *out) {
+    Rational start;
+    Rational end;
+    out->count = 0;
+    if (rational_mul_int(bar_length, (long long)bar, &start) != RATIONAL_OK || rational_add(start, bar_length, &end) != RATIONAL_OK) {
+        return;
+    }
+    for (size_t i = 0; i < motive->note_count && out->count < GROW_BLUEPRINT_NOTES; i++) {
+        Rational offset;
+        if (rational_cmp(motive->notes[i].onset, start) >= 0 && rational_cmp(motive->notes[i].onset, end) < 0 &&
+            rational_sub(motive->notes[i].onset, start, &offset) == RATIONAL_OK) {
+            out->notes[out->count++] = plan_note(motive_pitch(motive, i), offset, motive->notes[i].duration);
+        }
+    }
+}
+
+/* The cells of K11 of the meter: with the job's bit, or every one for a mask of 0. */
+static size_t meter_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity) {
+    char want[16];
+    size_t count = 0;
+    meter_text(meter, want, sizeof(want));
+    for (size_t i = 0; knowledge && i < knowledge_snapshot_pattern_count(knowledge) && count < capacity; i++) {
+        const PatternEntry *entry = knowledge_snapshot_pattern_at(knowledge, i);
+        if (entry && entry->is_rhythm && entry->rhythm.meter && strcmp(entry->rhythm.meter, want) == 0 &&
+            (job == 0 || (entry->rhythm.jobs & job) != 0)) {
+            out[count++] = entry;
+        }
+    }
+    return count;
+}
+
+/* The rhythm of a K11 cell as a bar's line; false when it does not read as a bar of the meter. */
+static bool cell_line(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, Rational bar_length,
+                      GrowBlueprintLine *out) {
+    return read_line(entry->rhythm.rhythm, true, knowledge, meter, bar_length, "", "rhythm", 0, out, NULL) == URSATZ_OK && out->count > 0;
+}
+
+/* How similar two rhythms are (similarity_rhythm_score on their durations); 1 when they cannot be compared. */
+static Rational rhythm_similarity(const GrowBlueprintLine *a, const GrowBlueprintLine *b) {
+    SimilarityDuration left[GROW_BLUEPRINT_NOTES];
+    SimilarityDuration right[GROW_BLUEPRINT_NOTES];
+    SimilarityScore score = {1, 1};
+    for (size_t i = 0; i < a->count; i++) {
+        left[i] = a->notes[i].duration;
+    }
+    for (size_t i = 0; i < b->count; i++) {
+        right[i] = b->notes[i].duration;
+    }
+    if (a->count == 0 || b->count == 0 || similarity_rhythm_score(left, a->count, right, b->count, &score) != SIMILARITY_SCORE_OK) {
+        score = (Rational){1, 1};
+    }
+    return score;
+}
+
+/* The variant of a rhythm (R-745): one note split in two equal halves or two neighbours joined, one draw among all of them. */
+static bool variant_of(const GrowBlueprintLine *base, FillRng *rng, GrowBlueprintLine *out) {
+    size_t splits = base->count < GROW_BLUEPRINT_NOTES ? base->count : 0;
+    size_t joins = 0;
+    for (size_t i = 0; i + 1 < base->count; i++) {
+        Rational end;
+        joins += rational_add(base->notes[i].offset, base->notes[i].duration, &end) == RATIONAL_OK &&
+                 rational_cmp(end, base->notes[i + 1].offset) == 0;
+    }
+    if (splits + joins == 0) {
+        return false;
+    }
+    size_t pick = (size_t)fill_rng_below(rng, splits + joins);
+    out->count = 0;
+    if (pick < splits) {
+        for (size_t i = 0; i < base->count; i++) {
+            Rational half;
+            if (i != pick) {
+                out->notes[out->count++] = base->notes[i];
+                continue;
+            }
+            if (rational_div_int(base->notes[i].duration, 2, &half) != RATIONAL_OK) {
+                return false;
+            }
+            PlanNote first = base->notes[i];
+            PlanNote second = base->notes[i];
+            first.duration = half;
+            second.duration = half;
+            if (rational_add(first.offset, half, &second.offset) != RATIONAL_OK) {
+                return false;
+            }
+            out->notes[out->count++] = first;
+            out->notes[out->count++] = second;
+        }
+        return true;
+    }
+    size_t join = pick - splits;
+    for (size_t i = 0; i < base->count; i++) {
+        Rational end;
+        bool joinable = i + 1 < base->count && rational_add(base->notes[i].offset, base->notes[i].duration, &end) == RATIONAL_OK &&
+                        rational_cmp(end, base->notes[i + 1].offset) == 0;
+        if (joinable && join == 0) {
+            PlanNote joined = base->notes[i];
+            if (rational_add(joined.duration, base->notes[i + 1].duration, &joined.duration) != RATIONAL_OK) {
+                return false;
+            }
+            out->notes[out->count++] = joined;
+            i++;
+            join = (size_t)-1;
+            continue;
+        }
+        join -= joinable && join != (size_t)-1 ? 1 : 0;
+        out->notes[out->count++] = base->notes[i];
+    }
+    return true;
+}
+
+/* The K11 job bit of a cell job. */
+static unsigned job_bit(GrowJob job) {
+    return job == GROW_JOB_RUNNING ? PATTERN_JOB_RUNNING
+           : job == GROW_JOB_LONG ? PATTERN_JOB_LONG
+           : job == GROW_JOB_SYNCOPATED ? PATTERN_JOB_SYNCOPATED
+                                        : PATTERN_JOB_CADENCE;
+}
+
+#define CELLS_MAX 128
+
+/* The rhythm of a bar's job. */
+static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, Rational bar_length, size_t bar, FillRng *rng,
+                           GrowBlueprintDraw *out, GrowRefusal *refusal) {
+    const GrowBlueprintBar *this = &request->blueprint->bars[bar];
+    const PatternEntry *cells[CELLS_MAX];
+    char path[64];
+    char meter[16];
+    snprintf(path, sizeof(path), "/blueprint/bars/%zu/job", bar);
+    meter_text(&request->meter, meter, sizeof(meter));
+    const char *word = this->job >= GROW_JOB_MOTIF && this->job <= GROW_JOB_CADENCE ? JOB_WORDS[this->job - GROW_JOB_MOTIF] : "entry";
+    switch (this->job) {
+    case GROW_JOB_ENTRY:
+        if (!cell_line(this->job_entry, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the rhythm %s is not a bar of %s", bar, this->job_entry->id, meter);
+        }
+        return GROW_OK;
+    case GROW_JOB_RUNNING:
+    case GROW_JOB_LONG:
+    case GROW_JOB_SYNCOPATED:
+    case GROW_JOB_CADENCE: {
+        size_t count = meter_cells(request->knowledge, &request->meter, job_bit(this->job), cells, CELLS_MAX);
+        if (count == 0) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "no %s rhythm in %s", word, meter);
+        }
+        const PatternEntry *cell = cells[fill_rng_below(rng, count)];
+        if (!cell_line(cell, request->knowledge, &request->meter, bar_length, &out->rhythm[bar])) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the rhythm %s is not a bar of %s", bar, cell->id, meter);
+        }
+        return GROW_OK;
+    }
+    case GROW_JOB_LIQUIDATION:
+        if (bar == 0 || !out->known[bar - 1]) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: liquidation takes the rhythm of the bar before, and bar %zu has none of its own",
+                          bar, bar > 0 ? bar - 1 : 0);
+        }
+        out->rhythm[bar] = out->rhythm[bar - 1];
+        return GROW_OK;
+    case GROW_JOB_MOTIF:
+    case GROW_JOB_VARIANT:
+    case GROW_JOB_CONTRAST: {
+        GrowPlace place = place_of(places, bar);
+        size_t basic = places->first[GROW_PLACE_BASIC] + (place < GROW_PLACE_COUNT ? bar - places->first[place] : 0);
+        if (place >= GROW_PLACE_COUNT || basic >= places->first[GROW_PLACE_BASIC] + places->count[GROW_PLACE_BASIC] || !out->known[basic]) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: %s takes the basic idea's bar at its place, and the basic idea has no bar there",
+                          bar, word);
+        }
+        const GrowBlueprintLine *motif = &out->rhythm[basic];
+        if (this->job == GROW_JOB_MOTIF) {
+            out->rhythm[bar] = *motif;
+            return GROW_OK;
+        }
+        if (this->job == GROW_JOB_VARIANT) {
+            return variant_of(motif, rng, &out->rhythm[bar])
+                       ? GROW_OK
+                       : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the basic idea's bar has no variant", bar);
+        }
+        size_t count = meter_cells(request->knowledge, &request->meter, 0, cells, CELLS_MAX);
+        GrowBlueprintLine lines[CELLS_MAX];
+        size_t far[CELLS_MAX];
+        size_t far_count = 0;
+        size_t least = CELLS_MAX;
+        Rational least_score = {2, 1};
+        Rational half = {1, 2};
+        for (size_t c = 0; c < count; c++) {
+            if (!cell_line(cells[c], request->knowledge, &request->meter, bar_length, &lines[c])) {
+                continue;
+            }
+            Rational score = rhythm_similarity(motif, &lines[c]);
+            if (rational_cmp(score, half) <= 0) {
+                far[far_count++] = c;
+            }
+            if (rational_cmp(score, least_score) < 0) {
+                least_score = score;
+                least = c;
+            }
+        }
+        if (least == CELLS_MAX) {
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "no contrast rhythm in %s", meter);
+        }
+        out->rhythm[bar] = lines[far_count > 0 ? far[fill_rng_below(rng, far_count)] : least];
+        return GROW_OK;
+    }
+    case GROW_JOB_NONE:
+        break;
+    }
+    return GROW_OK;
+}
+
+/* ------------------------------------------------------------ the motives */
+
+/*
+ * The motive of the lines' notes that start inside the place (from `start`, `length` long), each bar's line lines[bar], offsets
+ * from the place's start and the last note cut at its end: a full motive with the notes' pitches, or a rhythm-only one (R-746).
+ */
+static bool motive_of_lines(const GrowRequest *request, const GrowBlueprintLine *lines, Rational start, Rational length,
+                            Rational bar_length, bool rhythm, Motive *out) {
+    Rational end;
+    motive_init(out, request->meter);
+    motive_set_key(out, &request->key, MOTIVE_SKETCH_KEY_GIVEN);
+    out->form = rhythm ? MOTIVE_SKETCH_FORM_RHYTHM : MOTIVE_SKETCH_FORM_FULL;
+    if (rational_add(start, length, &end) != RATIONAL_OK) {
+        return false;
+    }
+    for (size_t bar = 0; bar < request->bars && bar < GROW_BLUEPRINT_BARS; bar++) {
+        Rational bar_start;
+        if (rational_mul_int(bar_length, (long long)bar, &bar_start) != RATIONAL_OK) {
+            return false;
+        }
+        for (size_t i = 0; i < lines[bar].count; i++) {
+            Rational at;
+            Rational note_end;
+            const PlanNote *note = &lines[bar].notes[i];
+            if (rational_add(bar_start, note->offset, &at) != RATIONAL_OK || rational_cmp(at, start) < 0 || rational_cmp(at, end) >= 0) {
+                continue;
+            }
+            if (out->note_count >= MOTIVE_MAX_NOTES || rational_add(at, note->duration, &note_end) != RATIONAL_OK) {
+                return false;
+            }
+            MotiveSketchNote *made = &out->notes[out->note_count++];
+            made->pitch = rhythm ? MOTIVE_SKETCH_PITCH_UNKNOWN : note->midi;
+            made->duration = note->duration;
+            if (rational_sub(at, start, &made->onset) != RATIONAL_OK ||
+                (rational_cmp(note_end, end) > 0 && rational_sub(end, at, &made->duration) != RATIONAL_OK) ||
+                rational_add(made->onset, made->duration, &out->length) != RATIONAL_OK) {
+                return false;
+            }
+        }
+    }
+    return out->note_count > 0;
+}
+
+/* The basic motive drawn from the basic idea's rhythm, chords, anchors and events (R-746), and the climax when it lies there. */
+static GrowResult draw_basic(const GrowRequest *request, const PlaceBars *places, Rational bar_length, FillRng *rng,
+                             GrowBlueprintDraw *out, GrowRefusal *refusal) {
+    const GrowBlueprint *blueprint = request->blueprint;
+    size_t first = places->first[GROW_PLACE_BASIC];
+    size_t count = places->count[GROW_PLACE_BASIC];
+    char path[64];
+    BlueprintMotiveRequest *drawing = calloc(1, sizeof(*drawing));
+    if (!drawing) {
+        return GROW_ERR_ALLOC;
+    }
+    drawing->key = request->key;
+    drawing->meter = request->meter;
+    MelodyFillParams range = melody_fill_params_default();
+    drawing->range_low = range.range_low;
+    drawing->range_high = range.range_high;
+    GrowResult result = GROW_OK;
+    snprintf(path, sizeof(path), "/blueprint/bars/%zu", first);
+    for (size_t bar = first; result == GROW_OK && bar < first + count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        Rational bar_start;
+        if (rational_mul_int(bar_length, (long long)(bar - first), &bar_start) != RATIONAL_OK) {
+            result = GROW_ERR_BAD_REQUEST;
+            break;
+        }
+        for (size_t i = 0; i < out->rhythm[bar].count && drawing->note_count < MOTIVE_MAX_NOTES; i++) {
+            rational_add(bar_start, out->rhythm[bar].notes[i].offset, &drawing->onsets[drawing->note_count]);
+            drawing->durations[drawing->note_count++] = out->rhythm[bar].notes[i].duration;
+        }
+        if (this->chords[0]) {
+            MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
+            size_t parsed_count = 0;
+            MotiveError detail;
+            if (motive_harmony_parse_in(request->knowledge, this->chords, &request->meter, parsed, &parsed_count, &detail) != MOTIVE_OK) {
+                snprintf(path, sizeof(path), "/blueprint/bars/%zu/chords", bar);
+                result = refuse(refusal, GROW_ERR_BAD_REQUEST, path, "chords bar %zu: %s", bar, detail.message);
+                break;
+            }
+            for (size_t c = 0; c < parsed_count && drawing->chord_count < MOTIVE_MAX_CHORDS; c++) {
+                drawing->chords[drawing->chord_count] = parsed[c];
+                rational_add(bar_start, parsed[c].onset, &drawing->chords[drawing->chord_count++].onset);
+            }
+        }
+        for (size_t a = 0; a < this->anchor_count && drawing->anchor_count < BLUEPRINT_MOTIVE_MAX_ANCHORS; a++) {
+            drawing->anchors[drawing->anchor_count] = this->anchors[a];
+            rational_add(bar_start, this->anchors[a].offset, &drawing->anchors[drawing->anchor_count++].offset);
+        }
+        for (size_t e = 0; e < this->event_count && drawing->event_count < BLUEPRINT_MOTIVE_MAX_EVENTS; e++) {
+            drawing->events[drawing->event_count] = this->events[e];
+            rational_add(bar_start, this->events[e].offset, &drawing->events[drawing->event_count++].offset);
+        }
+        /* The climax is an anchor no other note reaches: its pitch wins over an anchor at its onset. */
+        if (blueprint->has_climax && blueprint->climax_bar == bar) {
+            Rational at;
+            bool placed = false;
+            rational_add(bar_start, blueprint->climax_at, &at);
+            for (size_t a = 0; a < drawing->anchor_count; a++) {
+                if (rational_cmp(drawing->anchors[a].offset, at) == 0) {
+                    drawing->anchors[a].midi = blueprint->climax_midi;
+                    placed = true;
+                }
+            }
+            if (!placed && drawing->anchor_count < BLUEPRINT_MOTIVE_MAX_ANCHORS) {
+                drawing->anchors[drawing->anchor_count++] = (PlanAnchor){at, blueprint->climax_midi};
+            }
+        }
+    }
+    if (result == GROW_OK && drawing->chord_count == 0) {
+        snprintf(path, sizeof(path), "/blueprint/bars/%zu/chords", first);
+        result = refuse(refusal, GROW_ERR_BAD_REQUEST, path, "a basic idea drawn from its rhythm needs its chords");
+    }
+    if (result == GROW_OK && blueprint->has_climax && blueprint->climax_midi - 1 < drawing->range_high) {
+        drawing->range_high = blueprint->climax_midi - 1 > drawing->range_low ? blueprint->climax_midi - 1 : drawing->range_low;
+    }
+    if (result == GROW_OK) {
+        ComposerChords tones;
+        MotiveError detail;
+        memset(&detail, 0, sizeof(detail));
+        const ComposerChords *chords = composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
+        MotiveResult drawn = composer_blueprint_motive(chords, drawing, rng, &out->basic, &detail);
+        if (drawn == MOTIVE_ERR_ALLOC) {
+            result = GROW_ERR_ALLOC;
+        } else if (drawn != MOTIVE_OK) {
+            result = refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the basic idea, drawn from its rhythm: %s", detail.message);
+        }
+    }
+    free(drawing);
+    return result;
+}
+
+/* Whether the place's idea restates the basic motive when its bars give nothing: the repetition and the consequent's basic idea. */
+static bool restates_basic(const PlaceBars *places, GrowPlace place) {
+    return place < GROW_PLACE_COUNT && place != GROW_PLACE_BASIC &&
+           (places->idea[place] == GROW_IDEA_REPETITION || places->idea[place] == GROW_IDEA_CONSEQUENT_BASIC);
+}
+
+GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *out, GrowRefusal *refusal) {
+    const GrowBlueprint *blueprint = request ? request->blueprint : NULL;
+    Rational bar_length;
+    PlaceBars places;
+    memset(out, 0, sizeof(*out));
+    if (!blueprint || plan_meter_bar_length(&request->meter, &bar_length) != PLAN_OK || blueprint->bar_count != request->bars ||
+        !place_bars(request, bar_length, &places) || places.count[GROW_PLACE_BASIC] == 0) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/bars", "the ideas of this theme cannot be laid out over its bars");
+    }
+    FillRng rng;
+    fill_rng_seed(&rng, request->seed + 9);
+    size_t basic_first = places.first[GROW_PLACE_BASIC];
+    size_t basic_count = places.count[GROW_PLACE_BASIC];
+    bool slot = request->motive && request->motive->note_count > 0;
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        if (this->has_melody || this->has_rhythm) {
+            out->rhythm[bar] = this->has_melody ? this->melody : this->rhythm;
+            out->known[bar] = true;
+        }
+    }
+    for (size_t bar = basic_first; slot && bar < basic_first + basic_count; bar++) {
+        motive_bar(request->motive, bar - basic_first, bar_length, &out->rhythm[bar]);
+        out->known[bar] = true;
+    }
+    /* The jobs, in bar order: a bar of an idea that restates the basic motive takes the basic idea's bar at its place first. */
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        GrowPlace place = place_of(&places, bar);
+        if (!out->known[bar] && this->job == GROW_JOB_NONE && restates_basic(&places, place)) {
+            size_t basic = basic_first + (bar - places.first[place]);
+            if (basic < basic_first + basic_count && out->known[basic]) {
+                out->rhythm[bar] = out->rhythm[basic];
+                out->known[bar] = true;
+            }
+        }
+        if (this->job != GROW_JOB_NONE) {
+            GrowResult drawn = draw_job(request, &places, bar_length, bar, &rng, out, refusal);
+            if (drawn != GROW_OK) {
+                return drawn;
+            }
+            out->known[bar] = true;
+        }
+    }
+    /* The basic motive: slots.basic's, the basic idea's melody, or drawn from its bars. */
+    GrowResult result = GROW_OK;
+    if (slot) {
+        out->basic = *request->motive;
+    } else if (blueprint->bars[basic_first].has_melody) {
+        GrowBlueprintLine melody[GROW_BLUEPRINT_BARS];
+        for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+            melody[bar] = blueprint->bars[bar].melody;
+        }
+        if (!motive_of_lines(request, melody, places.start[GROW_PLACE_BASIC], places.length[GROW_PLACE_BASIC], bar_length, false,
+                             &out->basic)) {
+            char path[64];
+            snprintf(path, sizeof(path), "/blueprint/bars/%zu/melody", basic_first);
+            result = refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the basic idea's melody is not a motive");
+        }
+    } else {
+        result = draw_basic(request, &places, bar_length, &rng, out, refusal);
+    }
+    /* The ideas after the basic idea whose bars give rhythms restate them as rhythm-only motives. */
+    for (size_t place = GROW_PLACE_BASIC + 1; result == GROW_OK && place < GROW_PLACE_COUNT; place++) {
+        size_t first = places.first[place];
+        if (places.count[place] == 0 || first >= blueprint->bar_count || !gives_rhythm(&blueprint->bars[first])) {
+            continue;
+        }
+        GrowIdea idea = places.idea[place];
+        if (!motive_of_lines(request, out->rhythm, places.start[place], places.length[place], bar_length, true, &out->idea[idea])) {
+            char path[64];
+            snprintf(path, sizeof(path), "/blueprint/bars/%zu", first);
+            result = refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the rhythm of the %s has no note", grow_idea_name(idea));
+        }
+        out->has_idea[idea] = result == GROW_OK;
+    }
+    return result;
+}
+
+/* ------------------------------------------------------------ the climax */
+
+/* Whether a note of the line starts at the offset. */
+static bool starts_at(const GrowBlueprintLine *line, Rational offset) {
+    for (size_t i = 0; i < line->count; i++) {
+        if (rational_cmp(line->notes[i].offset, offset) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+GrowResult grow_blueprint_check_climax(const GrowBlueprint *blueprint, const GrowBlueprintDraw *drawn, const PlanMeter *meter,
+                                       GrowRefusal *refusal) {
+    if (!blueprint->has_climax) {
+        return GROW_OK;
+    }
+    size_t at_bar = blueprint->climax_bar;
+    char at[32];
+    beats_text(blueprint->climax_at, meter, at, sizeof(at));
+    if (!drawn->known[at_bar] || !starts_at(&drawn->rhythm[at_bar], blueprint->climax_at)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax/at", "bar %zu climax at %s: no note starts there", at_bar, at);
+    }
+    bool flats = strchr(blueprint->climax_name + 1, 'b') != NULL;
+    for (size_t bar = 0; bar < blueprint->bar_count; bar++) {
+        const GrowBlueprintBar *this = &blueprint->bars[bar];
+        char name[16] = "?";
+        for (size_t i = 0; this->has_melody && i < this->melody.count; i++) {
+            const PlanNote *note = &this->melody.notes[i];
+            bool spot = bar == at_bar && rational_cmp(note->offset, blueprint->climax_at) == 0;
+            if (spot && note->midi != blueprint->climax_midi) {
+                pitch_name_of_midi(note->midi, flats, name, sizeof(name));
+                return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax/pitch", "the climax %s: bar %zu gives %s at %s", blueprint->climax_name,
+                              bar, name, at);
+            }
+            if (!spot && note->midi >= blueprint->climax_midi) {
+                pitch_name_of_midi(note->midi, flats, name, sizeof(name));
+                return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax/pitch", "the climax %s is not the theme's highest note: bar %zu has %s",
+                              blueprint->climax_name, bar, name);
+            }
+        }
+        for (size_t a = 0; a < this->anchor_count; a++) {
+            bool spot = bar == at_bar && rational_cmp(this->anchors[a].offset, blueprint->climax_at) == 0;
+            if (!spot && this->anchors[a].midi >= blueprint->climax_midi) {
+                pitch_name_of_midi(this->anchors[a].midi, flats, name, sizeof(name));
+                return refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax/pitch",
+                              "the climax %s is not the theme's highest note: bar %zu anchors %s", blueprint->climax_name, bar, name);
+            }
+        }
+    }
+    return GROW_OK;
+}
+
+/* The melody span (voice 0) inside the theme that holds the time, PLAN_LANE_SPAN_NONE for none. */
+static LaneSpanId melody_span_at(const Plan *plan, PlanSpan theme, Rational time) {
+    LaneSpanId ids[GROW_BLUEPRINT_BARS * 8];
+    size_t count = plan_lane_find(plan, PLAN_LANE_MELODY, 0, theme, ids, sizeof(ids) / sizeof(ids[0]));
+    for (size_t i = 0; i < count && i < sizeof(ids) / sizeof(ids[0]); i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        Rational end;
+        if (plan_span_end(span, &end) == PLAN_OK && rational_cmp(span.start, time) <= 0 && rational_cmp(time, end) < 0) {
+            return ids[i];
+        }
+    }
+    return PLAN_LANE_SPAN_NONE;
+}
+
+/* Adds a melody constraint at a bar's offset on the span that holds it; PLAN_OK when no span does. */
+static PlanResult place_at(Plan *plan, PlanSpan theme, Rational bar_length, size_t bar, Rational offset, PlanConstraint *constraint,
+                           Rational *span_offset) {
+    Rational time;
+    if (rational_mul_int(bar_length, (long long)bar, &time) != RATIONAL_OK || rational_add(time, offset, &time) != RATIONAL_OK ||
+        rational_add(time, theme.start, &time) != RATIONAL_OK) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    LaneSpanId span = melody_span_at(plan, theme, time);
+    if (span == PLAN_LANE_SPAN_NONE) {
+        return PLAN_OK;
+    }
+    if (rational_sub(time, plan_lane_span_span(plan, span).start, span_offset) != RATIONAL_OK) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    return plan_lane_span_add_constraint(plan, span, constraint);
+}
+
+PlanResult grow_blueprint_place(Plan *plan, NodeId theme, const GrowBlueprint *blueprint) {
+    PlanSpan span = plan_node_span(plan, theme);
+    Rational bar_length;
+    LaneSpanId meter[2];
+    if (!blueprint || plan_lane_find(plan, PLAN_LANE_METER, 0, span, meter, 2) < 1 ||
+        plan_meter_bar_length(&plan_lane_span_payload(plan, meter[0])->meter, &bar_length) != PLAN_OK) {
+        return PLAN_OK;
+    }
+    PlanResult result = PLAN_OK;
+    if (blueprint->has_climax) {
+        PlanConstraint constraint;
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_CLIMAX;
+        constraint.params.climax.midi = blueprint->climax_midi;
+        result = place_at(plan, span, bar_length, blueprint->climax_bar, blueprint->climax_at, &constraint,
+                          &constraint.params.climax.offset);
+    }
+    return result;
 }

@@ -42,17 +42,3 @@ composer/src/material/given.c plan_give_chords  # the plain form of plan_give_ch
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
 composer/src/motive/motive_text.c motive_harmony_parse  # the plain form of motive_harmony_parse_in (P69 B8): every application passes its snapshot; its tests call it
-composer/src/motive/motive_blueprint.c choose  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c composer_blueprint_motive  # no application draws a blueprint motive until the theme request reads a blueprint (P69b B6); test_motive_blueprint calls it
-composer/src/motive/motive_blueprint.c event_tone  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c nearest  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c note_at  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c placed_before  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c refuse  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c resolution  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c time_text  # a helper of composer_blueprint_motive, reached with it (P69b B6)
-composer/src/motive/motive_blueprint.c composer_rhythm_motive_attach  # no application gives a rhythm-only idea motive until the theme request reads a blueprint (P69b B6); test_melody_blueprint calls it
-composer/src/grow/grow_blueprint.c grow_blueprint_give_voices  # no theme plan gives a blueprint's bass and inner voices until the plan is built from its blueprint (P69b B6 commit 4)
-composer/src/grow/grow_blueprint.c refuse  # a helper of grow_blueprint_give_voices, reached with it (P69b B6 commit 4)
-composer/src/material/given.c plan_give_bass_with_rests  # reached through grow_blueprint_give_voices once the plan is built from its blueprint (P69b B6 commit 4)
-composer/src/material/given.c plan_give_inner_voice  # reached through grow_blueprint_give_voices once the plan is built from its blueprint (P69b B6 commit 4)

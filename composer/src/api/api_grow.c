@@ -220,7 +220,6 @@ void api_grow_run_destroy(GrowRun *run) {
 /* The request of the theme for a seed: the setup and its material, which it points into and must outlive it. */
 void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowRequest *request) {
     const GrowMaterial *material = setup->material;
-    (void)seed;
     memset(request, 0, sizeof(*request));
     request->motive = setup->motive;
     request->source = setup->seeded ? &setup->source : NULL;
@@ -250,6 +249,8 @@ void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowReques
         request->chord_count = material->chord_count;
     }
     request->knowledge = setup->knowledge;
+    request->blueprint = setup->blueprint;
+    request->seed = seed;
 }
 
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
@@ -260,14 +261,28 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     api_grow_request_for(setup, seed, &request);
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
+    /* A blueprint's jobs and basic motive are drawn for the seed (R-743); the run keeps the basic motive the plan's m0 is. */
+    GrowBlueprintDraw *drawn = NULL;
+    if (setup->blueprint) {
+        drawn = malloc(sizeof(*drawn));
+        GrowResult made = drawn ? grow_blueprint_draw(&request, drawn, &run->refusal) : GROW_ERR_ALLOC;
+        if (made != GROW_OK) {
+            free(drawn);
+            return made;
+        }
+        request.drawn = drawn;
+        request.motive = &drawn->basic;
+    }
     GrowResult built = grow_build_plan_checked(&request, &theme->plan, &run->refusal);
     if (built != GROW_OK) {
+        free(drawn);
         return built;
     }
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    config.basic = setup->motive;
+    config.basic = drawn ? &drawn->basic : setup->motive;
+    config.context.blueprint = setup->blueprint;
     config.context.development = setup->development;
     if (setup->continuation) {
         config.context.continuation = *setup->continuation;
@@ -295,6 +310,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
         config.pool_count = material->pool_count;
     }
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
+    free(drawn);
     NodeId theme_node = api_find_node(theme->plan, "theme");
     if (theme->outcome.cancelled) {
         *cancelled = true;
