@@ -43,6 +43,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [fill-loop.md](fill-loop.md): the engine that fills a plan with seeded, recorded operators.
 - [melody-fill.md](melody-fill.md): the melody operator.
 - [blueprint-generator.md](blueprint-generator.md): the blueprint generator (R-751): the chords, rhythms, climax and sounds the Composer draws from a motif, the eligibility of a request and the echoed blueprint (API 4.9).
+- [presets.md](presets.md): the presets `ff7` and `hollow-knight` (R-754): named settings of her listening, which a theme or random motive request names with `preset`.
 - [blueprints.md](blueprints.md): theme blueprints: the request's `blueprint` member (R-743), the melody constraints, rhythm-only idea motives and the blueprint motive (R-746).
 - [modes.md](modes.md): the church modes as a key (R-725): stacked chords, numerals, functions, the phrase model and cadences per mode, and what a modal key does not write.
 - [preferences.md](preferences.md): the settings document (R-411): the melody, development, candidates, critic and harmony groups, and how it is read and written.

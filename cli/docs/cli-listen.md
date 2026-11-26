@@ -3,7 +3,7 @@
 The `listen` command of `ursatz`: a batch of motifs or themes from fixed seeds and one settings file, written as files a listening session plays and reads. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--blueprint <file>]
+ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--preset <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--blueprint <file>]
 ursatz listen --print-settings
 ```
 
@@ -26,6 +26,7 @@ ursatz listen --print-settings
 | `--tempo <bpm>` | The tempo of the MIDI and MusicXML files, 20 to 400. |
 | `--strategy segments\|drawn\|blueprint` | How a generated motif is made (default `segments`). |
 | `--into sentence\|period` | Themes: the pairing (default `sentence`). |
+| `--preset <name>` | A preset of the Composer (`ff7` or `hollow-knight`, [presets.md](../../composer/docs/presets.md)): the settings of her listening and, for themes, the accompaniment that goes with them; `--settings` and the session's settings apply over it. Motifs and themes (the manifest line records it as `preset`; an unknown name exits 1). |
 | `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `balanced`); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
 | `--bars 4\|8` | Themes: the length (default 8). |
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
