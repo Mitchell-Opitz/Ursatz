@@ -125,7 +125,7 @@ static size_t parse_mark(const char *text, bool uppercase, Mark *mark) {
 }
 
 /* The color suffixes, longest first so "maj9" is not read as the mark "maj". The text is static: the numeral keeps the pointer. */
-static const char *const COLORS[] = {"maj9", "add9", "add6", "69", "q3", "q4", "9"};
+static const char *const COLORS[] = {"maj9", "add9", "add6", "69", "q3", "q4", "sus2", "sus4", "9"};
 
 static size_t parse_color(const char *text, const char **color) {
     *color = NULL;
@@ -414,7 +414,11 @@ bool standard_tonality_numeral_color_type(const KnowledgeSnapshot *snapshot, con
                  {"69", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.six-nine"},
                  {"9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.dominant-ninth"},
                  {"9", STANDARD_TONALITY_NUMERAL_MINOR, "persichetti.chord-type.minor-ninth"},
-                 {"maj9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.major-ninth"}};
+                 {"maj9", STANDARD_TONALITY_NUMERAL_MAJOR, "persichetti.chord-type.major-ninth"},
+                 {"sus2", STANDARD_TONALITY_NUMERAL_MAJOR, "omt.chord-type.sus2"},
+                 {"sus2", STANDARD_TONALITY_NUMERAL_MINOR, "omt.chord-type.sus2"},
+                 {"sus4", STANDARD_TONALITY_NUMERAL_MAJOR, "omt.chord-type.sus4"},
+                 {"sus4", STANDARD_TONALITY_NUMERAL_MINOR, "omt.chord-type.sus4"}};
     if (snapshot == NULL || numeral == NULL || type == NULL || numeral->color == NULL) {
         return false;
     }
@@ -445,7 +449,8 @@ const char *standard_tonality_color_suffix(const ChordType *type) {
                     {"persichetti.chord-type.add6", "add6"},         {"persichetti.chord-type.minor-add6", "add6"},
                     {"persichetti.chord-type.six-nine", "69"},       {"persichetti.chord-type.dominant-ninth", "9"},
                     {"persichetti.chord-type.minor-ninth", "9"},     {"persichetti.chord-type.major-ninth", "maj9"},
-                    {"persichetti.chord-type.quartal-three", "q3"},  {"persichetti.chord-type.quartal-four", "q4"}};
+                    {"persichetti.chord-type.quartal-three", "q3"},  {"persichetti.chord-type.quartal-four", "q4"},
+                    {"omt.chord-type.sus2", "sus2"},                 {"omt.chord-type.sus4", "sus4"}};
     for (size_t i = 0; type != NULL && type->id != NULL && i < sizeof(SUFFIXES) / sizeof(SUFFIXES[0]); i++) {
         if (strcmp(type->id, SUFFIXES[i].id) == 0) {
             return SUFFIXES[i].suffix;
