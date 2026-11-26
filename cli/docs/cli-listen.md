@@ -27,7 +27,7 @@ ursatz listen --print-settings
 | `--strategy segments\|drawn\|blueprint` | How a generated motif is made (default `segments`). |
 | `--into sentence\|period` | Themes: the pairing (default `sentence`). |
 | `--preset <name>` | A preset of the Composer (`ff7` or `hollow-knight`, [presets.md](../../composer/docs/presets.md)): the settings of her listening and, for themes, the accompaniment that goes with them; `--settings` and the session's settings apply over it. Motifs and themes (the manifest line records it as `preset`; an unknown name exits 1). |
-| `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `balanced`); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
+| `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `blueprint` where the theme fits it, else `balanced`: the request names no development unless the option is given, R-756); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
 | `--bars 4\|8` | Themes: the length (default 8). |
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
 | `--motif <file>` | Themes: the motif of every sample, anything the [`motive`](cli-motive.md) command reads (a note list, MusicXML, MIDI, a motive document). It is read in key C and the mode. Absent: a generated motif for each sample, made with the sample's seed, the mode, meter, strategy, style and settings. |
