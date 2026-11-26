@@ -6,6 +6,7 @@
 
 #include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <plan/plan.h>
 #include <ursatz_composer/style.h>
 
@@ -33,17 +34,19 @@
 /*
  * Strategy. SEGMENTS (the zero value, so the default) builds a motive from a harmony plan and segments, the way a motive is
  * made: a rhythm cell, a repeat of it on the next chord, a contrasting cell, an ending that slows down. DRAWN is the
- * earlier strategy: a rhythm drawn note by note over a frame of chord tones of I.
+ * earlier strategy: a rhythm drawn note by note over a frame of chord tones of I. BLUEPRINT (P69c, R-753) draws a two-bar motif from the K8
+ * expectations of the sentence's basic idea and the blueprint preferences, as the blueprint generator draws a theme's bars.
  */
 typedef enum {
     MOTIVE_RANDOM_STRATEGY_SEGMENTS = 0,
-    MOTIVE_RANDOM_STRATEGY_DRAWN
+    MOTIVE_RANDOM_STRATEGY_DRAWN,
+    MOTIVE_RANDOM_STRATEGY_BLUEPRINT
 } MotiveRandomStrategy;
 
-/* "segments" or "drawn". */
+/* "segments", "drawn" or "blueprint". */
 const char *motive_random_strategy_name(MotiveRandomStrategy strategy);
 
-/* Reads "segments" or "drawn" (as written, any case). False for any other text. */
+/* Reads "segments", "drawn" or "blueprint" (as written, any case). False for any other text. */
 bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out);
 
 typedef enum {
@@ -192,6 +195,8 @@ typedef struct {
     const ComposerStyle *style;
     /* How the motive is made; the zero value is SEGMENTS. */
     MotiveRandomStrategy strategy;
+    /* The BLUEPRINT strategy's settings (R-750): the sounds, jobs.basic and range. NULL for the defaults; not owned. */
+    const BlueprintPreferences *blueprint;
     /* How many motives, 1 to MOTIVE_RANDOM_MAX_COUNT. */
     size_t count;
     unsigned long seed;

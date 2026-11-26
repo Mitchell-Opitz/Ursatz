@@ -114,7 +114,7 @@ static const char *const CADENCE_LABELS[PLAN_CADENCE_COUNT] = {"Perfect authenti
                                                                "Half cadence", "Deceptive cadence", "Plagal cadence"};
 static const char *const MOTIVE_FORM_LABELS[] = {"Full", "Rhythm only", "Contour only"};
 static const char *const ROLE_LABELS[] = {"Melodic", "Accompaniment"};
-static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn"};
+static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn", "Blueprint"};
 static const char *const PART_LABELS[PIECE_PART_COUNT] = {"Intro", "Loop body", "Turnaround", "Ending"};
 static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme"};
 
@@ -376,7 +376,7 @@ static bool add_library_lists(cJSON *root) {
             return false;
         }
     }
-    for (int strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS; strategy <= MOTIVE_RANDOM_STRATEGY_DRAWN; strategy++) {
+    for (int strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS; strategy <= MOTIVE_RANDOM_STRATEGY_BLUEPRINT; strategy++) {
         if (!add_choice(strategies, motive_random_strategy_name((MotiveRandomStrategy)strategy),
                         RANDOM_STRATEGY_LABELS[strategy - MOTIVE_RANDOM_STRATEGY_SEGMENTS])) {
             return false;

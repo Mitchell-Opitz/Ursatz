@@ -328,10 +328,11 @@ static void test_round_trip(void) {
         accepted("random_motive", request);
         cJSON_Delete(request);
     }
-    /* The strategies the vocabulary serves are the ones the request takes: segments (the default) and drawn. */
-    assert(cJSON_GetArraySize(list("random_motive_strategies")) == 2);
+    /* The strategies the vocabulary serves are the ones the request takes: segments (the default), drawn and blueprint. */
+    assert(cJSON_GetArraySize(list("random_motive_strategies")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 0)), "segments") == 0);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 1)), "drawn") == 0);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 2)), "blueprint") == 0);
     cJSON_ArrayForEach(entry, list("random_motive_strategies")) {
         cJSON *request = random_request("major", "4/4");
         assert(cJSON_AddStringToObject(request, "strategy", value_of(entry)));

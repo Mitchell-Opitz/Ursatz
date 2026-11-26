@@ -103,6 +103,19 @@ bool composer_rhythm_variant(const PlanNote *base, size_t count, FillRng *rng, P
 bool composer_rhythm_contrast(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, const PlanNote *base, size_t count, FillRng *rng,
                               PlanNote *out, size_t *out_count);
 
+/* The index of a draw in proportion to the weights (fill_rng_below on their sum); `count` when every weight is 0 (no draw is made). */
+size_t composer_draw_weighted(FillRng *rng, const unsigned *weights, size_t count);
+
+/*
+ * One K11 cell of the meter with the job (PATTERN_JOB_*), drawn in proportion to its weight: 1, or 1 + `long_weak` when it holds a note of a
+ * beat or longer that starts off the downbeat (a beat: the beat unit, a dotted quarter in 6/8); a cell whose first note is exactly a half
+ * note has weight 0 when `previous_ends_half` (the bar before ends with exactly a half note). The cell and its rhythm in out/out_count; NULL,
+ * with no draw, when none has weight. With `commit` false nothing is drawn: the first cell is answered when one has weight, NULL when none.
+ */
+const PatternEntry *composer_rhythm_draw_cell(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned pattern_job,
+                                              bool previous_ends_half, unsigned long_weak, bool commit, FillRng *rng, PlanNote *out,
+                                              size_t *out_count);
+
 /*
  * Attaches a rhythm-only motive (R-746): the motive's notes (their pitches are not read: a rhythm sounds degree 1) as a Given motive
  * node under parent at start, as motive_attach does, with a motive_tones constraint that labels every note "rhythm". The melody stage

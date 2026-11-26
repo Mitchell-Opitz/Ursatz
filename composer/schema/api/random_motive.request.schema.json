@@ -39,7 +39,8 @@
     "strategy": {
       "enum": [
         "segments",
-        "drawn"
+        "drawn",
+        "blueprint"
       ]
     },
     "role": {

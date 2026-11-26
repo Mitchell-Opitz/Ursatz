@@ -47,7 +47,7 @@ const char *motive_random_result_name(MotiveRandomResult result) {
 }
 
 const char *motive_random_strategy_name(MotiveRandomStrategy strategy) {
-    return strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? "drawn" : "segments";
+    return strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? "drawn" : strategy == MOTIVE_RANDOM_STRATEGY_BLUEPRINT ? "blueprint" : "segments";
 }
 
 bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out) {
@@ -57,6 +57,10 @@ bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out) {
     }
     if (name && strcasecmp(name, "drawn") == 0) {
         *out = MOTIVE_RANDOM_STRATEGY_DRAWN;
+        return true;
+    }
+    if (name && strcasecmp(name, "blueprint") == 0) {
+        *out = MOTIVE_RANDOM_STRATEGY_BLUEPRINT;
         return true;
     }
     return false;
@@ -162,6 +166,9 @@ static bool draw_drawn_candidate(const MotiveRandomOptions *options, const Spell
 /* One candidate by the strategy asked for. */
 static bool draw_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                            bool *found) {
+    if (options->strategy == MOTIVE_RANDOM_STRATEGY_BLUEPRINT) {
+        return motive_random_blueprint_candidate(options, key, rng, out, found);
+    }
     return options->strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? draw_drawn_candidate(options, key, rng, out, found)
                                                               : motive_random_segments_candidate(options, key, rng, out, found);
 }
@@ -180,7 +187,8 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     if (!composer_material_valid(options->material) ||
         (options->form != MOTIVE_SKETCH_FORM_FULL && options->form != MOTIVE_SKETCH_FORM_RHYTHM &&
          options->form != MOTIVE_SKETCH_FORM_CONTOUR) ||
-        (options->strategy != MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->strategy != MOTIVE_RANDOM_STRATEGY_DRAWN) ||
+        (options->strategy != MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->strategy != MOTIVE_RANDOM_STRATEGY_DRAWN &&
+         options->strategy != MOTIVE_RANDOM_STRATEGY_BLUEPRINT) ||
         options->count < 1 || options->count > MOTIVE_RANDOM_MAX_COUNT) {
         return MOTIVE_RANDOM_ERR_ARGUMENT;
     }

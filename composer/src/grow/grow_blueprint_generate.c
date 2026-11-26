@@ -383,69 +383,8 @@ static BlueprintFunction function_of(const ThemeTypeIdea *idea) {
                                      : BLUEPRINT_FUNCTION_BASIC;
 }
 
-/* The index of a draw in proportion to the weights; `count` when every weight is 0. */
-static size_t draw_weighted(FillRng *rng, const unsigned *weights, size_t count) {
-    unsigned total = 0;
-    for (size_t i = 0; i < count; i++) {
-        total += weights[i];
-    }
-    if (total == 0) {
-        return count;
-    }
-    unsigned at = (unsigned)fill_rng_below(rng, total);
-    for (size_t i = 0; i < count; i++) {
-        if (at < weights[i]) {
-            return i;
-        }
-        at -= weights[i];
-    }
-    return count - 1;
-}
-
-/*
- * A K11 cell of the meter with the job, each weighted 1, or 1 + long_weak when it holds a note of a beat or longer that starts off the
- * downbeat; a cell whose first note is exactly a half note is skipped when the bar before is known and ends with one. NULL when there
- * is none. `line` is the cell's rhythm.
- */
-static const PatternEntry *draw_cell(const GrowRequest *request, unsigned pattern_job, const Cells *cells, const BarInfo *before,
-                                     unsigned long_weak, bool commit, FillRng *rng, GrowBlueprintLine *lines, GrowBlueprintLine *line) {
-    const PatternEntry *entries[GEN_CELLS_MAX];
-    unsigned weights[GEN_CELLS_MAX];
-    size_t count = grow_blueprint_cells(request->knowledge, &request->meter, pattern_job, entries, GEN_CELLS_MAX);
-    size_t usable = 0;
-    Rational beat = beat_length(&request->meter);
-    for (size_t c = 0; c < count; c++) {
-        weights[c] = 0;
-        if (!grow_blueprint_cell_line(entries[c], request->knowledge, &request->meter, cells->bar, &lines[c])) {
-            continue;
-        }
-        if (is_half(lines[c].notes[0].duration) && before && before->known && before->ends_half) {
-            continue;
-        }
-        weights[c] = 1;
-        for (size_t n = 1; n < lines[c].count; n++) {
-            if (rational_cmp(lines[c].notes[n].duration, beat) >= 0 && lines[c].notes[n].offset.num > 0) {
-                weights[c] = 1 + long_weak;
-            }
-        }
-        usable++;
-    }
-    if (usable == 0) {
-        return NULL;
-    }
-    if (!commit) {
-        return entries[0];
-    }
-    size_t pick = draw_weighted(rng, weights, count);
-    if (pick >= count) {
-        return NULL;
-    }
-    *line = lines[pick];
-    return entries[pick];
-}
-
-static GrowResult draw_jobs(const GrowRequest *request, const Layout *layout, const Cells *cells, const BlueprintPreferences *preferences,
-                            FillRng *rng, GrowBlueprint *out, GrowRefusal *refusal, GrowBlueprintLine *lines) {
+static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout, const Cells *cells, const BlueprintPreferences *preferences,
+                               FillRng *rng, GrowBlueprint *out, GrowRefusal *refusal) {
     BarInfo info[GEN_BARS];
     memset(info, 0, sizeof info);
     motive_info(request, cells, info, layout->bars[0]);
@@ -469,7 +408,9 @@ static GrowResult draw_jobs(const GrowRequest *request, const Layout *layout, co
             unsigned bits = expect->jobs[unit];
             GrowBlueprintBar *this = &out->bars[bar];
             const BarInfo *before = bar > 0 ? &info[bar - 1] : NULL;
-            GrowBlueprintLine line;
+            bool before_half = before && before->known && before->ends_half;
+            PlanNote cell_notes[COMPOSER_RHYTHM_NOTES_MAX];
+            size_t cell_count = 0;
             char path[48];
             snprintf(path, sizeof path, "/blueprint/bars/%zu/job", bar);
             if (bits == THEME_JOB_LIQUIDATION) {
@@ -490,13 +431,14 @@ static GrowResult draw_jobs(const GrowRequest *request, const Layout *layout, co
                     }
                     unsigned weight = preferences->jobs[function][blueprint_job_of(bit)];
                     bool cell_job = bit != THEME_JOB_VARIANT && bit != THEME_JOB_CONTRAST;
-                    if (weight == 0 || (cell_job && !draw_cell(request, pattern_job_of(bit), cells, before, preferences->sounds[BLUEPRINT_SOUND_LONG_WEAK], false, rng, lines, &line))) {
+                    if (weight == 0 || (cell_job && !composer_rhythm_draw_cell(request->knowledge, &request->meter, pattern_job_of(bit), before_half,
+                                                                  preferences->sounds[BLUEPRINT_SOUND_LONG_WEAK], false, rng, cell_notes, &cell_count))) {
                         continue;
                     }
                     jobs[candidates] = bit;
                     weights[candidates++] = weight;
                 }
-                size_t pick = draw_weighted(rng, weights, candidates);
+                size_t pick = composer_draw_weighted(rng, weights, candidates);
                 if (pick < candidates) {
                     chosen = jobs[pick];
                 } else {
@@ -510,7 +452,8 @@ static GrowResult draw_jobs(const GrowRequest *request, const Layout *layout, co
                 this->job = chosen == THEME_JOB_MOTIF ? GROW_JOB_MOTIF : GROW_JOB_LIQUIDATION;
                 info[bar] = (BarInfo){false, false};
             } else {
-                const PatternEntry *cell = draw_cell(request, pattern_job_of(chosen), cells, before, preferences->sounds[BLUEPRINT_SOUND_LONG_WEAK], true, rng, lines, &line);
+                const PatternEntry *cell = composer_rhythm_draw_cell(request->knowledge, &request->meter, pattern_job_of(chosen), before_half,
+                                                                     preferences->sounds[BLUEPRINT_SOUND_LONG_WEAK], true, rng, cell_notes, &cell_count);
                 if (!cell) {
                     char meter[16];
                     snprintf(meter, sizeof meter, "%d/%d", request->meter.beats_per_bar, request->meter.beat_unit);
@@ -519,22 +462,11 @@ static GrowResult draw_jobs(const GrowRequest *request, const Layout *layout, co
                 this->job = GROW_JOB_ENTRY;
                 this->job_entry = cell;
                 info[bar].known = true;
-                info[bar].ends_half = is_half(line.notes[line.count - 1].duration);
+                info[bar].ends_half = is_half(cell_notes[cell_count - 1].duration);
             }
         }
     }
     return GROW_OK;
-}
-
-static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout, const Cells *cells, const BlueprintPreferences *preferences,
-                               FillRng *rng, GrowBlueprint *out, GrowRefusal *refusal) {
-    GrowBlueprintLine *lines = malloc(GEN_CELLS_MAX * sizeof(*lines));
-    if (!lines) {
-        return GROW_ERR_ALLOC;
-    }
-    GrowResult result = draw_jobs(request, layout, cells, preferences, rng, out, refusal, lines);
-    free(lines);
-    return result;
 }
 
 GrowResult grow_blueprint_generate(const GrowRequest *request, const BlueprintPreferences *preferences, FillRng *rng, GrowBlueprint *out,
@@ -901,7 +833,7 @@ static void place_sounds(Marks *marks, FillRng *rng) {
                 continue;
             }
             weights[count] = SOUND_NONE_WEIGHT;
-            size_t pick = draw_weighted(rng, weights, count + 1);
+            size_t pick = composer_draw_weighted(rng, weights, count + 1);
             if (pick < count && sound_realize(marks, kinds[pick], bar)) {
                 marks->once[sound_index(kinds[pick])] = true;
                 marks->taken[bar] = true;
@@ -975,7 +907,7 @@ GrowResult grow_blueprint_generate_marks(const GrowRequest *request, const Bluep
     if (count == 0) {
         result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/blueprint/climax", "the theme type has no climax unit");
     } else {
-        size_t pick = draw_weighted(rng, weights, count);
+        size_t pick = composer_draw_weighted(rng, weights, count);
         size_t bar = bars[pick < count ? pick : count - 1];
         long note = longest_note(marks, bar, marks->beat);
         note = note >= 0 ? note : (drawn->known[bar] && drawn->rhythm[bar].count > 0 ? 0 : -1);

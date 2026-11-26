@@ -116,7 +116,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
         return URSATZ_ERR_REQUEST;
     }
     if (present && !motive_random_strategy_parse(strategy_text, &out->strategy)) {
-        return api_fail(error, URSATZ_ERR_REQUEST, "/strategy", "strategy must be segments or drawn, not '%s'",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/strategy", "strategy must be segments, drawn or blueprint, not '%s'",
                         strategy_text);
     }
     if (!api_member_string(request, "role", &role_text, has_role, error)) {
@@ -131,6 +131,7 @@ static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;
     out->color = *has_preferences ? &preferences->harmony.color : NULL;
+    out->blueprint = *has_preferences ? &preferences->blueprint : NULL;
     /* The candidates group (R-673): variety 0, the default, draws as it always did. */
     out->variety = *has_preferences ? preferences->candidates.variety : 0;
     out->pool = *has_preferences ? preferences->candidates.pool : 4;

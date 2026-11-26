@@ -103,6 +103,7 @@ add_library(ursatz_composer_engine STATIC
     motive/motive_random_pitch.c
     motive/motive_random_rhythm.c
     motive/motive_random_segments.c
+    motive/motive_random_blueprint.c
     motive/variant_registry.c
     motive/variant_chain.c
     motive/variant_functions.c

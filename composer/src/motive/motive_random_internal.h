@@ -108,6 +108,10 @@ double motive_random_distance(const Motive *a, const Motive *b);
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                                       bool *found);
 
+/* One candidate of the BLUEPRINT strategy (motive_random_blueprint.c, R-753), as the others: a two-bar motif drawn from the K8 expectations of
+   the sentence's basic idea and the blueprint preferences. */
+bool motive_random_blueprint_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out, bool *found);
+
 /* True when a given chord plan (preferences->plan_count > 0) can be drawn in the meter (motive_random_segments.c); false means
    the plan never fits, whatever the seed. */
 bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences, const PlanMeter *meter);

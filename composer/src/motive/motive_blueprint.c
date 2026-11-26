@@ -536,6 +536,80 @@ bool composer_rhythm_contrast(const KnowledgeSnapshot *knowledge, const PlanMete
     return found;
 }
 
+size_t composer_draw_weighted(FillRng *rng, const unsigned *weights, size_t count) {
+    unsigned total = 0;
+    for (size_t i = 0; i < count; i++) {
+        total += weights[i];
+    }
+    if (total == 0) {
+        return count;
+    }
+    unsigned at = (unsigned)fill_rng_below(rng, total);
+    for (size_t i = 0; i < count; i++) {
+        if (at < weights[i]) {
+            return i;
+        }
+        at -= weights[i];
+    }
+    return count - 1;
+}
+
+/* The length of a beat in whole notes: the beat unit, or three of them in a compound meter. */
+static Rational beat_length(const PlanMeter *meter) {
+    long long num = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0 ? 3 : 1;
+    return (Rational){num, meter->beat_unit};
+}
+
+const PatternEntry *composer_rhythm_draw_cell(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned pattern_job,
+                                              bool previous_ends_half, unsigned long_weak, bool commit, FillRng *rng, PlanNote *out,
+                                              size_t *out_count) {
+    const PatternEntry *entries[CELLS_MAX];
+    unsigned weights[CELLS_MAX];
+    size_t lengths[CELLS_MAX];
+    size_t count = composer_rhythm_cells(knowledge, meter, pattern_job, entries, CELLS_MAX);
+    PlanNote *lines = malloc(CELLS_MAX * COMPOSER_RHYTHM_NOTES_MAX * sizeof(PlanNote));
+    if (!lines) {
+        return NULL;
+    }
+    size_t usable = 0;
+    Rational beat = beat_length(meter);
+    for (size_t c = 0; c < count; c++) {
+        PlanNote *line = lines + c * COMPOSER_RHYTHM_NOTES_MAX;
+        weights[c] = 0;
+        if (!composer_rhythm_cell_notes(entries[c], knowledge, meter, line, &lengths[c])) {
+            continue;
+        }
+        if (line[0].duration.num == 1 && line[0].duration.den == 2 && previous_ends_half) {
+            continue;
+        }
+        weights[c] = 1;
+        for (size_t n = 1; n < lengths[c]; n++) {
+            if (rational_cmp(line[n].duration, beat) >= 0 && line[n].offset.num > 0) {
+                weights[c] = 1 + long_weak;
+            }
+        }
+        usable++;
+    }
+    const PatternEntry *found = NULL;
+    if (usable > 0) {
+        size_t pick = commit ? composer_draw_weighted(rng, weights, count) : 0;
+        if (!commit) {
+            for (size_t c = 0; c < count && !found; c++) {
+                pick = weights[c] > 0 ? c : pick;
+                found = weights[c] > 0 ? entries[c] : NULL;
+            }
+        } else if (pick < count) {
+            found = entries[pick];
+        }
+        if (found && commit) {
+            *out_count = lengths[pick];
+            memcpy(out, lines + pick * COMPOSER_RHYTHM_NOTES_MAX, lengths[pick] * sizeof(PlanNote));
+        }
+    }
+    free(lines);
+    return found;
+}
+
 /* ------------------------------------------------------------ rhythm-only motives */
 
 PlanResult composer_rhythm_motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
