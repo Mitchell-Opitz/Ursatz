@@ -106,7 +106,7 @@ static void test_chord_types(void) {
                  {"persichetti.chord-type.quartal-four", CHORD_CONSTRUCTION_QUARTAL, 4},
                  {"omt.chord-type.major-triad", CHORD_CONSTRUCTION_TERTIAN, 3}};
     KnowledgeSnapshot *snapshot = build();
-    assert(knowledge_snapshot_chord_type_count(snapshot) == 19);
+    assert(knowledge_snapshot_chord_type_count(snapshot) == 21);
     for (size_t i = 0; i < sizeof(TYPES) / sizeof(TYPES[0]); i++) {
         const ChordType *type = knowledge_snapshot_chord_type(snapshot, TYPES[i].id);
         assert(type != NULL && type->construction == TYPES[i].construction && type->member_count == TYPES[i].members);
@@ -118,7 +118,7 @@ static void test_chord_types(void) {
     assert(six_nine->members[3].role == CHORD_MEMBER_ADDED_SIXTH && six_nine->members[4].semitones == 14);
     /* in id order, the accessors list every one of them */
     assert(strcmp(knowledge_snapshot_chord_type_at(snapshot, 0)->id, "omt.chord-type.augmented-triad") == 0);
-    assert(knowledge_snapshot_chord_type_at(snapshot, 19) == NULL);
+    assert(knowledge_snapshot_chord_type_at(snapshot, 21) == NULL);
     knowledge_snapshot_destroy(snapshot);
 }
 
