@@ -77,6 +77,33 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
                                        Motive *out, MotiveError *error);
 
 /*
+ * The rhythms of a blueprint's bars (R-745), as the draws of the blueprint generator (R-751) and of the blueprint motif strategy (R-753)
+ * share them. A rhythm is the PlanNote list of one bar: offsets from the bar's start, a gap a rest, the pitches not read; the list holds
+ * at most COMPOSER_RHYTHM_NOTES_MAX notes and every `out` below has room for that many.
+ */
+#define COMPOSER_RHYTHM_NOTES_MAX 63
+
+/* The K11 rhythm cells of the meter that have the job's bit (PATTERN_JOB_*; a mask of 0: every one), up to `capacity`. */
+size_t composer_rhythm_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity);
+
+/* The rhythm of a K11 cell as one bar of the meter; false when its text does not fill a bar exactly or has no note. */
+bool composer_rhythm_cell_notes(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, PlanNote *out,
+                                size_t *out_count);
+
+/*
+ * The variant of a rhythm (R-745): one note split in two equal halves or two neighbours joined, one draw (fill_rng_below) among all of
+ * them. False, with nothing drawn, for a rhythm with none (no notes).
+ */
+bool composer_rhythm_variant(const PlanNote *base, size_t count, FillRng *rng, PlanNote *out, size_t *out_count);
+
+/*
+ * The contrast to a rhythm (R-745): a cell of the meter whose rhythm is at most half as similar to `base` as similarity_rhythm_score
+ * measures it, one draw among those; none that far takes the least similar one with no draw. False when the meter has no cell.
+ */
+bool composer_rhythm_contrast(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, const PlanNote *base, size_t count, FillRng *rng,
+                              PlanNote *out, size_t *out_count);
+
+/*
  * Attaches a rhythm-only motive (R-746): the motive's notes (their pitches are not read: a rhythm sounds degree 1) as a Given motive
  * node under parent at start, as motive_attach does, with a motive_tones constraint that labels every note "rhythm". The melody stage
  * then places them as notes of its own (melody_context.c), and the harmony stage does not read the constraint's chords: the motive's

@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include <analysis/similarity/similarity_scoring.h>
 #include <model/pitch/pitch_arithmetic.h>
 
 #include <ursatz_composer/given.h>
@@ -737,97 +736,14 @@ static void motive_bar(const Motive *motive, size_t bar, Rational bar_length, Gr
 
 /* The cells of K11 of the meter: with the job's bit, or every one for a mask of 0. */
 size_t grow_blueprint_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity) {
-    char want[16];
-    size_t count = 0;
-    meter_text(meter, want, sizeof(want));
-    for (size_t i = 0; knowledge && i < knowledge_snapshot_pattern_count(knowledge) && count < capacity; i++) {
-        const PatternEntry *entry = knowledge_snapshot_pattern_at(knowledge, i);
-        if (entry && entry->is_rhythm && entry->rhythm.meter && strcmp(entry->rhythm.meter, want) == 0 &&
-            (job == 0 || (entry->rhythm.jobs & job) != 0)) {
-            out[count++] = entry;
-        }
-    }
-    return count;
+    return composer_rhythm_cells(knowledge, meter, job, out, capacity);
 }
 
 /* The rhythm of a K11 cell as a bar's line; false when it does not read as a bar of the meter. */
 bool grow_blueprint_cell_line(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, Rational bar_length,
-                      GrowBlueprintLine *out) {
-    return read_line(entry->rhythm.rhythm, true, knowledge, meter, bar_length, "", "rhythm", 0, out, NULL) == URSATZ_OK && out->count > 0;
-}
-
-/* How similar two rhythms are (similarity_rhythm_score on their durations); 1 when they cannot be compared. */
-static Rational rhythm_similarity(const GrowBlueprintLine *a, const GrowBlueprintLine *b) {
-    SimilarityDuration left[GROW_BLUEPRINT_NOTES];
-    SimilarityDuration right[GROW_BLUEPRINT_NOTES];
-    SimilarityScore score = {1, 1};
-    for (size_t i = 0; i < a->count; i++) {
-        left[i] = a->notes[i].duration;
-    }
-    for (size_t i = 0; i < b->count; i++) {
-        right[i] = b->notes[i].duration;
-    }
-    if (a->count == 0 || b->count == 0 || similarity_rhythm_score(left, a->count, right, b->count, &score) != SIMILARITY_SCORE_OK) {
-        score = (Rational){1, 1};
-    }
-    return score;
-}
-
-/* The variant of a rhythm (R-745): one note split in two equal halves or two neighbours joined, one draw among all of them. */
-static bool variant_of(const GrowBlueprintLine *base, FillRng *rng, GrowBlueprintLine *out) {
-    size_t splits = base->count < GROW_BLUEPRINT_NOTES ? base->count : 0;
-    size_t joins = 0;
-    for (size_t i = 0; i + 1 < base->count; i++) {
-        Rational end;
-        joins += rational_add(base->notes[i].offset, base->notes[i].duration, &end) == RATIONAL_OK &&
-                 rational_cmp(end, base->notes[i + 1].offset) == 0;
-    }
-    if (splits + joins == 0) {
-        return false;
-    }
-    size_t pick = (size_t)fill_rng_below(rng, splits + joins);
-    out->count = 0;
-    if (pick < splits) {
-        for (size_t i = 0; i < base->count; i++) {
-            Rational half;
-            if (i != pick) {
-                out->notes[out->count++] = base->notes[i];
-                continue;
-            }
-            if (rational_div_int(base->notes[i].duration, 2, &half) != RATIONAL_OK) {
-                return false;
-            }
-            PlanNote first = base->notes[i];
-            PlanNote second = base->notes[i];
-            first.duration = half;
-            second.duration = half;
-            if (rational_add(first.offset, half, &second.offset) != RATIONAL_OK) {
-                return false;
-            }
-            out->notes[out->count++] = first;
-            out->notes[out->count++] = second;
-        }
-        return true;
-    }
-    size_t join = pick - splits;
-    for (size_t i = 0; i < base->count; i++) {
-        Rational end;
-        bool joinable = i + 1 < base->count && rational_add(base->notes[i].offset, base->notes[i].duration, &end) == RATIONAL_OK &&
-                        rational_cmp(end, base->notes[i + 1].offset) == 0;
-        if (joinable && join == 0) {
-            PlanNote joined = base->notes[i];
-            if (rational_add(joined.duration, base->notes[i + 1].duration, &joined.duration) != RATIONAL_OK) {
-                return false;
-            }
-            out->notes[out->count++] = joined;
-            i++;
-            join = (size_t)-1;
-            continue;
-        }
-        join -= joinable && join != (size_t)-1 ? 1 : 0;
-        out->notes[out->count++] = base->notes[i];
-    }
-    return true;
+                              GrowBlueprintLine *out) {
+    (void)bar_length;
+    return composer_rhythm_cell_notes(entry, knowledge, meter, out->notes, &out->count);
 }
 
 /* The K11 job bit of a cell job. */
@@ -892,34 +808,14 @@ static GrowResult draw_job(const GrowRequest *request, const PlaceBars *places, 
             return GROW_OK;
         }
         if (this->job == GROW_JOB_VARIANT) {
-            return variant_of(motif, rng, &out->rhythm[bar])
+            return composer_rhythm_variant(motif->notes, motif->count, rng, out->rhythm[bar].notes, &out->rhythm[bar].count)
                        ? GROW_OK
                        : refuse(refusal, GROW_ERR_BAD_REQUEST, path, "bar %zu: the basic idea's bar has no variant", bar);
         }
-        size_t count = grow_blueprint_cells(request->knowledge, &request->meter, 0, cells, CELLS_MAX);
-        GrowBlueprintLine lines[CELLS_MAX];
-        size_t far[CELLS_MAX];
-        size_t far_count = 0;
-        size_t least = CELLS_MAX;
-        Rational least_score = {2, 1};
-        Rational half = {1, 2};
-        for (size_t c = 0; c < count; c++) {
-            if (!grow_blueprint_cell_line(cells[c], request->knowledge, &request->meter, bar_length, &lines[c])) {
-                continue;
-            }
-            Rational score = rhythm_similarity(motif, &lines[c]);
-            if (rational_cmp(score, half) <= 0) {
-                far[far_count++] = c;
-            }
-            if (rational_cmp(score, least_score) < 0) {
-                least_score = score;
-                least = c;
-            }
-        }
-        if (least == CELLS_MAX) {
+        if (!composer_rhythm_contrast(request->knowledge, &request->meter, motif->notes, motif->count, rng, out->rhythm[bar].notes,
+                                      &out->rhythm[bar].count)) {
             return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "no contrast rhythm in %s", meter);
         }
-        out->rhythm[bar] = lines[far_count > 0 ? far[fill_rng_below(rng, far_count)] : least];
         return GROW_OK;
     }
     case GROW_JOB_NONE:

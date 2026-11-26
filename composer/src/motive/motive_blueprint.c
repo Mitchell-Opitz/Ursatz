@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <analysis/motive/motive_sketch.h>
+#include <analysis/similarity/similarity_scoring.h>
 #include <theory/tonality/tonal_key.h>
 
 #include <plan/plan_state.h>
@@ -379,6 +380,160 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
         *out = motive;
     }
     return result;
+}
+
+/* ------------------------------------------------------------ rhythms of a bar */
+
+#define CELLS_MAX 128
+
+size_t composer_rhythm_cells(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, unsigned job, const PatternEntry **out, size_t capacity) {
+    char want[16];
+    size_t count = 0;
+    snprintf(want, sizeof(want), "%d/%d", (int)meter->beats_per_bar, (int)meter->beat_unit);
+    for (size_t i = 0; knowledge && i < knowledge_snapshot_pattern_count(knowledge) && count < capacity; i++) {
+        const PatternEntry *entry = knowledge_snapshot_pattern_at(knowledge, i);
+        if (entry && entry->is_rhythm && entry->rhythm.meter && strcmp(entry->rhythm.meter, want) == 0 &&
+            (job == 0 || (entry->rhythm.jobs & job) != 0)) {
+            out[count++] = entry;
+        }
+    }
+    return count;
+}
+
+bool composer_rhythm_cell_notes(const PatternEntry *entry, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, PlanNote *out,
+                                size_t *out_count) {
+    Rational bar_length;
+    char closed[256];
+    if (!entry || !entry->rhythm.rhythm || plan_meter_bar_length(meter, &bar_length) != PLAN_OK ||
+        snprintf(closed, sizeof(closed), "%s x:w", entry->rhythm.rhythm) >= (int)sizeof(closed)) {
+        return false;
+    }
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter = *meter;
+    options.knowledge = knowledge;
+    Motive motive;
+    MotiveError detail;
+    if (motive_from_rhythm_text(closed, &options, &motive, &detail) != MOTIVE_OK || motive.note_count < 2 ||
+        rational_cmp(motive.notes[motive.note_count - 1].onset, bar_length) != 0) {
+        return false;
+    }
+    *out_count = motive.note_count - 1;
+    for (size_t i = 0; i < *out_count && i < COMPOSER_RHYTHM_NOTES_MAX; i++) {
+        out[i] = plan_note(motive_pitch(&motive, i), motive.notes[i].onset, motive.notes[i].duration);
+    }
+    return *out_count > 0;
+}
+
+bool composer_rhythm_variant(const PlanNote *base, size_t count, FillRng *rng, PlanNote *out, size_t *out_count) {
+    size_t splits = count < COMPOSER_RHYTHM_NOTES_MAX ? count : 0;
+    size_t joins = 0;
+    for (size_t i = 0; i + 1 < count; i++) {
+        Rational end;
+        joins += rational_add(base[i].offset, base[i].duration, &end) == RATIONAL_OK && rational_cmp(end, base[i + 1].offset) == 0;
+    }
+    if (splits + joins == 0) {
+        return false;
+    }
+    size_t pick = (size_t)fill_rng_below(rng, splits + joins);
+    *out_count = 0;
+    if (pick < splits) {
+        for (size_t i = 0; i < count; i++) {
+            Rational half;
+            if (i != pick) {
+                out[(*out_count)++] = base[i];
+                continue;
+            }
+            if (rational_div_int(base[i].duration, 2, &half) != RATIONAL_OK) {
+                return false;
+            }
+            PlanNote first = base[i];
+            PlanNote second = base[i];
+            first.duration = half;
+            second.duration = half;
+            if (rational_add(first.offset, half, &second.offset) != RATIONAL_OK) {
+                return false;
+            }
+            out[(*out_count)++] = first;
+            out[(*out_count)++] = second;
+        }
+        return true;
+    }
+    size_t join = pick - splits;
+    for (size_t i = 0; i < count; i++) {
+        Rational end;
+        bool joinable = i + 1 < count && rational_add(base[i].offset, base[i].duration, &end) == RATIONAL_OK &&
+                        rational_cmp(end, base[i + 1].offset) == 0;
+        if (joinable && join == 0) {
+            PlanNote joined = base[i];
+            if (rational_add(joined.duration, base[i + 1].duration, &joined.duration) != RATIONAL_OK) {
+                return false;
+            }
+            out[(*out_count)++] = joined;
+            i++;
+            join = (size_t)-1;
+            continue;
+        }
+        join -= joinable && join != (size_t)-1 ? 1 : 0;
+        out[(*out_count)++] = base[i];
+    }
+    return true;
+}
+
+/* How similar two rhythms are (similarity_rhythm_score on their durations); 1 when they cannot be compared. */
+static Rational rhythm_similarity(const PlanNote *a, size_t a_count, const PlanNote *b, size_t b_count) {
+    SimilarityDuration left[COMPOSER_RHYTHM_NOTES_MAX];
+    SimilarityDuration right[COMPOSER_RHYTHM_NOTES_MAX];
+    SimilarityScore score = {1, 1};
+    for (size_t i = 0; i < a_count; i++) {
+        left[i] = a[i].duration;
+    }
+    for (size_t i = 0; i < b_count; i++) {
+        right[i] = b[i].duration;
+    }
+    if (a_count == 0 || b_count == 0 || similarity_rhythm_score(left, a_count, right, b_count, &score) != SIMILARITY_SCORE_OK) {
+        score = (Rational){1, 1};
+    }
+    return score;
+}
+
+bool composer_rhythm_contrast(const KnowledgeSnapshot *knowledge, const PlanMeter *meter, const PlanNote *base, size_t count, FillRng *rng,
+                              PlanNote *out, size_t *out_count) {
+    const PatternEntry *cells[CELLS_MAX];
+    size_t far[CELLS_MAX];
+    size_t lengths[CELLS_MAX];
+    size_t cell_count = composer_rhythm_cells(knowledge, meter, 0, cells, CELLS_MAX);
+    PlanNote *lines = malloc(CELLS_MAX * COMPOSER_RHYTHM_NOTES_MAX * sizeof(PlanNote));
+    if (!lines) {
+        return false;
+    }
+    size_t far_count = 0;
+    size_t least = CELLS_MAX;
+    Rational least_score = {2, 1};
+    Rational half = {1, 2};
+    for (size_t c = 0; c < cell_count; c++) {
+        PlanNote *line = lines + c * COMPOSER_RHYTHM_NOTES_MAX;
+        if (!composer_rhythm_cell_notes(cells[c], knowledge, meter, line, &lengths[c])) {
+            continue;
+        }
+        Rational score = rhythm_similarity(base, count, line, lengths[c]);
+        if (rational_cmp(score, half) <= 0) {
+            far[far_count++] = c;
+        }
+        if (rational_cmp(score, least_score) < 0) {
+            least_score = score;
+            least = c;
+        }
+    }
+    bool found = least != CELLS_MAX;
+    if (found) {
+        size_t pick = far_count > 0 ? far[fill_rng_below(rng, far_count)] : least;
+        *out_count = lengths[pick];
+        memcpy(out, lines + pick * COMPOSER_RHYTHM_NOTES_MAX, lengths[pick] * sizeof(PlanNote));
+    }
+    free(lines);
+    return found;
 }
 
 /* ------------------------------------------------------------ rhythm-only motives */
