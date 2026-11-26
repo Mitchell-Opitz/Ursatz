@@ -31,7 +31,8 @@
  * melody and its echoed blueprint: every fixed item of the blueprint holds (test_blueprint_check_fixed); the melody spans at most the larger of 16 and the
  * climax's distance above the motif's lowest note; the climax, the theme's highest note, is in bar 5 or 6 of a sentence and bar 6 of a period; no half
  * note follows a half note after the second bar; a sentence's bar 4 has a rhythm of its own, not bar 0's; a period's bar 2, when the generator drew it
- * as a contrast, is at most 1/2 as similar to bar 0 as similarity_rhythm_score measures. With `fast`, seed 1 of every case (the smoke test).
+ * as a contrast, is at most 1/2 as similar to bar 0 as similarity_rhythm_score measures. With `fast`, seed 1 of the u51 and two-bar-3-4 cases (the smoke test);
+ * with a case's name ("u51:period") that case alone; the environment variable SWEEP_SEED limits a run to one seed.
  */
 
 #define SEEDS 10
@@ -276,6 +277,9 @@ int main(int argc, char **argv) {
         MOTIVE_OF[which] = load_motive(path, MODE_OF[which], sizeof MODE_OF[which]);
     }
     unsigned last = fast_run ? 1 : SEEDS;
+    const char *seed_only = getenv("SWEEP_SEED");
+    unsigned first = seed_only ? (unsigned)strtoul(seed_only, NULL, 10) : 1;
+    last = seed_only ? first : last;
     for (size_t which = 0; which < FIXTURES; which++) {
         for (int period = 0; period < 2; period++) {
             char case_name[64];
@@ -283,11 +287,11 @@ int main(int argc, char **argv) {
             if (only && strcmp(only, case_name) != 0) {
                 continue;
             }
-            if (fast_run && !(which == 0 && !period) && !(which == 1 && period)) {
-                continue; /* the smoke test: seed 1 of two cases (each case is several seconds: a seed that does not compose costs its melody stage) */
+            if (fast_run && which != 1 && which != 2) {
+                continue; /* the smoke test: seed 1 of u51 and two-bar-3-4 (a seed that does not compose costs its melody stage: s77 and the arpeggio take half a minute) */
             }
             unsigned composed = 0;
-            for (unsigned seed = 1; seed <= last; seed++) {
+            for (unsigned seed = first; seed <= last; seed++) {
                 composed += compose(which, period != 0, seed);
             }
             printf("%s %s: %u of %u composed (pinned %d)\n", FIXTURE[which].name, period ? "period" : "sentence", composed, last,
