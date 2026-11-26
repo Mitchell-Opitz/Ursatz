@@ -250,6 +250,12 @@ ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS sm
 # in docs/accompaniment.md): the test holds the share to the baseline in its source and prints the target (R-698).
 ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard)
 
+# The accompaniment of block, arpeggiated, alberti and oom-pah as `229c40f` wrote it (P69b B3): 45 themes by hash. Slow (composes all 45); its
+# smoke composes four and runs every PR.
+ursatz_test(test_accompaniment_patterns LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_accompaniment_patterns_smoke TARGET test_accompaniment_patterns ARGS smoke)
+
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_voicing_heard LIBS ursatz_composer_engine composer_test_support)
