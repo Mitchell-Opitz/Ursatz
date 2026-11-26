@@ -605,6 +605,9 @@ ursatz_test(test_harmony_beats LIBS ursatz_composer_engine composer_test_support
 
 ursatz_test(test_melody_beats LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
+# The melody stage over a blueprint: rhythm-only motives, anchors, events and the climax (R-746).
+ursatz_test(test_melody_blueprint LIBS ursatz_composer_engine composer_test_support)
+
 # The Composer API (docs/api.md): the core entries, and progress and cancel through the library loops.
 ursatz_test(test_api_core LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
