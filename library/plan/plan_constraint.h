@@ -313,6 +313,9 @@ typedef struct {
     int midi;
 } PlanClimax;
 
+/* The event type a word names as the plan file writes it ("appoggiatura", "passing", ...); false, *out untouched, for any other word. */
+bool plan_event_type_named(const char *word, PlanEventType *out);
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;

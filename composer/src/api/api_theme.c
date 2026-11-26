@@ -553,7 +553,52 @@ typedef struct {
     ComposerStyle *style;
     GrowRun run;
     bool ran;
+    GrowBlueprint *blueprint; /* the request's blueprint, NULL for none */
 } ThemeState;
+
+/* A blueprint gives its chords, its accompaniment and its idea motives per bar: the request's own members are refused beside it. */
+static UrsatzStatus refuse_beside_blueprint(const cJSON *request, UrsatzError *error) {
+    static const struct {
+        const char *member;
+        const char *what;
+    } BESIDE[] = {{"chords", "chords"}, {"accompaniment", "accompaniment"}, {"ideas", "idea motives"}};
+    for (size_t i = 0; i < sizeof(BESIDE) / sizeof(BESIDE[0]); i++) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, BESIDE[i].member);
+        if (item && !cJSON_IsNull(item)) {
+            char path[32];
+            snprintf(path, sizeof path, "/%s", BESIDE[i].member);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "a blueprint gives its %s per bar: leave \"%s\" out", BESIDE[i].what,
+                            BESIDE[i].member);
+        }
+    }
+    return URSATZ_OK;
+}
+
+/* Reads the blueprint once the meter, the bars and the pairing are known, and checks it against the ideas of the form. */
+static UrsatzStatus read_blueprint(ThemeState *state, const cJSON *blueprint, UrsatzError *error) {
+    GrowSetup *setup = &state->setup;
+    state->blueprint = calloc(1, sizeof(*state->blueprint));
+    if (!state->blueprint) {
+        return api_fail_alloc(error);
+    }
+    UrsatzStatus status = grow_blueprint_read(blueprint, setup->knowledge, &setup->meter, setup->bars, state->blueprint, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    SectionConstruction chosen;
+    const SectionConstruction *construction = setup->has_construction ? &setup->construction : NULL;
+    if (!construction && setup->bars != 4 && setup->bars != 8) {
+        /* The construction the length makes (R-469): the basic motif is not known before the plan is built. */
+        if (!grow_construction_choose(NULL, &setup->meter, setup->bars, &setup->pairing, setup->cadence, &chosen)) {
+            return api_fail(error, URSATZ_ERR_REQUEST, "/bars", "no construction makes a %zu-bar theme of this pairing", setup->bars);
+        }
+        construction = &chosen;
+    }
+    const cJSON *slots = cJSON_GetObjectItemCaseSensitive(state->request, "slots");
+    const cJSON *basic = cJSON_IsObject(slots) ? cJSON_GetObjectItemCaseSensitive(slots, "basic") : NULL;
+    return grow_blueprint_check_ideas(state->blueprint, &setup->pairing, &setup->meter, setup->bars, construction,
+                                      basic && !cJSON_IsNull(basic), error);
+}
 
 static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOutputOptions *outputs, UrsatzError *error) {
     const cJSON *request = state->request;
@@ -569,7 +614,12 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         return api_fail(error, URSATZ_ERR_REQUEST, "/schema_version",
                         "the request must have \"schema_version\": 2 (see docs/theme-request.md)");
     }
-    UrsatzStatus status = read_motives(&state->theme, request, error);
+    const cJSON *blueprint = cJSON_GetObjectItemCaseSensitive(request, "blueprint");
+    blueprint = blueprint && !cJSON_IsNull(blueprint) ? blueprint : NULL;
+    UrsatzStatus status = blueprint ? refuse_beside_blueprint(request, error) : URSATZ_OK;
+    if (status == URSATZ_OK) {
+        status = read_motives(&state->theme, request, error);
+    }
     if (status == URSATZ_OK) {
         status = read_brief(&state->theme, request, &state->brief, error);
     }
@@ -630,6 +680,9 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     status = api_grow_read_brief(&state->brief.text, setup, error);
     if (status == URSATZ_OK) {
         status = api_grow_read_construction(request, setup, error);
+    }
+    if (status == URSATZ_OK && blueprint) {
+        status = read_blueprint(state, blueprint, error);
     }
     if (status != URSATZ_OK) {
         return status;
@@ -737,6 +790,7 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
         api_grow_run_destroy(&state.run);
     }
     free(state.material);
+    free(state.blueprint);
     composer_style_destroy(state.style);
     cJSON_Delete(state.request);
     if (status != URSATZ_OK) {
@@ -773,6 +827,7 @@ UrsatzStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const Common
         }
     }
     free(state.material);
+    free(state.blueprint);
     composer_style_destroy(state.style);
     cJSON_Delete(state.request);
     return status;

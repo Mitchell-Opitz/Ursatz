@@ -1048,6 +1048,16 @@ static const char *const EVENT_NAMES[] = {"appoggiatura", "suspension", "passing
                                           "escape",       "anticipation", "retardation"};
 _Static_assert(COUNT_OF(EVENT_NAMES) == PLAN_EVENT_RETARDATION + 1, "a name for every event type");
 
+bool plan_event_type_named(const char *word, PlanEventType *out) {
+    for (size_t i = 0; word && i < COUNT_OF(EVENT_NAMES); i++) {
+        if (strcmp(word, EVENT_NAMES[i]) == 0) {
+            *out = (PlanEventType)i;
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool valid_offset(Rational offset) {
     return offset.den > 0 && offset.num >= 0 && offset.num <= TIME_LIMIT && offset.den <= TIME_LIMIT;
 }

@@ -126,6 +126,7 @@ add_library(ursatz_composer_engine STATIC
     structure/form_spec.c
     structure/form_builtin.c
     check/return_hear.c
+    grow/grow_blueprint.c
     grow/grow_request.c
     grow/grow_apply.c
     grow/grow_contrast.c

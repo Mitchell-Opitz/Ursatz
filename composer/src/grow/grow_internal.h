@@ -5,6 +5,8 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include "motive/motive_fidelity.h"
 #include "structure/plan_util.h"
 
@@ -689,5 +691,85 @@ int grow_widest_leap(const Motive *motive);
 bool grow_same_notes(const Motive *a, const Motive *b);
 /* Whether every pitch of the motive is within the range a form may have, so the melody has room to place it. */
 bool grow_motive_in_form_range(const Motive *motive);
+
+/* --- theme blueprints (R-743, grow_blueprint.c, docs/blueprints.md) --------------------------------------------------------- */
+
+struct cJSON;
+
+#define GROW_BLUEPRINT_BARS 16
+#define GROW_BLUEPRINT_NOTES 63
+#define GROW_BLUEPRINT_ANCHORS 8
+#define GROW_BLUEPRINT_EVENTS 4
+#define GROW_BLUEPRINT_INNER 8
+#define GROW_BLUEPRINT_TEXT 96
+
+/* The job of a bar's rhythm (K11, R-745): a cell of the meter tagged with the job, a relation to another bar, or one named entry. */
+typedef enum {
+    GROW_JOB_NONE,
+    GROW_JOB_MOTIF,       /* the basic idea's bar at the same place in its idea */
+    GROW_JOB_VARIANT,     /* that rhythm with one note split in two or two neighbours joined */
+    GROW_JOB_CONTRAST,    /* a cell of the meter whose rhythm is at most half similar to that bar's */
+    GROW_JOB_RUNNING,
+    GROW_JOB_LONG,
+    GROW_JOB_SYNCOPATED,
+    GROW_JOB_LIQUIDATION, /* the rhythm of the bar before */
+    GROW_JOB_CADENCE,
+    GROW_JOB_ENTRY        /* the rhythm of the K11 entry the job names by its id */
+} GrowJob;
+
+/* The notes of one bar of a blueprint, offsets from the bar's start; a gap is a rest. */
+typedef struct {
+    size_t count;
+    PlanNote notes[GROW_BLUEPRINT_NOTES];
+} GrowBlueprintLine;
+
+/* One bar: each part given or left open (a count of 0, "" or false). Offsets are whole notes from the bar's start. */
+typedef struct {
+    char chords[GROW_BLUEPRINT_TEXT];
+    bool has_melody;
+    GrowBlueprintLine melody;
+    bool has_rhythm;
+    GrowBlueprintLine rhythm; /* the pitches are not read */
+    GrowJob job;
+    const PatternEntry *job_entry; /* GROW_JOB_ENTRY's */
+    size_t anchor_count;
+    PlanAnchor anchors[GROW_BLUEPRINT_ANCHORS];
+    size_t event_count;
+    PlanEvent events[GROW_BLUEPRINT_EVENTS];
+    bool has_bass;
+    GrowBlueprintLine bass;
+    size_t inner_count;
+    GrowBlueprintLine inner[GROW_BLUEPRINT_INNER];
+} GrowBlueprintBar;
+
+/* A theme request's blueprint, read and checked bar by bar (grow_blueprint_read). */
+typedef struct GrowBlueprint {
+    size_t bar_count;
+    GrowBlueprintBar bars[GROW_BLUEPRINT_BARS];
+    bool has_climax;
+    size_t climax_bar;
+    Rational climax_at; /* from the bar's start */
+    int climax_midi;
+    bool has_accompaniment; /* blueprint.accompaniment is given (the request's brief reads it) */
+} GrowBlueprint;
+
+/*
+ * Reads the `blueprint` member of a theme request (R-743) for a theme of `bars` bars in the meter: each bar's members, the climax
+ * and whether an accompaniment is given, with every check one bar or the whole list can make (see docs/blueprints.md). A note list,
+ * a rhythm and the pitches of anchors are read with the note-list reader, a bar long, a rest allowed at the end; a job is a K11
+ * rhythm job word or the id of a K11 rhythm entry of the meter (the snapshot's). URSATZ_OK, or URSATZ_ERR_REQUEST with the path
+ * and the message in error.
+ */
+UrsatzStatus grow_blueprint_read(const struct cJSON *json, const KnowledgeSnapshot *knowledge, const PlanMeter *meter, size_t bars,
+                                 GrowBlueprint *out, UrsatzError *error);
+
+/*
+ * The checks that need the ideas of the form (grow_layout_of): an idea's bars give a melody in all or none and a rhythm or a job in
+ * all or none; the bars of an extension give no rhythm or job; the basic idea gives a melody, a rhythm or a job, or `basic_slot`
+ * (slots.basic) gives it and then its bars give none of them; motif, variant and contrast name the basic idea's bars, so they are
+ * not in them, and the first bar has no bar before for liquidation. construction is NULL for a theme of 4 or 8 bars without one.
+ */
+UrsatzStatus grow_blueprint_check_ideas(const GrowBlueprint *blueprint, const SectionPairing *pairing, const PlanMeter *meter,
+                                        size_t bars, const SectionConstruction *construction, bool basic_slot, UrsatzError *error);
 
 #endif
