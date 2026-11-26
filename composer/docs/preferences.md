@@ -109,7 +109,7 @@ Moved to [critic.md](critic.md#the-critic-group-r-722): `rank`, `candidates`, `k
 
 A **hard** setting changes what a request may ask for or what a candidate may be: `melody.range.low`, `melody.range.high`, `melody.nct_types`, `melody.rhythm_repeat_bars`, `melody.waive`, `motif.leap.low`, `motif.leap.high`, `motif.leaps_per_motif`, `melody.cadence_long`, `motif.skips_per_motif`, `motif.contrast_fidelity_min`, `motif.plan` and every `development.fidelity_minimum.*` (R-671). Every other setting is **soft**: a preference a listener can move.
 
-`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) the 7 hard rules (key `melody.waive`) and the 8 evaluators of the critic (key `critic.weights.<code>`, soft). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
+`composer_preferences_rules` lists the rules a setting can override, in enum order: the 13 soft groups (`melody.weights.<name>` for the ten weights, `melody.closure`, `melody.leaps`, `melody.register`) the 7 hard rules (key `melody.waive`) and the 10 evaluators of the critic (key `critic.weights.<code>`, soft). The vocabulary serves both tables as `preference_keys` and `rules` ([api.md](api.md)).
 
 ## The motif group
 

@@ -107,7 +107,7 @@ const RuleEntry *rule = knowledge_snapshot_rule(snapshot, "michelle.rule.rhythmi
 /* rule->subtype == RULE_EVALUATOR, rule->default_weight == 1, parameter "run" == 3 */
 ```
 
-The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 19 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.
+The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 21 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.
 
 ## The pattern kind and the sus types (K11, P69b B1, R-744, R-745)
 

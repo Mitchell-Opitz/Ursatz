@@ -13,7 +13,7 @@ The `blueprint` group of the settings document: the weights the blueprint genera
 | `jobs.<function>.<job>` | below | 0 to 20 | The weight of a rhythm job for a unit of an idea with that formal function. |
 | `climax.m6`, `climax.m7` | 1, 2 | 0 to 20 | The weight of the sentence's climax in bar 5 (m6) or bar 6 (m7). Both 0 takes the last bar. |
 | `range` | 16 | 12 to 24 | The semitones the melody spans below the climax. |
-| `candidates` | 3 | 1 to 8 | The themes drawn for one request, of which the critic keeps one (B6). |
+| `candidates` | 3 | 1 to 8 | The themes drawn for one request, of which the critic keeps one ([ranking](critic.md#ranking-blueprint-candidates-r-755)); 1 judges nothing. |
 
 `jobs` holds four functions, each with the five jobs `running`, `long`, `syncopated`, `variant` and `contrast`:
 

@@ -531,7 +531,7 @@ const CliCommand CLI_COMMANDS[] = {
     "critique item:<id>[@v<n>] [--settings <file>] [--note <text>] [--format text|json]\n"
     "critique --verdict <obs-id> agree|disagree item:<id> [--note <text>]",
      "Judge candidates with the critic, in her words",
-    "Judges candidate files with the critic (docs/critic.md): eight evaluators of what she has said about a melody give each candidate a\n"
+    "Judges candidate files with the critic (docs/critic.md): ten evaluators of what she has said about a melody give each candidate a\n"
     "score (minus the weighted sum of their penalties), and the Composer's hearing of a theme against its plan gives observations in plain\n"
     "words. A file is a listen sample (its motive, or the plan of its first theme: make themes with listen --plans), a plan or a motive\n"
     "document. The files of one call are one set, which the critic compares (one_rhythm). See cli/docs/cli-critique.md.\n"

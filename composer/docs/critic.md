@@ -1,6 +1,6 @@
 # The critic
 
-`<ursatz_composer/critic.h>`, `src/critic/` (module `critic`, between `check` and `piece`). The critic judges a candidate in Michelle's words (vision 4.7, R-716, R-719): it reads the candidate's melody line, eight evaluators each measure one thing she has said about a melody, and the score is minus the weighted sum of their penalties. With `critic.rank` on it also chooses a theme among candidates ([ranking](#ranking-theme-candidates-r-722)); off, nothing composes with it. Back to the [docs index](README.md).
+`<ursatz_composer/critic.h>`, `src/critic/` (module `critic`, between `check` and `piece`). The critic judges a candidate in Michelle's words (vision 4.7, R-716, R-719): it reads the candidate's melody line, ten evaluators each measure one thing she has said about a melody, and the score is minus the weighted sum of their penalties. With `critic.rank` on it also chooses a theme among candidates ([ranking](#ranking-theme-candidates-r-722)); off, nothing composes with it. Back to the [docs index](README.md).
 
 ## The rules are data
 
@@ -27,6 +27,8 @@ Each gives a `CriticFinding`: its penalty from 0 to 1, and where and by how much
 | `one_rhythm` | The share of the other candidates of the set whose first bar has the rhythm of this line's first bar. 0 for a set of one. | none |
 | `repeated_notes` | The notes that repeat the pitch before them, over the moves. | none |
 | `wide_range` | (highest - lowest pitch - `limit`) / `span`, from 0 to 1. A tenth, OMT part II chapter 1. | `limit` 16, `span` 8 |
+| `register_shift` | (the largest shift - `limit`) / `span`, from 0 to 1 (R-755): a bar's register is the mean pitch of its notes, a shift the distance between the registers of two neighbouring bars that have notes; the finding names the two bars (`first`, `last`) and the shift (`value`, rounded). A fifth. | `limit` 7, `span` 5 |
+| `half_notes` | The notes of exactly a half note that follow a half note, over `span`, from 0 to 1 (R-755). | `span` 2 |
 
 ## The score
 
@@ -36,7 +38,7 @@ Each gives a `CriticFinding`: its penalty from 0 to 1, and where and by how much
 
 An observation is a note in plain words from the message template of an entry. `critic_message` fills the template: `{bar}`, `{beat}` (1-based), `{first}`, `{last}`, `{count}`, `{value}` and `{limit}` come from a `CriticFinding`, `{idea}`, `{against}` and `{aspect}` from its names, `{planned}`, `{heard}` and `{amount}` from the `CriticFields` the caller gives. A name with no value (a bar of -1, a field left empty) and an unknown name stay as written.
 
-`critic_judge(line, set, set_count, knowledge, settings, &judgment)` runs the evaluators, scores them and writes one **scored** observation for each finding with a penalty above 0, in evaluator order, from the entry `michelle.rule.<code>`: "bars 2 to 4 keep one rhythm", "the line spans 19 semitones, more than 16". `CriticJudgment` holds the score, the eight findings and at most 32 observations.
+`critic_judge(line, set, set_count, knowledge, settings, &judgment)` runs the evaluators, scores them and writes one **scored** observation for each finding with a penalty above 0, in evaluator order, from the entry `michelle.rule.<code>`: "bars 2 to 4 keep one rhythm", "the line spans 19 semitones, more than 16". `CriticJudgment` holds the score, the ten findings and at most 32 observations.
 
 `critic_observe(hearing, plan, theme, line, knowledge, &judgment)` appends the observations of the Composer's hearing of the theme node against its plan (the hearing of [form-hear.md](form-hear.md) and [analyzer-check.md](analyzer-check.md), over the hearing's render, so nothing is analyzed twice):
 
@@ -74,7 +76,7 @@ The critic's settings, in `CriticSettings` ([critic.md](critic.md)). `rank` and 
 | `candidates` | 4 | 2 to 8 | The candidates made for each theme kept. |
 | `keep_rejected` | 8 | 0 to 16 | The rejected candidates a run reports. |
 | `reverse` | none | evaluator codes | The evaluators whose penalty counts for a candidate (none twice). |
-| `weights.<code>` | 1 | 0 to 20 | The weight of each evaluator: `rhythmic_monotony`, `contrast_distance`, `leap_load`, `open_ending`, `stray_syncopation`, `one_rhythm`, `repeated_notes`, `wide_range`. |
+| `weights.<code>` | 1 | 0 to 20 | The weight of each evaluator: `rhythmic_monotony`, `contrast_distance`, `leap_load`, `open_ending`, `stray_syncopation`, `one_rhythm`, `repeated_notes`, `wide_range`, `register_shift`, `half_notes`. |
 
 A value outside its limit is refused at `/critic/<key>`, an evaluator that is unknown at `/critic/weights/<code>` or `/critic/reverse/<i>`.
 
@@ -90,6 +92,10 @@ With the preferences' `critic.rank` on (off by default) a theme request makes se
 A run that made fewer candidates than asked ranks what it made. The response of a theme request that ranked has `critic` in each kept theme (`score`, `evaluators`, `observations`, the shapes of the critique response) and `rejected` in the document (`seed`, `score`, `evaluators`); a request that did not has neither, and its output is the bytes it was. The same request with `rank` on and off differs only by the theme the critic chose (the first seed that composes without ranking is always among the candidates). `ursatz listen` writes both with the settings, and with `--plans` the plan, so `ursatz critique` can judge the pick.
 
 **Gate 3 (R-543, P68).** A `Listen Ursatz` round plays themes with `critic.rank` on against off: the first rejected candidate is the one the critic passed over, so a pair that plays the pick against it says whether she hears what the critic hears. Her ratings of the picks, on average, are the third gate. Whether the critic's score should also weigh the observations waits for her verdicts on them (B6).
+
+## Ranking blueprint candidates (R-755)
+
+With `development` `blueprint` ([blueprint-generator.md](blueprint-generator.md)) the critic also chooses among the blueprints the generator draws: when `blueprint.candidates` ([preferences-blueprint.md](preferences-blueprint.md)) is above 1 the run draws that many themes for each one kept (more than `critic.candidates` when `critic.rank` is on too: the larger of the two), judges them as `critic.rank` does and keeps the best; the request's critic settings or the defaults apply, and the response has `critic` and `rejected` as with `critic.rank`. With `candidates` 1 and `rank` off nothing is judged. The two evaluators `register_shift` and `half_notes` are the ones she hears in her listening rounds on the generated themes (u15, t2).
 
 ## Variety in theme sets
 

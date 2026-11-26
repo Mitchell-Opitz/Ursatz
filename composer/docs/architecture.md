@@ -53,7 +53,7 @@ The Composer's sources are 18 modules, one folder each under `src/` (R-636). A m
 | `material` | the returns, variations and figures of a section, given material, connectives, the seam | `harmony`, `melody` and the five above |
 | `grow` | growing a theme from a motive | `harmony`, `motive`, `melody`, `material` and the five above |
 | `check` | hearing (readings), the checks (`analyzer_check`, form, key and return hearing), the style check and measure | `grow`, `harmony`, `melody`, `motive`, `texture` and the five above |
-| `critic` | the critic ([critic.md](critic.md), R-719): the melody line of a candidate, eight evaluators of her listening notes and their score | `motive` and the five above |
+| `critic` | the critic ([critic.md](critic.md), R-719): the melody line of a candidate, ten evaluators of her listening notes and their score | `motive` and the five above |
 | `piece` | the compose run, the piece builders, performing, regenerating, the stages of `grow` | `check`, the operators, `grow` and the five above |
 | `candidates` | candidates and variations of a plan | `piece` and the five above |
 | `explain` | the explanation of a run | `piece`, `check`, `grow` and the five above |
