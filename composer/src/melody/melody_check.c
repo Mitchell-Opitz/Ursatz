@@ -257,7 +257,8 @@ unsigned melody_motive_waived(const MelodyContext *context) {
     PitchSpelling *spellings[MOTIVE_MAX_NOTES];
     unsigned hard = 0;
     unsigned soft = 0;
-    bool spelled = context->motive_count > 0 && context->motive_count <= MOTIVE_MAX_NOTES;
+    /* A rhythm-only motive's pitches are not its own (R-746): it waives nothing. */
+    bool spelled = !context->motive_rhythm_only && context->motive_count > 0 && context->motive_count <= MOTIVE_MAX_NOTES;
     memset(spellings, 0, sizeof(spellings));
     for (size_t k = 0; spelled && k < context->motive_count; k++) {
         spellings[k] = spell_melody(&context->key, context->motive_pitch[k]);

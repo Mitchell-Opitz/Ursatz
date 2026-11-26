@@ -125,7 +125,8 @@ static bool layout_residue(const MelodyContext *context, Rational start, MelodyC
 
 /*
  * The notes of the phrase: the motive's, then notes that fill the rest. A motive as long as the phrase (an idea it fills
- * whole) is all there is: its notes are placed as written and nothing is filled after it. A liquidated residue is
+ * whole) is all there is: its notes are placed as written and nothing is filled after it. A rhythm-only motive's notes are
+ * notes of the phrase (motive_index -1): the stage gives them pitches as it does the notes it fills (R-746). A liquidated residue is
  * followed by its own rhythm (layout_residue). With a density the rest is notes of an even length, that many to a cell;
  * without one it is the motive's rhythm over again, each note as long as the time from one onset of the motive to the
  * next, the last as long as it is.
@@ -140,7 +141,7 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
         if (!note) {
             return false;
         }
-        note->motive_index = (int)k;
+        note->motive_index = context->motive_rhythm_only ? -1 : (int)k;
     }
     if (context->liquidated) {
         return layout_residue(context, start, out);
@@ -234,6 +235,10 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         climax = !contour.in_motive && i == contour.climax;
         top = climax ? high : (contour.cap < high ? contour.cap : high);
         ideal = melody_contour_ideal(context, &contour, out, i, before);
+        /* A first note with nothing placed before it (a rhythm-only motive's, R-746) starts from the melody before, else the middle. */
+        if (i == 0) {
+            ideal = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : (low + high) / 2;
+        }
         /* A leap of a fourth or more is answered by a step back, unless this is the climax or the end. */
         if (adjacent && (before > 0 || context->lead_in_count > 0) && i + 1 < out->count) {
             int leap = out->notes[before].pitch -
@@ -696,7 +701,7 @@ bool melody_build(const MelodyContext *original, const MelodyFillParams *params,
                   bool relaxed, FillRng *rng, MelodyCandidate *out) {
     MelodyContext held_context;
     const MelodyContext *context = original;
-    if (params->cadence_long && original->has_cadence) {
+    if (params->cadence_long && original->has_cadence && !original->motive_rhythm_only) {
         held_context = *original;
         trim_motive_for_cadence(&held_context);
         context = &held_context;
@@ -710,16 +715,18 @@ bool melody_build(const MelodyContext *original, const MelodyFillParams *params,
     out->params = *params;
     /* A melody with two notes as high as its highest has no one climax. */
     bool laid = layout(context, &arch, out);
+    /* A rhythm-only motive's rhythm is given (R-746): none of the three below changes it. */
+    bool rhythm_free = laid && !context->motive_rhythm_only;
     /* Closure: half the layouts of a target that ends a cadence settle into a long last note; no draw at weight 0. */
-    if (laid && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
+    if (rhythm_free && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
         settle_ending(context, out);
     }
     /* The cadence held to one last note from the last downbeat, when it is on (R-712); it draws no random number. */
-    if (laid && params->cadence_long && context->has_cadence) {
+    if (rhythm_free && params->cadence_long && context->has_cadence) {
         hold_cadence(context, out);
     }
     /* The rhythm repetition cap, when it is on (R-479); it draws no random number. */
-    if (laid && params->rhythm_repeat_bars > 0) {
+    if (rhythm_free && params->rhythm_repeat_bars > 0) {
         limit_rhythm_repeats(context, params, out);
     }
     bool assigned = laid && melody_realize(context, params, shift, keep_figures, out) &&

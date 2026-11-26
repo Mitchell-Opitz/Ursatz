@@ -2,10 +2,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <analysis/motive/motive_sketch.h>
 #include <theory/tonality/tonal_key.h>
 
+#include <plan/plan_state.h>
+
+#include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "util/util.h"
 
@@ -373,6 +377,54 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
     free(draw);
     if (result == MOTIVE_OK) {
         *out = motive;
+    }
+    return result;
+}
+
+/* ------------------------------------------------------------ rhythm-only motives */
+
+PlanResult composer_rhythm_motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+                                         NodeId *out_node, LaneSpanId *out_span) {
+    if (!plan || !motive) {
+        return PLAN_ERR_NULL;
+    }
+    if (motive->note_count == 0 || motive->note_count > PLAN_TONES_MAX_NOTES) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_MOTIVE_TONES;
+    PlanMotiveTones *tones = &constraint.params.motive_tones;
+    for (size_t c = 0; c < motive->chord_count && c < PLAN_TONES_MAX_CHORDS; c++) {
+        Rational end = c + 1 < motive->chord_count ? motive->chords[c + 1].onset : motive->length;
+        PlanToneChord *chord = &tones->chords[tones->chord_count];
+        if (motive_chord_numeral(&motive->chords[c], chord->numeral, sizeof(chord->numeral)) &&
+            rational_sub(end, motive->chords[c].onset, &chord->length) == RATIONAL_OK && chord->length.num > 0) {
+            chord->onset = motive->chords[c].onset;
+            tones->chord_count++;
+        }
+    }
+    if (tones->chord_count == 0) {
+        snprintf(tones->chords[0].numeral, sizeof(tones->chords[0].numeral), "I");
+        tones->chords[0].onset = (Rational){0, 1};
+        tones->chords[0].length = motive->length;
+        tones->chord_count = 1;
+    }
+    for (size_t i = 0; i < motive->note_count; i++) {
+        snprintf(tones->labels[i], PLAN_TONE_LABEL_MAX, "%s", HARMONY_TONE_RHYTHM);
+    }
+    tones->label_count = motive->note_count;
+    NodeId node;
+    LaneSpanId span;
+    PlanResult result = motive_attach_as(plan, parent, start, motive, name, PLAN_STATE_REALIZED, &node, &span);
+    result = result == PLAN_OK ? plan_node_add_constraint(plan, node, &constraint) : result;
+    result = result == PLAN_OK ? plan_node_set_state(plan, node, PLAN_STATE_GIVEN) : result;
+    result = result == PLAN_OK ? plan_lane_span_set_state(plan, span, PLAN_STATE_GIVEN) : result;
+    if (result == PLAN_OK && out_node) {
+        *out_node = node;
+    }
+    if (result == PLAN_OK && out_span) {
+        *out_span = span;
     }
     return result;
 }

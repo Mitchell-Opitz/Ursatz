@@ -52,3 +52,4 @@ composer/src/motive/motive_blueprint.c placed_before  # a helper of composer_blu
 composer/src/motive/motive_blueprint.c refuse  # a helper of composer_blueprint_motive, reached with it (P69b B6)
 composer/src/motive/motive_blueprint.c resolution  # a helper of composer_blueprint_motive, reached with it (P69b B6)
 composer/src/motive/motive_blueprint.c time_text  # a helper of composer_blueprint_motive, reached with it (P69b B6)
+composer/src/motive/motive_blueprint.c composer_rhythm_motive_attach  # no application gives a rhythm-only idea motive until the theme request reads a blueprint (P69b B6); test_melody_blueprint calls it

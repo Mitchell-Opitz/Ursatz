@@ -615,6 +615,12 @@ unsigned melody_melodic_soft_rules(void);
 
 /* The motive_tones constraint of a node, or NULL. */
 const PlanMotiveTones *node_tones(const Plan *plan, NodeId node);
+/*
+ * The tone label of a note of a rhythm-only motive (R-746): it has no pitch of its own, and the melody stage chooses one. A motive
+ * whose motive_tones label every note so is rhythm-only; its harmony is not read as the motive's chords.
+ */
+#define HARMONY_TONE_RHYTHM "rhythm"
+bool harmony_tones_rhythm_only(const PlanMotiveTones *tones);
 
 /* Applies a skeleton candidate (schema or sequence) to the harmony lane span it was drawn for. */
 PlanResult harmony_skeleton_apply_target(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);

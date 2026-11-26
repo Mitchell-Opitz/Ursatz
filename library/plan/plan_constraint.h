@@ -243,7 +243,8 @@ typedef struct {
  * A chord is a Roman numeral as a motive's own harmony writes it ("I", "V65", "bVII7") with its onset from the start of
  * the motive and its length, both in whole notes. A label is "chord", "unclassified" or the name of a non-chord tone
  * ("passing", "neighbor", "appoggiatura", "suspension", "retardation", "escape", "anticipation", "double-neighbor",
- * "changing-tone", "pedal"); the plan holds the text, the melody operator reads it. The label count is the note count of
+ * "changing-tone", "pedal"), or "rhythm" on every note of a rhythm-only motive, whose pitches the melody operator chooses and whose
+ * harmony is then not read (R-746); the plan holds the text, the melody operator reads it. The label count is the note count of
  * the node's melody span, which the plan reader checks.
  */
 #define PLAN_TONES_MAX_CHORDS 8

@@ -31,6 +31,13 @@ void melody_context_zero(MelodyContext *context) {
         context->repeat_onset[i] = POSITION_ZERO;
         context->repeat_duration[i] = POSITION_ZERO;
     }
+    for (size_t i = 0; i < MELODY_MAX_ANCHORS; i++) {
+        context->anchors[i].offset = POSITION_ZERO;
+    }
+    for (size_t i = 0; i < MELODY_MAX_EVENTS; i++) {
+        context->events[i].offset = POSITION_ZERO;
+    }
+    context->climax.offset = POSITION_ZERO;
 }
 
 /* The length of a note the probes look through: the shortest note the operator writes. */
@@ -177,6 +184,7 @@ static bool read_motive(const Plan *plan, MelodyContext *context) {
         context->liquidated = own->kind == PLAN_CONSTRAINT_MOTIVE_REF && own->params.motive.steps > 0;
     }
     context->motive_given = plan_lane_span_state(plan, span) == PLAN_STATE_GIVEN;
+    context->motive_rhythm_only = harmony_tones_rhythm_only(node_tones(plan, context->motive_node));
     context->motive_count = notes->note_count;
     context->motive_length = POSITION_ZERO;
     for (size_t i = 0; i < notes->note_count; i++) {
@@ -194,7 +202,63 @@ static bool read_motive(const Plan *plan, MelodyContext *context) {
         }
         context->motive_length = position_add(context->motive_onset[i], context->motive_duration[i]);
     }
-    read_tones(plan, constraint.params.motive.motive, context);
+    /* A rhythm-only motive's notes have no pitches and no tones: the stage places them as its own. */
+    if (context->motive_rhythm_only) {
+        context->motive_tone_count = 0;
+    } else {
+        read_tones(plan, constraint.params.motive.motive, context);
+    }
+    return true;
+}
+
+/* An offset from a lane span's start as a position of the target (from its start after the pickup). */
+static Rational target_position(const Plan *plan, const MelodyContext *context, LaneSpanId span, Rational offset) {
+    return position_sub(position_add(plan_lane_span_span(plan, span).start, offset), context->span.start);
+}
+
+/*
+ * The melody constraints (R-746): the target's anchors and events, and the plan's climax wherever it is. False when the target
+ * holds more than the context keeps.
+ */
+static bool read_melody_constraints(const Plan *plan, MelodyContext *context) {
+    for (size_t k = 0; k < plan_lane_span_constraint_count(plan, context->target); k++) {
+        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, context->target, k);
+        if (constraint->kind != PLAN_CONSTRAINT_ANCHOR && constraint->kind != PLAN_CONSTRAINT_EVENT) {
+            continue;
+        }
+        Rational at = target_position(plan, context, context->target,
+                                      constraint->kind == PLAN_CONSTRAINT_ANCHOR ? constraint->params.anchor.offset
+                                                                                 : constraint->params.event.offset);
+        if (rational_cmp(at, POSITION_ZERO) < 0) {
+            continue;
+        }
+        if (constraint->kind == PLAN_CONSTRAINT_ANCHOR) {
+            if (context->anchor_count >= MELODY_MAX_ANCHORS) {
+                return false;
+            }
+            context->anchors[context->anchor_count] = constraint->params.anchor;
+            context->anchors[context->anchor_count++].offset = at;
+        } else {
+            if (context->event_count >= MELODY_MAX_EVENTS) {
+                return false;
+            }
+            context->events[context->event_count] = constraint->params.event;
+            context->events[context->event_count++].offset = at;
+        }
+    }
+    for (LaneSpanId id = 1; !context->has_climax && id <= plan_lane_span_count(plan); id++) {
+        if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != PLAN_LANE_MELODY) {
+            continue;
+        }
+        const PlanConstraint *climax = plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_CLIMAX);
+        if (climax) {
+            context->has_climax = true;
+            context->climax = climax->params.climax;
+            context->climax.offset = target_position(plan, context, id, climax->params.climax.offset);
+            context->climax_here = rational_cmp(context->climax.offset, POSITION_ZERO) >= 0 &&
+                                   rational_cmp(context->climax.offset, context->length) < 0;
+        }
+    }
     return true;
 }
 
@@ -574,6 +638,7 @@ static void restate_previous(const Plan *plan, MelodyContext *context) {
         context->motive_tone_count = 0;
     }
     context->motive_given = false;
+    context->motive_rhythm_only = false;
     context->restating = true;
 }
 
@@ -618,7 +683,8 @@ static bool melody_idea_read(const Plan *plan, LaneSpanId target, const Composer
     }
     return read_idea_chords(plan, context) && read_idea_bass(plan, context) &&
            read_idea_melody(plan, context, phrase) && read_motive(plan, context) &&
-           (restate_previous(plan, context), true) && ((context->motive_waived = melody_motive_waived(context)), true);
+           (restate_previous(plan, context), true) && ((context->motive_waived = melody_motive_waived(context)), true) &&
+           read_melody_constraints(plan, context);
 }
 
 /*
@@ -680,7 +746,7 @@ bool melody_context_read(const Plan *plan, LaneSpanId target, const ComposerChor
     }
     out->target = target;
     return (!has_pickup || read_pickup(plan, span.start, pickup.params.pickup, out)) && read_motive(plan, out) &&
-           ((out->motive_waived = melody_motive_waived(out)), true);
+           ((out->motive_waived = melody_motive_waived(out)), true) && read_melody_constraints(plan, out);
 }
 
 /* ---------------------------------------------------------- rhythm repetition */

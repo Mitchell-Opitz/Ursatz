@@ -76,4 +76,14 @@ typedef struct {
 MotiveResult composer_blueprint_motive(const ComposerChords *chords, const BlueprintMotiveRequest *request, FillRng *rng,
                                        Motive *out, MotiveError *error);
 
+/*
+ * Attaches a rhythm-only motive (R-746): the motive's notes (their pitches are not read: a rhythm sounds degree 1) as a Given motive
+ * node under parent at start, as motive_attach does, with a motive_tones constraint that labels every note "rhythm". The melody stage
+ * then places them as notes of its own (melody_context.c), and the harmony stage does not read the constraint's chords: the motive's
+ * own chords when it has some, else one "I" over its length. PLAN_ERR_BAD_PAYLOAD for a motive of more notes than a plan's tones hold;
+ * the other results are motive_attach's.
+ */
+PlanResult composer_rhythm_motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+                                         NodeId *out_node, LaneSpanId *out_span);
+
 #endif

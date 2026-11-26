@@ -19,6 +19,18 @@ const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     return NULL;
 }
 
+bool harmony_tones_rhythm_only(const PlanMotiveTones *tones) {
+    if (!tones || tones->label_count == 0) {
+        return false;
+    }
+    for (size_t i = 0; i < tones->label_count; i++) {
+        if (strcmp(tones->labels[i], HARMONY_TONE_RHYTHM) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /*
  * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
  * read as chords over the cells of a harmony target.
@@ -130,7 +142,8 @@ void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
             continue;
         }
         const PlanMotiveTones *tones = node_tones(plan, ref.params.motive.motive);
-        if (!tones || tones->chord_count == 0) {
+        /* A rhythm-only motive's labels carry no chords of its own (R-746). */
+        if (!tones || tones->chord_count == 0 || harmony_tones_rhythm_only(tones)) {
             continue;
         }
         PlanSpan melody = plan_lane_span_span(plan, ids[i]);
