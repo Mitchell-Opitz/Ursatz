@@ -799,7 +799,8 @@ typedef struct GrowBlueprintDraw {
  * The draw of the request's blueprint for its seed (request->seed + 9), in the request's key, meter, bars, pairing and construction
  * (the theme's construction when it is not 4 or 8 bars), with request->knowledge for the K11 cells and the chords. request->motive is
  * slots.basic's motive when the request gives one (not read otherwise). GROW_ERR_BAD_REQUEST, with the path and the reason in
- * refusal, when a job has no cell ("no running rhythm in 3/4"), a relation has no rhythm to take, or the basic motive cannot be drawn.
+ * refusal, when a job has no cell ("no running rhythm in 3/4"), a relation has no rhythm to take, an anchor or event lies on no note
+ * onset (grow_blueprint_check_marks), or the basic motive cannot be drawn.
  */
 GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *out, GrowRefusal *refusal);
 

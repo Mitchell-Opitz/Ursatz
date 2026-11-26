@@ -1111,8 +1111,12 @@ GrowResult grow_blueprint_draw(const GrowRequest *request, GrowBlueprintDraw *ou
             out->known[bar] = true;
         }
     }
+    /* Every anchor and event lies on a note onset now known, before the basic motive is drawn on them. */
+    GrowResult result = grow_blueprint_check_marks(blueprint, out, &request->meter, refusal);
+    if (result != GROW_OK) {
+        return result;
+    }
     /* The basic motive: slots.basic's, the basic idea's melody, or drawn from its bars. */
-    GrowResult result = GROW_OK;
     if (slot) {
         out->basic = *request->motive;
     } else if (blueprint->bars[basic_first].has_melody) {
