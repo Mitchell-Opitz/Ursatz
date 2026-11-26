@@ -18,7 +18,8 @@ typedef enum {
     CHORD_MEMBER_THIRTEENTH,
     CHORD_MEMBER_ADDED_SECOND,
     CHORD_MEMBER_ADDED_SIXTH,
-    CHORD_MEMBER_SUSPENDED_FOURTH
+    CHORD_MEMBER_SUSPENDED_FOURTH,
+    CHORD_MEMBER_SUSPENDED_SECOND
 } ChordMemberRole;
 
 /* How the members are built up: stacked thirds, fourths or seconds, a triad with added notes, two chords, a mix, a cluster, a power chord. */

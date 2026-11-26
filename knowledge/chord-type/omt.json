@@ -83,6 +83,24 @@
       "status": "active",
       "examples": [{"root": "C", "pitches": ["C", "Eb", "Gb", "A"], "symbol": "Co7"}],
       "version": 1
+    },
+    {
+      "id": "omt.chord-type.sus2", "kind": "chord-type", "name": "suspended second",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "suspended-second", "semitones": 2}, {"role": "fifth", "semitones": 7}],
+                   "symbols": ["Csus2"] },
+      "citations": [{"source": "omt", "part": "VI", "chapter": 2, "note": "a sus chord replaces the third with the second or the fourth above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "D", "G"], "symbol": "Csus2"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.sus4", "kind": "chord-type", "name": "suspended fourth",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "suspended-fourth", "semitones": 5}, {"role": "fifth", "semitones": 7}],
+                   "symbols": ["Csus4"] },
+      "citations": [{"source": "omt", "part": "VI", "chapter": 2, "note": "a sus chord replaces the third with the second or the fourth above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "F", "G"], "symbol": "Csus4"}],
+      "version": 1
     }
   ]
 }
