@@ -2,6 +2,11 @@
 
 Newest first. [Docs index](README.md).
 
+## P69b: theme blueprints (2026-11)
+
+- **Listen blueprints.** `ursatz listen --what themes --blueprint <file>` makes the themes from a theme request with a blueprint, written as JSON or as Ursatz Text (R-747); it is refused with `--motif` or `--theme-request`. New flag `--blueprint` ([cli-listen.md](cli-listen.md)).
+- **Show blueprints.** `ursatz show <file> --view json` of a blueprint text prints the theme request, and `--view full` of the request prints the text; the other views are refused.
+
 ## P68: the critic (2026-11)
 
 - **Critique.** `ursatz critique <file>...` judges candidate files (listen samples, plans, motives) as one set with the critic; `ursatz critique --rated <file>` judges a rated set pair by pair against her ratings and today's ranking ([cli-critique.md](cli-critique.md), R-721). New flag `--rated`. The command count is 32.

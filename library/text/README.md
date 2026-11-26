@@ -14,7 +14,7 @@ format_version 6
 metadata producer ursatz-composer producer_version 5.0.0
 ```
 
-The kinds are `json` (any object), `plan`, `reading`, `realization`, `knowledge`, `knowledge-entry`, `commands` (B6) and `view` (the views, below).
+The kinds are `json` (any object), `plan`, `reading`, `realization`, `knowledge`, `knowledge-entry`, `commands` (B6), `view` (the views, below) and `blueprint` (a theme request written a bar a line, below).
 
 ### Values
 
@@ -100,6 +100,23 @@ bar 10  F#4:w
 ```
 
 A view takes a measure range and a section (its label or id, else a reading group's label): rows, nodes and bars outside are left out, the header keeps the full address, and `# leaves out` adds `bars outside a-b`. `full` and `json` are not views of this library: the caller joins the layers' texts (`text_layers.h`) or their JSON. A refusal names the view, the layer it needs or the unknown line, part or section.
+
+## The blueprint kind
+
+`ursatz-text 1 blueprint` (R-747) is a theme request with a `blueprint` member, one line a bar. Like `commands` it has a line grammar of its own, read and written by the workshop (the tool `blueprint-parse`, `ursatz show <file> --view json` for the request and `--view full` for the text); `text_to_json` reads it only as the tree.
+
+```
+ursatz-text 1 blueprint
+key C major
+meter 4/4
+into sentence
+bars 8
+climax 6 2 A5
+1: chords I ; rhythm x:h x:e x:e x:q ; anchor 0 D5 ; event 0 appoggiatura
+2: chords V7 ; melody G5:q. F5:e D5:h ; bass G2:w
+```
+
+Header lines come first, each once, in any order: `key <tonic> [<material>]`, `meter`, `into`, `bars`, `cadence`, `first_cadence`, `development`, `tempo`, `accompaniment <pattern> [voicing <id>]`, `climax <bar> <beats> <pitch>` and `basic <degrees> [pickup <beats>]`. Then one line a bar, `<bar>: ` (from 1, in order) and fields split by `;`: `chords`, `melody`, `rhythm`, `job`, `bass` (each once, the rest of the field is its text), `anchor <beats> <pitch>`, `event <beats> <type>` and `inner <notes>` (each repeatable). A refusal names its line. The members and every rule of the request are in [blueprints.md](../../composer/docs/blueprints.md#the-text-form).
 
 ## API
 

@@ -72,6 +72,43 @@ When the plan is built (`URSATZ_ERR_UNSATISFIABLE`): a job with no cell; `motif`
 
 Without `blueprint` every plan is as before. The response has the same shape.
 
+## The text form
+
+A blueprint is also written as Ursatz Text (R-747, kind `blueprint`, [text](../../library/text/README.md#the-blueprint-kind)): header lines for the brief, then one line a bar. The workshop reads it to the request JSON above and writes the JSON back as the same text (`ursatz show <file> --view json` prints the request, `--view full` the text); `ursatz listen --what themes --blueprint <file>` takes the text or the JSON ([cli-listen.md](../../cli/docs/cli-listen.md)). The text only carries the request's brief (`key`, `meter`, `into`, `bars`, `cadence`, `first_cadence`, `development`, `tempo`), the blueprint and the motive of `slots.basic`; any other member (a style, a construction) stays in the JSON.
+
+```
+ursatz-text 1 blueprint
+key C major
+meter 4/4
+into sentence
+bars 8
+cadence PAC
+tempo 92
+accompaniment arpeggiated
+climax 6 2 A5
+1: chords I ; rhythm x:h x:e x:e x:q ; anchor 0 D5 ; event 0 appoggiatura
+2: chords V7 ; rhythm x:q. x:e x:h
+3: chords V7 ; event 0 appoggiatura
+4: chords I ; event 0 appoggiatura
+5: chords VI II@2 ; job running
+6: chords I6 IV@2 ; job liquidation
+7: chords II6 V7@2 ; rhythm x:q. x:e x:q. x:e
+8: chords I ; rhythm x:w
+```
+
+| Line | Reads to |
+| --- | --- |
+| `key <tonic> [<material>]` | `key` and `material` (`key D natural minor` is `"D"` and `"natural minor"`; a value with spaces may be quoted). |
+| `meter 4/4`, `into sentence`, `bars 8`, `cadence PAC`, `first_cadence HC`, `development balanced`, `tempo 92` | The member of that name (`bars` and `tempo` as numbers). |
+| `accompaniment <pattern> [voicing <id>]` | `blueprint.accompaniment`. |
+| `climax <bar> <beats> <pitch>` | `blueprint.climax`; the bar counts from 1 here (the JSON counts from 0), `<beats>` is `at`. |
+| `basic <degrees> [pickup <beats>]` | A motive `A` (`form` full, `role` melodic) in `motives` and `slots.basic`, for a basic idea that gives no melody, rhythm or job. |
+| `<bar>: field ; field` | One object of `blueprint.bars`; the bar counts from 1, in order. A bar with no field is an open bar `{}`. |
+
+The fields of a bar are `chords`, `melody`, `rhythm`, `job` and `bass` (the rest of the field is the member's text, each at most once), `anchor <beats> <pitch>` and `event <beats> <type>` (each adds to `anchors` and `events`) and `inner <notes>` (each adds an inner voice, the first line being inner voice 1). Header lines each appear once, in any order, before the first bar; comment lines (`#`) and blank lines are ignored.
+
+The text is read for its grammar only: whether the request is a theme is the Composer's answer, with the refusals above. A mistake in the text is refused with its line (`URSATZ_ERR_REQUEST`, path `/params/text`): `line 3: bar 3 is out of order: the next bar is 2`, `line 2: unknown header 'frob'`, `line 5: key is given twice`, `line 4: 'key' comes after the first bar: the header lines come before the bars`, `line 2: bar 1: unknown field 'frob' (the fields are chords, ...)`, `line 2: bar 1: chords is given twice`, `line 1: the first line must be ursatz-text 1 blueprint` (also for a line before the header). A request written as text refuses a member the text has no place for (`the request member 'style' has no place in a blueprint text: write the request as JSON`) and a note list with a `;` or a line break.
+
 ## The melody constraints
 
 Each is a constraint on a melody lane span ([plan-constraints.md](plan-constraints.md)), its `offset` from the span's start. The melody operator ([melody-fill.md](melody-fill.md)) reads the span's anchors and events (up to 64 and 32; more leave the span open) and the plan's climax, wherever it is. One in a pickup is not read.
