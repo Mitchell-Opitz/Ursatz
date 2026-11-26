@@ -130,6 +130,9 @@ ursatz_test(test_motive LIBS ursatz_composer_engine composer_test_support INCLUD
 ursatz_test(test_motive_tones LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+# The events of a blueprint and the blueprint motive (R-746).
+ursatz_test(test_motive_blueprint LIBS ursatz_composer_engine composer_test_support)
+
 ursatz_test(test_motive_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
