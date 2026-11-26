@@ -306,7 +306,12 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
 /*
  * As motive_harmony_parse, and a chord may take a color suffix after its numeral (R-727): "IVadd9@2", "I69", "Vq4". The suffix names the
  * snapshot's type for a major triad (add9, add6, 69, 9, maj9, quartal three or four); the chord sounds its own third and fifth and the
- * type's other members. A suffix with no snapshot (knowledge NULL, or the plain form) is refused. A colored chord is in root position.
+ * type's other members (sus2 and sus4 have no third: the fifth is the only own member). A suffix with no snapshot (knowledge NULL, or the plain
+ * form) is refused. A colored chord is in root position.
+ *
+ * A numeral the upper-case form above does not read is read with the library grammar (R-744): a lower-case numeral (a minor triad), a mark
+ * (o, +, the o-slash, M or maj7), or an applied chord (V7/V, viio7/V). The chord then holds quality_given and quality, and has_target with the
+ * target's degree and alteration. Text neither reads is refused as before.
  */
 MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const char *text, const PlanMeter *meter, MotiveSketchChord *out,
                                      size_t *count, MotiveError *error);

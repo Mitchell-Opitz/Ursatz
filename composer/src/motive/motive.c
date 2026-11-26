@@ -747,7 +747,9 @@ bool motive_equal(const Motive *a, const Motive *b) {
         const MotiveSketchChord *x = &a->chords[i];
         const MotiveSketchChord *y = &b->chords[i];
         if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
-            x->inversion != y->inversion || x->seventh != y->seventh || x->color != y->color) {
+            x->inversion != y->inversion || x->seventh != y->seventh || x->color != y->color ||
+            x->quality_given != y->quality_given || x->quality != y->quality || x->has_target != y->has_target ||
+            x->target_degree != y->target_degree || x->target_alteration != y->target_alteration) {
             return false;
         }
     }

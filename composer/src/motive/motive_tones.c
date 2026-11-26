@@ -32,7 +32,7 @@ bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out) {
 }
 
 static MotiveSketchChord triad(int degree, Rational onset) {
-    MotiveSketchChord chord = {onset, degree, 0, 0, false, NULL};
+    MotiveSketchChord chord = {onset, degree, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0};
     return chord;
 }
 
