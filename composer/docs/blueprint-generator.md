@@ -34,3 +34,16 @@ Each theme of the response has `blueprint`, in the form a request's `blueprint` 
 ## The motif strategy
 
 `strategy` `blueprint` of the random motive and `listen --strategy blueprint` draw a two-bar motif from the same expectations: the basic idea's chords and rhythm jobs, a ninth or an appoggiatura on the downbeat. The rhythm helpers the generator and the strategy share (`composer_rhythm_cells`, `composer_rhythm_cell_notes`, `composer_rhythm_draw_cell`, `composer_rhythm_variant`, `composer_rhythm_contrast`, `composer_draw_weighted`) are in `motive_blueprint.c`. See [cli-random-motive.md](../../cli/docs/cli-random-motive.md#the-blueprint-strategy-r-753).
+
+## Measured (P69c, gate 2)
+
+`test_blueprint_generator_sweep` ([testing/theme-quality.md](testing/theme-quality.md#the-blueprint-generator-sweep-p69c-gate-2-of-r-757)), seeds 1 to 10, default development, `blueprint.candidates` 1:
+
+| Fixture (key C) | Sentence | Period |
+|---|---|---|
+| `continuation/s77-chords` (major, 4/4) | 10 of 10 | 10 of 10 |
+| `continuation/u51-chords` (minor, 4/4) | 10 of 10 | 10 of 10 |
+| `rates/two-bar-3-4` (minor, 3/4) | 10 of 10 | 10 of 10 |
+| `motifs/motive-d-minor-arpeggio` (minor, 4/4) | 10 of 10 | 10 of 10 |
+
+In every composed theme the fixed items of the echoed blueprint hold, the range, climax, half-note and rhythm checks pass. Gate 3 is a `Listen Ursatz` round after the pull request merges.

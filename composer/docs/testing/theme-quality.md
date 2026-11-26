@@ -34,3 +34,15 @@ The listening round of gate 3 (`Listen Ursatz`: themes rated at 3.5 or more, the
 ## What the contrasts measure
 
 The response's `contrasts` measure the motives the ideas are made from, which is what the draw holds to the target, not the melody the melody stage writes from them: with every setting on, the stage moves notes to the chords and holds the last note, and one contrasting idea of 80 (the 3/4 motif, seed 3) had a contour distance of 0.2 between its melody and the basic idea's while its motive's was above 1/2.
+
+## The blueprint generator sweep (P69c, gate 2 of R-757)
+
+`test_blueprint_generator_sweep` (slow; `test_blueprint_generator_sweep_smoke` runs seed 1 of the u51 and two-bar-3-4 cases) composes the four motif fixtures (`continuation/s77-chords`, `continuation/u51-chords`, `rates/two-bar-3-4`, `motifs/motive-d-minor-arpeggio`) as the theme request `listen --motif` sends (key C, the fixture's mode, its meter, the motif's degrees, pickup, harmony and features in the basic slot), as a sentence and as a period (`first_cadence` HC), seeds 1 to 10, with no `development` (so the default, a blueprint) and `blueprint.candidates` 1 (ranking three would triple each request), through `composer_api_theme`. A seed counts as composed when the theme has the blueprint the Composer wrote; each case's count is pinned in the test and may only rise. Of every theme that composes, read from its plan and its echoed blueprint:
+
+- every fixed item of the echoed blueprint holds: its chords at their beats, its rhythms note for note, each anchor's pitch, each event's note (a non-chord tone that steps on), the climax (its pitch, no other note reaching it) (`support/test_blueprint_check.c`, shared with `test_reference_skeletons`);
+- the melody spans at most the larger of 16 and the climax's distance above the motif's lowest note;
+- the climax is the highest note and lies in bar 5 or 6 of a sentence, bar 6 of a period;
+- no note of exactly a half note follows a half note after the second bar;
+- a sentence's bar 4 does not have bar 0's rhythm; a period's bar 2, when the generator drew it as a contrast (the test regenerates the blueprint from the theme's seed), is at most 1/2 as similar to bar 0 as `similarity_rhythm_score` measures.
+
+Measured (2026-11-26): every case composes on 10 of the 10 seeds. A request is a few seconds, and more for a motif whose seeds stick at the melody stage (s77 as a sentence at seed 1 and the arpeggio as a period take about half a minute); the slow test took 661 s in the full suite at `-j4`, the smoke 6.5 s. The measure showed three things the generator now answers: an anchor in the climax's bar before the climax (and the climax's own note) leaves the melody stage no line to it, so no sound is placed there; a variant or a contrast can begin with a half note (a join of the motif's first two notes), so after a bar that may end with one a cell job is preferred; a motif that dips under the default low of 60 needs the melody range to reach its lowest note.
