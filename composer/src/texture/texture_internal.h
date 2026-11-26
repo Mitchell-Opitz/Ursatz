@@ -37,6 +37,7 @@ typedef struct {
     SpelledKey key;
     PlanMeter meter;
     PlanAccompanimentPattern pattern; /* as asked: ANY or one */
+    const PatternEntry *entry;        /* the K11 accompaniment entry of the pattern ENTRY, from the snapshot of composer_chords; else NULL */
     int texture;                      /* a StandardTexture, or -1 */
     int low;
     int high;
@@ -115,10 +116,11 @@ void accomp_context_zero(AccompContext *context);
 /* The index of the chord sounding at a position of the target. */
 size_t accomp_chord_at(const AccompContext *context, Rational position);
 
-/* Whether the pattern can be written in the meter, and under the texture asked for when the pattern is ANY. */
+/*
+ * Whether the pattern can be written in the meter, and under the texture asked for when the pattern is ANY. A pattern with a figure
+ * (the four and ENTRY) needs its K11 entry in the snapshot, and a meter its entry allows (`compound`); ENTRY only when it is the one asked.
+ */
 bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern);
-/* How many voices the pattern writes: three for a block and an oom-pah, one for the lines and the motive. */
-size_t accomp_pattern_voices(PlanAccompanimentPattern pattern);
 const char *accomp_pattern_name(PlanAccompanimentPattern pattern);
 
 /* The distance in semitones between two voicings, voice by voice from the top. */

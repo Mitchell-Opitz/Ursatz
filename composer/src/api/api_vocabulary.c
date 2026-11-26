@@ -795,6 +795,26 @@ static bool add_defaults(cJSON *root) {
            cJSON_AddStringToObject(theme, "cadence", "PAC") && cJSON_AddStringToObject(theme, "development", "balanced");
 }
 
+/*
+ * The accompaniment patterns: the names a request takes, then the K11 accompaniment entries of the snapshot that are not one of the
+ * four patterns (R-745), by id, each a pattern a request may name by its id.
+ */
+static bool add_accompaniment_patterns(cJSON *root, const KnowledgeSnapshot *knowledge) {
+    cJSON *list = add_list(root, "accompaniment_patterns");
+    for (size_t i = 0; list && API_ACCOMPANIMENT_PATTERNS[i].value; i++) {
+        if (!add_choice(list, API_ACCOMPANIMENT_PATTERNS[i].value, API_ACCOMPANIMENT_PATTERNS[i].label)) {
+            return false;
+        }
+    }
+    for (size_t i = 0; list && knowledge && i < knowledge_snapshot_pattern_count(knowledge); i++) {
+        const PatternEntry *entry = knowledge_snapshot_pattern_at(knowledge, i);
+        if (entry && !entry->is_rhythm && strncmp(entry->id, "schoenberg.pattern.", 19) != 0 && !add_choice(list, entry->id, entry->name)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 bool api_vocabulary_build(cJSON *root, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials) {
     return add_meters(root) && add_defaults(root) && add_theme_form_members(root) && add_materials(root, knowledge, materials, "materials", false) && add_materials(root, knowledge, materials, "piece_materials", true) &&
            add_materials(root, knowledge, materials, "region_materials", false) &&
@@ -805,7 +825,7 @@ bool api_vocabulary_build(cJSON *root, const KnowledgeSnapshot *knowledge, const
            add_regular_bars(root) && add_theme_extensions(root) &&
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
-           add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
+           add_accompaniment_patterns(root, knowledge) &&
            add_piece_intos(root) && add_tone_labels(root) && add_operations(root) && add_theme_developments(root) && add_lanes(root) &&
            add_preferences(root) && add_preference_keys(root) && add_rules(root) && add_limits(root);
 }

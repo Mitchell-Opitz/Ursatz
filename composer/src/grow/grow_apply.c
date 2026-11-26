@@ -506,8 +506,8 @@ static PlanResult add_section_motive(GrowBuild *build, size_t bar_index, NodeId 
 
 PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const GrowThemeSpec *spec = candidate ? candidate->payload : NULL;
+    const GrowContext *shared = context;
     GrowThemeRequest request;
-    (void)context;
     if (spec && spec->magic == GROW_FREE_MAGIC) {
         return grow_free_apply(plan, target, (const GrowFreeSpec *)candidate->payload);
     }
@@ -632,7 +632,12 @@ PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candid
         return result;
     }
     result = grow_beginning_build(&build);
-    return result == PLAN_OK ? grow_ending_build(&build) : result;
+    result = result == PLAN_OK ? grow_ending_build(&build) : result;
+    /* A blueprint's anchors, events and climax go on the melody spans that hold them, now that the spans are made (R-743). */
+    if (result == PLAN_OK && shared && shared->blueprint) {
+        result = grow_blueprint_place(plan, request.section, shared->blueprint);
+    }
+    return result;
 }
 
 

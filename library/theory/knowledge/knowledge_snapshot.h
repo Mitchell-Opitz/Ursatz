@@ -7,6 +7,7 @@
 #include "model/pitch/pitch_material.h"
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/instrument.h"
+#include "theory/knowledge/pattern_entry.h"
 #include "theory/knowledge/relation.h"
 #include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
@@ -103,6 +104,13 @@ const VoicingEntry *knowledge_snapshot_voicing(const KnowledgeSnapshot *snapshot
 /* The voicings in id order: how many, and the one at `index` (NULL out of range). */
 size_t knowledge_snapshot_voicing_count(const KnowledgeSnapshot *snapshot);
 const VoicingEntry *knowledge_snapshot_voicing_at(const KnowledgeSnapshot *snapshot, size_t index);
+
+/* The pattern (kind pattern: a rhythm cell or an accompaniment) with this id, or NULL when there is none or the entry is another kind. */
+const PatternEntry *knowledge_snapshot_pattern(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The patterns in id order: how many, and the one at `index` (NULL out of range). */
+size_t knowledge_snapshot_pattern_count(const KnowledgeSnapshot *snapshot);
+const PatternEntry *knowledge_snapshot_pattern_at(const KnowledgeSnapshot *snapshot, size_t index);
 
 /*
  * The first chord type, in id order and not retired, whose members above the root make `mask_above_root`: bit n is a member n

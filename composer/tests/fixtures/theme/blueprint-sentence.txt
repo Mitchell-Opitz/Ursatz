@@ -1,0 +1,18 @@
+ursatz-text 1 blueprint
+key C major
+meter 4/4
+into sentence
+bars 8
+cadence PAC
+development balanced
+tempo 92
+accompaniment arpeggiated
+climax 6 2 A5
+1: chords I ; rhythm x:h x:e x:e x:q ; anchor 0 D5 ; event 0 appoggiatura
+2: chords V7 ; rhythm x:q. x:e x:h
+3: chords V7 ; event 0 appoggiatura
+4: chords I ; event 0 appoggiatura
+5: chords VI II@2 ; job running
+6: chords I6 IV@2 ; job liquidation
+7: chords II6 V7@2 ; rhythm x:q. x:e x:q. x:e
+8: chords I ; rhythm x:w

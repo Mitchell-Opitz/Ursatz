@@ -1,0 +1,1031 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "michelle",
+ "entries": [
+  {
+   "id": "michelle.pattern.arpeggio-eight",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "eight-note arpeggio",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     "rest",
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 0
+     }
+    ],
+    "compound": false,
+    "by_meter": {
+     "3/4": [
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      }
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-2-ff7 (rated 5)",
+     "note": "a flowing arpeggio rising from the bass and falling back"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      }
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.arpeggio-wave",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "arpeggio wave",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     "rest",
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     }
+    ],
+    "compound": false,
+    "by_meter": {
+     "3/4": [
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      }
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight (rated 5), ref-7-debussy (rated 4.5)",
+     "note": "a wide arpeggio that rises and falls across the bar"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      }
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.compound-oom-pah",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "compound oom-pah",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     "rest",
+     "rest",
+     "chord",
+     "rest",
+     "rest",
+     "chord"
+    ],
+    "compound": true,
+    "by_meter": {
+     "6/8": [
+      "rest",
+      "rest",
+      "chord",
+      "rest",
+      "rest",
+      "chord"
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo (rated 4)",
+     "note": "the bass on each dotted beat, the chord on its last eighth"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      "rest",
+      "chord",
+      "rest",
+      "rest",
+      "chord"
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.octave-pulse",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "octave pulse",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     "rest",
+     {
+      "bass_octave": 1
+     }
+    ],
+    "compound": true
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-1-megaman (rated 4.5)",
+     "note": "the bass an octave up on every off-beat eighth, a driving pulse"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      {
+       "bass_octave": 1
+      }
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.ostinato",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "ostinato",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     {
+      "member": 0
+     },
+     "rest",
+     {
+      "member": 0
+     },
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     "rest",
+     {
+      "member": 0
+     },
+     "rest"
+    ],
+    "compound": false,
+    "by_meter": {
+     "3/4": [
+      {
+       "member": 0
+      },
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      "rest"
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-6-holst (rated 4)",
+     "note": "a short figure repeated on the lowest voiced note"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      {
+       "member": 0
+      },
+      "rest",
+      {
+       "member": 0
+      },
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      "rest",
+      {
+       "member": 0
+      },
+      "rest"
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.run-eighths-dotted",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run eighths dotted",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:e x:e x:e x:e x:q. x:e",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-A m3",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:e x:e x:q. x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.run-groups",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run groups",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:e x:e x:q x:e x:e x:q",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-B m5",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:q x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.run-eight",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run eight",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:e x:e x:e x:e x:e x:e x:q",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-1-megaman m7",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:e x:e x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.long-weak",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "long weak",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:e x:e x:q x:h",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-A m2, hand-B m6",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:q x:h"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.long-first",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "long first",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:h x:e x:e x:q",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-B m1, ref-2-ff7 m1",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:h x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.long-dotted",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "long dotted",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:q. x:e x:h",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-B m2, ref-2-ff7 m6",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:q. x:e x:h"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.sync-hold",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "sync hold",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:s x:s x:e x:e x:q. x:e x:e",
+    "jobs": [
+     "syncopated"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-1-megaman m1",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:s x:s x:e x:e x:q. x:e x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.sync-answer",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "sync answer",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:q x:e x:e x:e x:q.",
+    "jobs": [
+     "syncopated"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-1-megaman m2",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:q x:e x:e x:e x:q."
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.dotted-pair",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "dotted pair",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:q. x:e x:q. x:e",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-B m7",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:q. x:e x:q. x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-long",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end long",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:e x:e x:h.",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-A m4",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:h."
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-whole",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end whole",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:w",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-A m8, hand-B m8",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:w"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-turn",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end turn",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:q. x:s x:s x:h",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-1-megaman m4",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:q. x:s x:s x:h"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.wave-long",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "wave long",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:q x:q. x:e",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m1",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:q x:q. x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.long-first-34",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "long first 34",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:h x:e x:e",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m2",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:h x:e x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.dotted-34",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "dotted 34",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:q. x:e x:q",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m3",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:q. x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.run-34",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run 34",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:e x:e x:e x:e x:q",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m8 (in eighths)",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:e x:e x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-34",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end 34",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:h x:q",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m4",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:h x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-34-turn",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end 34 turn",
+   "content": {
+    "meter": "3/4",
+    "rhythm": "x:e x:e x:h",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-4-hollowknight m8",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "3/4",
+     "rhythm": "x:e x:e x:h"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.run-68",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run 68",
+   "content": {
+    "meter": "6/8",
+    "rhythm": "x:e x:e x:e x:e x:e x:e",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo m1",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "6/8",
+     "rhythm": "x:e x:e x:e x:e x:e x:e"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.long-68",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "long 68",
+   "content": {
+    "meter": "6/8",
+    "rhythm": "x:q x:e x:q.",
+    "jobs": [
+     "long"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo m2",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "6/8",
+     "rhythm": "x:q x:e x:q."
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.sync-68",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "sync 68",
+   "content": {
+    "meter": "6/8",
+    "rhythm": "x:q x:e x:e x:q",
+    "jobs": [
+     "syncopated"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo (a figure across the dotted beat)",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "6/8",
+     "rhythm": "x:q x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-68",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end 68",
+   "content": {
+    "meter": "6/8",
+    "rhythm": "x:e x:e x:e x:q.",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo m4",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "6/8",
+     "rhythm": "x:e x:e x:e x:q."
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "michelle.pattern.end-68-long",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "end 68 long",
+   "content": {
+    "meter": "6/8",
+    "rhythm": "x:q. x:q.",
+    "jobs": [
+     "cadence"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-3-banjo",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "6/8",
+     "rhythm": "x:q. x:q."
+    }
+   ],
+   "version": 1
+  }
+ ]
+}

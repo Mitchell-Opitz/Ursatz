@@ -92,6 +92,9 @@ ursatz_test(test_modal_mixture LIBS ursatz_composer_engine composer_test_support
 ursatz_test(test_color_chords LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
+ursatz_test(test_blueprint_chords LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 ursatz_test(test_modal_compose LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
@@ -126,6 +129,9 @@ ursatz_test(test_motive LIBS ursatz_composer_engine composer_test_support INCLUD
 # The motive tones: the base harmony, the tones constraint, the bar limit, the tone names and the chord numerals.
 ursatz_test(test_motive_tones LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# The events of a blueprint and the blueprint motive (R-746).
+ursatz_test(test_motive_blueprint LIBS ursatz_composer_engine composer_test_support)
 
 ursatz_test(test_motive_cli LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>"
@@ -246,6 +252,12 @@ ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS sm
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
 # in docs/accompaniment.md): the test holds the share to the baseline in its source and prints the target (R-698).
 ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard)
+
+# The accompaniment of block, arpeggiated, alberti and oom-pah as `229c40f` wrote it (P69b B3): 45 themes by hash. Slow (composes all 45); its
+# smoke composes four and runs every PR.
+ursatz_test(test_accompaniment_patterns LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_accompaniment_patterns_smoke TARGET test_accompaniment_patterns ARGS smoke)
 
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
@@ -450,10 +462,10 @@ ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FIL
 
 # The listen command (cli/docs/cli-listen.md): batches of motifs and themes with settings. The motifs case runs the motifs and
 # settings sections, the themes case the themes from a generated motif, a motif file and triplets, the theme_settings case the themes with
-# settings and the style file. The slow case runs every section and also makes a style model
+# settings and the style file, the blueprint case --blueprint (R-747). The slow case runs every section and also makes a style model
 # from the sonatina folder with the Analyzer (about 53 s at -j1 in a Debug build, 2026-11-21). The fast cases: motifs 0.2 s, themes 8 s, theme_settings 13 s
 # and overrides 12 s (kept in the fast set with their times).
-foreach(case motifs themes theme_settings overrides plans theme_variety style_folder)
+foreach(case motifs themes theme_settings overrides plans theme_variety blueprint style_folder)
     set(folder OFF)
     set(labels)
     if(case STREQUAL "style_folder")
@@ -593,6 +605,9 @@ ursatz_test(test_harmony_beats LIBS ursatz_composer_engine composer_test_support
 
 ursatz_test(test_melody_beats LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
+# The melody stage over a blueprint: rhythm-only motives, anchors, events and the climax (R-746).
+ursatz_test(test_melody_blueprint LIBS ursatz_composer_engine composer_test_support)
+
 # The Composer API (docs/api.md): the core entries, and progress and cancel through the library loops.
 ursatz_test(test_api_core LIBS ursatz_composer_engine composer_test_support
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
@@ -618,6 +633,18 @@ ursatz_test_executable(test_api_theme LIBS ursatz_composer_engine composer_test_
 ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# Theme blueprints (R-743): every refusal with its path, a written period rendered note for note, a skeleton composed on seed 1.
+ursatz_test(test_theme_blueprint LIBS ursatz_composer_engine composer_test_support cjson)
+
+# Gate 2 of P69b (R-740): the full blueprint of each reference theme in fixtures/references renders the reference's notes on seed 1.
+ursatz_test(test_reference_blueprints LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# The reference skeletons on seeds 1 to 10, every fixed item checked in each composed theme. Slow (composes 60 themes); its smoke
+# (seed 1 of hand-A and ref-4-hollowknight) runs every PR.
+ursatz_test(test_reference_skeletons LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+ursatz_test(test_reference_skeletons_smoke TARGET test_reference_skeletons ARGS smoke)
 
 # The layers of a composed result (R-634): a theme request with "layers" returns the realization and the reading.
 ursatz_test(test_api_layers LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src

@@ -150,6 +150,29 @@ static void test_snapshots(void) {
     }
 }
 
+/* --- a blueprint (R-743) --------------------------------------------------------------------------- */
+
+/* A period written as a blueprint of rhythms, jobs, an anchor, an event, the climax and an accompaniment: the schema test reads it. */
+static void test_blueprint_request(void) {
+    static const char *const REQUEST =
+        "{\"schema\": \"ursatz-theme-request\", \"schema_version\": 2, \"into\": \"period\", \"key\": \"C\", \"material\": \"major\","
+        " \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\", \"seed\": 1, \"blueprint\": {\"bars\": ["
+        "{\"chords\": \"I\", \"rhythm\": \"x:h x:e x:e x:q\", \"anchors\": [{\"at\": \"0\", \"pitch\": \"D5\"}],"
+        " \"events\": [{\"at\": \"0\", \"type\": \"appoggiatura\"}]},"
+        "{\"chords\": \"V7\", \"rhythm\": \"x:q. x:e x:h\"}, {\"chords\": \"IV\", \"job\": \"running\"},"
+        "{\"chords\": \"V\", \"job\": \"cadence\"}, {\"chords\": \"I\"}, {\"chords\": \"V7\"},"
+        "{\"chords\": \"II6 V7@2\", \"job\": \"motif\"}, {\"chords\": \"I\", \"rhythm\": \"x:w\"}],"
+        " \"climax\": {\"bar\": 6, \"at\": \"0\", \"pitch\": \"A5\"}, \"accompaniment\": {\"pattern\": \"arpeggiated\"}}}";
+    ComposerResponse response;
+    UrsatzStatus status = composer_api_theme(test_context(), REQUEST, NULL, &response);
+    if (status != URSATZ_OK) {
+        fprintf(stderr, "blueprint: %s: %s at %s\n", test_status_name(status), response.error.message, response.error.path);
+    }
+    assert(status == URSATZ_OK && response.plan_json && strstr(response.plan_json, "\"climax\""));
+    write_pair("blueprint", REQUEST, &response);
+    composer_response_destroy(&response);
+}
+
 /* --- uneven themes (B5 of P47) -------------------------------------------------------------------- */
 
 typedef struct {
@@ -897,6 +920,7 @@ int main(int argc, char **argv) {
     if (responses) {
         test_two_bar_motif();
         test_snapshots();
+        test_blueprint_request();
         test_plain_has_no_construction();
         test_uneven();
         test_given_construction();

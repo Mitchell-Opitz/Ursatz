@@ -850,6 +850,12 @@ bool plan_json_read_constraints(JsonReader *reader, Plan *plan, const cJSON *com
                 }
             }
         }
+        /* The melody constraints (R-746) go on a melody span, below its length, one to an offset; one climax in the plan. */
+        const char *refusal = constraint_melody_refusal(
+            plan, add_constraint == plan_json_add_span_constraint ? (LaneSpanId)id : PLAN_LANE_SPAN_NONE, &constraint);
+        if (refusal) {
+            return json_fail(reader, PLAN_ERR_FORMAT, at, "%s", refusal);
+        }
         PlanResult result = add_constraint(plan, id, &constraint);
         if (result == PLAN_ERR_ALLOC) {
             return json_fail(reader, PLAN_ERR_ALLOC, at, "out of memory");

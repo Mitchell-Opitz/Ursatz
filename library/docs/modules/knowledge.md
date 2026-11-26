@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`), `PatternEntry` (K11, `pattern_entry.h`) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
@@ -95,3 +95,23 @@ const RuleEntry *rule = knowledge_snapshot_rule(snapshot, "michelle.rule.rhythmi
 ```
 
 The lookup returns NULL for an id that is absent or of another kind. An unknown subtype, a bad code, scope or function, a message longer than 200 characters or with a placeholder outside the list, a weight outside 0 to 20, a parameter that is neither an integer nor `n/d`, or a constraint without its stage, `waivable` or setting refuses the build with `KNOWLEDGE_ERR_FIELD` and `<file>: <id>: <field>: <problem>`. The test `rule_entries` pins the 19 entries and the refusals; `tools/ci/check-knowledge.py` repeats the code, placeholder and parameter rules over the files.
+
+## The pattern kind and the sus types (K11, P69b B1, R-744, R-745)
+
+A `pattern` entry has one of two subtypes. `pattern_entry.h` holds the `PatternEntry` the loader (`knowledge_pattern.c`) fills: `is_rhythm` says which member is set.
+
+| Subtype | Content | Becomes |
+|---|---|---|
+| `rhythm` | `meter` (`2/4`, `3/4`, `4/4`, `6/8`), `rhythm` (one bar as a note-list text: `x:e x:e x:q`, `r` for a rest), `jobs` (1 to 3 of `running`, `long`, `syncopated`, `cadence`) | `PatternRhythm`: the meter, the rhythm text and the `PATTERN_JOB_*` bits |
+| `accompaniment` | `grid` (`beat` or `eighth`), `steps` (1 to 16), optional `by_meter` (a step list for a meter that has its own) and `compound` (default true) | `PatternAccompaniment`: `beat_grid`, `compound`, the steps and one step list per `by_meter` key |
+
+A step is `rest`, `chord` (every voice of the chord), `{"member": 0 to 7}` (one member of the voicing) or `{"bass_octave": 1}` (the bass note an octave up), read as `PatternStep` (`PATTERN_STEP_REST`, `_CHORD`, `_MEMBER`, `_BASS_OCTAVE`). The loader checks the rhythm's tokens (`x` or `r`, a colon, a duration letter with up to two dots or a 3, an optional tie) and that the durations fill one bar of the meter; the Composer's note-list reader reads the text. A rhythm that does not fill its bar is refused with `<file>: <id>: content.rhythm: <why>`; a bad grid, step, member or `by_meter` key with the same form.
+
+```c
+const PatternEntry *cell = knowledge_snapshot_pattern(snapshot, "michelle.pattern.run-groups");
+/* cell->is_rhythm, cell->rhythm.jobs == PATTERN_JOB_RUNNING, cell->rhythm.rhythm == "x:e x:e x:q x:e x:e x:q" */
+```
+
+`knowledge_snapshot_pattern`, `_pattern_count` and `_pattern_at` (id order) are defined in `knowledge_pattern.c`; the lookup returns NULL for an id that is absent or of another kind. `knowledge/pattern/` holds the four Schoenberg accompaniment patterns, the five reference ones and 23 rhythm cells.
+
+`ChordMemberRole` gains `CHORD_MEMBER_SUSPENDED_SECOND` (`"suspended-second"` in an entry), and `omt.json` the chord types `omt.chord-type.sus2` (root, second, fifth) and `sus4` (root, fourth, fifth). `knowledge_snapshot_chord_type_of` finds them by their masks, so the chord reading names a bare second-and-fifth or fourth-and-fifth sonority `sus2` or `sus4`. The chord reading's `members_by_role` keeps its ten roles: a suspended-second member is not in it.

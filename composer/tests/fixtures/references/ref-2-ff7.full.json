@@ -1,0 +1,104 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "D",
+ "material": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 76,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "iadd9",
+    "melody": "E5:h D5:e C5:e D5:q",
+    "bass": "D3:e A3:e E4:e F4:e E4:e A3:e E4:e A3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VIadd9",
+    "melody": "F5:q. E5:e D5:q A4:q",
+    "bass": "Bb2:e F3:e C4:e D4:e C4:e F3:e C4:e F3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VIIadd9",
+    "melody": "C5:e D5:e E5:q G5:q. F5:e",
+    "bass": "C3:e G3:e D4:e E4:e D4:e G3:e D4:e G3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "Vsus4 V@2",
+    "melody": "D5:q. C#5:h~ C#5:e",
+    "bass": "A2:e E3:e A3:e D4:e A2:e E3:e A3:e C#4:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "iadd9",
+    "melody": "E5:h D5:e C5:e D5:q",
+    "bass": "D3:e A3:e E4:e F4:e E4:e A3:e E4:e A3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "VImaj9",
+    "melody": "F5:q. G5:e A5:h",
+    "bass": "Bb2:e F3:e C4:e A3:e C4:e F3:e C4:e F3:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "ivadd9 V7@2",
+    "melody": "Bb5:q. A5:e G5:e E5:e C#5:q",
+    "bass": "G2:e D3:e A3:e Bb3:e A2:e E3:e G3:e C#4:e",
+    "inner": [
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e",
+     "r:e r:e r:e r:e r:e r:e r:e r:e"
+    ]
+   },
+   {
+    "chords": "iadd9",
+    "melody": "E5:q D5:h.",
+    "bass": "D2:w",
+    "inner": [
+     "A2:w",
+     "D3:w",
+     "F3:w",
+     "E4:w"
+    ]
+   }
+  ]
+ }
+}

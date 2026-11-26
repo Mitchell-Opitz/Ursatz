@@ -15,12 +15,21 @@ extern const char *const API_EXTENSION_KINDS[4];
 /* The beginning and ending of a hybrid written "antecedent+continuation"; false for any other text. */
 bool api_parse_hybrid(const char *text, SectionPairing *pairing);
 
-/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
+/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry". */
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern);
 
-/* The accompaniment of the two texts (either may be NULL) for the meter. */
+/* The pattern as a request writes it: the entry's id for the pattern ENTRY, else api_accompaniment_name. */
+const char *api_accompaniment_text(const PlanAccompaniment *accompaniment);
+
+/*
+ * The accompaniment of the two texts (either may be NULL) for the meter. The pattern text is one of the names of
+ * api_accompaniment_name or, with a snapshot, the id of a K11 accompaniment entry (R-745): the pattern ENTRY with that pattern_id,
+ * refused when the snapshot has no such pattern, when it is a rhythm cell, or when it is not written in the meter. A NULL snapshot
+ * takes the names only.
+ */
 UrsatzStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
-                                      const PlanMeter *meter, PlanAccompaniment *out, UrsatzError *error);
+                                      const PlanMeter *meter, const KnowledgeSnapshot *knowledge, PlanAccompaniment *out,
+                                      UrsatzError *error);
 
 /*
  * The construction object itself ({"ideas": {...}, "extensions": [...]}, reason GIVEN) into *out, whose members are

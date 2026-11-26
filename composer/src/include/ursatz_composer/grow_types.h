@@ -165,6 +165,17 @@ typedef struct {
      */
     PlanVoicing voicing;
     bool has_voicing;
+    /*
+     * The blueprint the theme is built from (R-743, docs/blueprints.md), NULL for none. Its chords are `chords`; its jobs and its
+     * basic motive are drawn with seed + 9 (grow_blueprint_draw), the basic motive taking the place of `motive` (which is then
+     * slots.basic's, or a motive of no notes); its melody, bass and inner voices are Given; an idea after the basic idea whose
+     * bars give rhythms restates them as a rhythm-only motive (an entry of idea_motives); and its climax goes on the melody span
+     * that holds it. `drawn` is that draw when the caller made it already (the run keeps its basic motive), NULL to have it made
+     * here. Both must outlive grow_build_plan_checked only.
+     */
+    const struct GrowBlueprint *blueprint;
+    const struct GrowBlueprintDraw *drawn;
+    unsigned long seed;
 } GrowRequest;
 
 typedef enum {
@@ -280,6 +291,8 @@ typedef struct {
      * the compose run from GrowConfig.basic; NULL for none. grow-theme uses it only when its notes are m0's.
      */
     const Motive *basic;
+    /* The theme's blueprint (GrowRequest.blueprint), NULL for none: grow-theme puts its climax, anchors and events on the melody spans. */
+    const struct GrowBlueprint *blueprint;
 } GrowContext;
 
 #define GROW_DEFAULT_CANDIDATES 4

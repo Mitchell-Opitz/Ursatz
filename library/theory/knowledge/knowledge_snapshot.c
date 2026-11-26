@@ -444,7 +444,8 @@ bool knowledge_chord_role(const char *text, ChordMemberRole *role) {
                  {"thirteenth", CHORD_MEMBER_THIRTEENTH},
                  {"added-second", CHORD_MEMBER_ADDED_SECOND},
                  {"added-sixth", CHORD_MEMBER_ADDED_SIXTH},
-                 {"suspended-fourth", CHORD_MEMBER_SUSPENDED_FOURTH}};
+                 {"suspended-fourth", CHORD_MEMBER_SUSPENDED_FOURTH},
+                 {"suspended-second", CHORD_MEMBER_SUSPENDED_SECOND}};
     for (size_t i = 0; i < sizeof(ROLES) / sizeof(ROLES[0]); i++) {
         if (strcmp(text, ROLES[i].name) == 0) {
             *role = ROLES[i].role;
@@ -916,6 +917,9 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
         slot->voicing.name = slot->entry.name;
         status = knowledge_voicing_read(slot, entry, path, message, message_size);
         slot->has_voicing = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "pattern") == 0) {
+        status = knowledge_pattern_read(slot, entry, subtype, path, message, message_size);
+        slot->has_pattern = status == KNOWLEDGE_OK;
     } else if (strcmp(kind, "relation") == 0) {
         slot->relation.id = slot->entry.id;
         slot->relation.name = slot->entry.name;

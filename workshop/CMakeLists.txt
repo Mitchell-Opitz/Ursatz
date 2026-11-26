@@ -42,6 +42,7 @@ add_library(ursatz_workshop_engine STATIC
     src/items/op_checks.c
     src/items/version_files.c
     src/items/views.c
+    src/items/blueprint_text.c
     src/items/piece_lock.c
     src/items/subjects.c
     src/settings/settings_keys.c

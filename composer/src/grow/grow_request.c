@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <theory/harmony/harmony_cadence_rules.h>
@@ -11,6 +12,8 @@
 #include <plan/plan_lanes.h>
 #include <plan/plan_state.h>
 #include <theory/tonality/roman_numeral_rules.h>
+
+#include <ursatz_composer/motive_blueprint.h>
 
 #include "util/position.h"
 #include "structure/plan_util.h"
@@ -209,8 +212,9 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
+    return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_ENTRY &&
            (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
+           (accompaniment->pattern == PLAN_ACCOMPANIMENT_ENTRY) == (accompaniment->pattern_id[0] != '\0') &&
            accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
            (accompaniment->texture < 0 || standard_texture_is_homophonic((StandardTexture)accompaniment->texture)) &&
            low >= 0 && high <= 127 && low < high &&
@@ -395,7 +399,9 @@ static size_t idea_bars(size_t bars, size_t units) {
 static const char *motive_reason(const GrowRequest *request, const Motive *motive, size_t units, size_t given_bars,
                                  Rational bar) {
     Rational room;
-    if (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2) {
+    /* A blueprint's idea whose bars give rhythms restates them as a rhythm-only motive (R-743), of one note or more. */
+    bool rhythm = request->blueprint && motive->form == MOTIVE_SKETCH_FORM_RHYTHM;
+    if (rhythm ? motive->note_count < 1 : (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2)) {
         return "needs a full motif of at least two notes";
     }
     if (motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
@@ -440,7 +446,7 @@ static GrowResult slot_motive_valid(const GrowRequest *request, GrowSlot slot, R
 static GrowResult idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rational bar, GrowRefusal *refusal) {
     GrowPlace place;
     char path[64];
-    snprintf(path, sizeof(path), "/ideas/%.50s", grow_idea_name(idea));
+    snprintf(path, sizeof(path), request->blueprint ? "/blueprint/bars" : "/ideas/%.50s", grow_idea_name(idea));
     if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the idea %s has no place in this pairing", grow_idea_name(idea));
     }
@@ -501,11 +507,12 @@ static int numeral_degree(const char *numeral, bool *inverted) {
     const char *letters = at;
     at += standard_tonality_roman_numeral_letters(at);
     int degree = standard_tonality_roman_numeral_degree_of(letters, (size_t)(at - letters));
-    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
+    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7, 9, a color (add9, sus4, maj7) and none
+     * are root position. */
     while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {
         at++;
     }
-    *inverted = *at && *at != '7' && *at != '9' && *at != '@';
+    *inverted = *at == '6' || *at == '4' || *at == '2';
     return numeral[0] == 'b' || numeral[0] == '#' ? 0 : degree;
 }
 
@@ -549,7 +556,11 @@ static GrowResult check_cadence_bar(const GrowRequest *request, Rational bar_len
         }
         if (at_bar == bar && !cadence_allows(cadence, chord->numeral)) {
             char path[64];
-            snprintf(path, sizeof(path), "/chords/%ld", entry);
+            if (request->blueprint) {
+                snprintf(path, sizeof(path), "/blueprint/bars/%ld/chords", bar);
+            } else {
+                snprintf(path, sizeof(path), "/chords/%ld", entry);
+            }
             return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "chords bar %ld: %s cannot end a %s; the cadence needs %s", bar,
                           chord->numeral, cadence_label(cadence), cadence_needs(cadence));
         }
@@ -578,14 +589,7 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
     return result;
 }
 
-GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowRefusal *refusal) {
-    if (refusal) {
-        memset(refusal, 0, sizeof(*refusal));
-    }
-    if (!request || !request->motive || !out) {
-        return refuse(refusal, GROW_ERR_NULL, "", "no request");
-    }
-    *out = NULL;
+static GrowResult build_plan(const GrowRequest *request, Plan **out, GrowRefusal *refusal) {
     /* A theme of any length but 4 or 8 bars with no construction given gets the one its motif or its length makes (R-469). */
     GrowRequest chosen;
     SectionConstruction construction;
@@ -864,10 +868,12 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
         }
         result = from_plan(plan_result_of_rational(rational_add(material.start, position_times(bar, idea_bar), &start)));
         idea_bar += grow_motive_layout_bars(request->idea_motives[idea_at], bar);
-        result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
-                                                             grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
-                                                             NULL, NULL))
-                                   : result;
+        const Motive *own = request->idea_motives[idea_at];
+        grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name));
+        if (result == GROW_OK) {
+            result = from_plan(own->form == MOTIVE_SKETCH_FORM_RHYTHM ? composer_rhythm_motive_attach(plan, idea, start, own, name, NULL, NULL)
+                                                                    : motive_attach(plan, idea, start, own, name, NULL, NULL));
+        }
     }
     if (result == GROW_OK && accompaniment_motive) {
         Rational start;
@@ -880,7 +886,14 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     const ComposerChords *given_tones = request->knowledge != NULL && composer_chords_init(&tones, request->knowledge, NULL, 0) ? &tones : NULL;
     if (result == GROW_OK && request->chord_count > 0 &&
         plan_give_chords_in(plan, given_tones, theme_id, request->chords, request->chord_count) != GIVEN_OK) {
-        result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/chords", "the given chords do not fit the theme");
+        result = refuse(refusal, GROW_ERR_BAD_REQUEST, request->blueprint ? "/blueprint/bars" : "/chords",
+                        "the given chords do not fit the theme");
+    }
+    /* A blueprint's melody, bass and inner voices are Given, and its climax is checked against them (R-743). */
+    if (result == GROW_OK && request->blueprint) {
+        result = grow_blueprint_give_melody(plan, theme_id, request->blueprint, refusal);
+        result = result == GROW_OK ? grow_blueprint_give_voices(plan, theme_id, request->blueprint, refusal) : result;
+        result = result == GROW_OK ? grow_blueprint_check_climax(request->blueprint, request->drawn, &request->meter, refusal) : result;
     }
     if (result == GROW_OK) {
         result = grow_check_given_cadences(request, first, refusal);
@@ -903,6 +916,45 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowR
     }
     *out = plan;
     return GROW_OK;
+}
+
+GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowRefusal *refusal) {
+    if (refusal) {
+        memset(refusal, 0, sizeof(*refusal));
+    }
+    if (!request || (!request->motive && !request->blueprint) || !out) {
+        return refuse(refusal, GROW_ERR_NULL, "", "no request");
+    }
+    *out = NULL;
+    if (!request->blueprint) {
+        return build_plan(request, out, refusal);
+    }
+    /* A blueprint's draw (its jobs and its basic motive), made here unless the run made it; its idea motives join the request's. */
+    GrowBlueprintDraw *own = NULL;
+    const GrowBlueprintDraw *drawn = request->drawn;
+    if (!drawn) {
+        own = malloc(sizeof(*own));
+        if (!own) {
+            return refuse(refusal, GROW_ERR_ALLOC, "", "allocation failed");
+        }
+        GrowResult made = grow_blueprint_draw(request, own, refusal);
+        if (made != GROW_OK) {
+            free(own);
+            return made;
+        }
+        drawn = own;
+    }
+    GrowRequest blueprinted = *request;
+    blueprinted.drawn = drawn;
+    blueprinted.motive = &drawn->basic;
+    for (int idea = GROW_IDEA_BASIC + 1; idea < GROW_IDEA_COUNT; idea++) {
+        if (drawn->has_idea[idea]) {
+            blueprinted.idea_motives[idea] = &drawn->idea[idea];
+        }
+    }
+    GrowResult result = build_plan(&blueprinted, out, refusal);
+    free(own);
+    return result;
 }
 
 NodeId grow_find_source(const Plan *plan) {

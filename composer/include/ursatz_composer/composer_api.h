@@ -50,10 +50,12 @@
  * 4.5 adds the functions group of the development preferences (R-710 to R-712) and the theme response's contrasts (R-710).
  * 4.6 adds the critique entry and the critic group of the preferences (R-721, R-722).
  * 4.7 accepts the church modes as the material of a key (R-725): a request names "dorian", "lydian", "mixolydian", "phrygian" or "locrian".
+ * 4.8 adds the theme request's blueprint (R-743): the theme given bar by bar, its chords (R-744), melody, rhythms or rhythm jobs, anchors,
+ * events, bass and inner voices, its climax and accompaniment.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 7
+#define COMPOSER_API_VERSION_MINOR 8
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

@@ -1,0 +1,84 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "E",
+ "material": "minor",
+ "meter": "3/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 66,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "iadd9",
+    "rhythm": "x:q x:q. x:e",
+    "anchors": [
+     {
+      "at": "1",
+      "pitch": "F#5"
+     }
+    ]
+   },
+   {
+    "chords": "VI7",
+    "rhythm": "x:h x:e x:e",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "B4"
+     }
+    ]
+   },
+   {
+    "chords": "ivadd9",
+    "job": "long"
+   },
+   {
+    "chords": "v",
+    "rhythm": "x:h x:q",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "E5"
+     }
+    ],
+    "events": [
+     {
+      "at": "0",
+      "type": "appoggiatura"
+     }
+    ]
+   },
+   {
+    "chords": "iadd9"
+   },
+   {
+    "chords": "VI7"
+   },
+   {
+    "chords": "ivadd6",
+    "job": "long"
+   },
+   {
+    "chords": "iadd9",
+    "rhythm": "x:e x:e x:h",
+    "anchors": [
+     {
+      "at": "1",
+      "pitch": "E5"
+     }
+    ]
+   }
+  ],
+  "climax": {
+   "bar": 5,
+   "at": "0",
+   "pitch": "G5"
+  },
+  "accompaniment": {
+   "pattern": "michelle.pattern.arpeggio-wave"
+  }
+ }
+}

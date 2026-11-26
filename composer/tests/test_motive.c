@@ -1098,6 +1098,41 @@ static void test_harmony_text(void) {
     free(none);
 }
 
+/* R-744: a numeral today's matcher does not read is read with the library grammar; the chord keeps what the text named. */
+static void test_harmony_numerals(void) {
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = 0;
+    MotiveError error;
+    /* Lower case names a minor triad: iv in C major is the minor iv. Upper case names no quality. */
+    assert(motive_harmony_parse("I iv@1", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && count == 2);
+    assert(!chords[0].quality_given && !chords[0].has_target);
+    assert(chords[1].degree == 4 && chords[1].quality_given && chords[1].quality == STANDARD_TONALITY_NUMERAL_MINOR && !chords[1].seventh);
+    assert(motive_harmony_parse("ii7 viio7@1 IVmaj7@2 III+@3", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && count == 4);
+    assert(chords[0].seventh && chords[0].quality == STANDARD_TONALITY_NUMERAL_MINOR_SEVENTH && chords[0].quality_given);
+    assert(chords[1].degree == 7 && chords[1].seventh && chords[1].quality == STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH);
+    assert(chords[2].degree == 4 && chords[2].seventh && chords[2].quality == STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH);
+    assert(chords[3].degree == 3 && !chords[3].seventh && chords[3].quality == STANDARD_TONALITY_NUMERAL_AUGMENTED);
+    /* An applied chord keeps its target; a plain dominant seventh names no quality. */
+    assert(motive_harmony_parse("I V7/V@2 viio65/vi@3", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && count == 3);
+    assert(chords[1].degree == 5 && chords[1].seventh && chords[1].has_target && chords[1].target_degree == 5 && chords[1].target_alteration == 0 &&
+           !chords[1].quality_given);
+    assert(chords[2].degree == 7 && chords[2].inversion == 1 && chords[2].has_target && chords[2].target_degree == 6 && chords[2].quality_given);
+    /* Written back, the text reads as the same chords. */
+    Motive motive = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
+    const char *texts[] = {"I iv@2", "i #vii@1 V7/V@2 viio65/vi@3", "ii7@1 IVM7@2", "Vsus4 V@2", "iisus2"};
+    for (size_t t = 0; t < sizeof(texts) / sizeof(texts[0]); t++) {
+        assert(motive_harmony_parse_in(test_knowledge(), texts[t], &FOUR_FOUR, motive.chords, &motive.chord_count, &error) == MOTIVE_OK);
+        char *written = motive_harmony_to_text(&motive);
+        assert(written && strcmp(written, texts[t]) == 0);
+        free(written);
+    }
+    /* sus2 and sus4 are colors: the snapshot gives the type, and a text without it is refused. */
+    assert(motive_harmony_parse_in(test_knowledge(), "Vsus4", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && chords[0].color != NULL &&
+           strcmp(chords[0].color->id, "omt.chord-type.sus4") == 0);
+    assert(motive_harmony_parse("Vsus4", &FOUR_FOUR, chords, &count, &error) == MOTIVE_ERR_SYNTAX);
+    assert(strstr(error.message, "sus2, sus4") != NULL);
+}
+
 static void test_harmony_errors(void) {
     MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
     size_t count = 0;
@@ -1109,7 +1144,9 @@ static void test_harmony_errors(void) {
     } cases[] = {
         {"I V6", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},          /* later chords need an onset */
         {"I x@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},         /* not a numeral */
-        {"I iv@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* numerals are upper case */
+        {"I Iv@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* a numeral has one case */
+        {"I V7/@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},       /* an applied chord names its target */
+        {"I Vsus3@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},     /* sus2 and sus4 only */
         {"I V8@1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* not a figure */
         {"I V6@x", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* not an onset */
         {"I V@-1", MOTIVE_ERR_SYNTAX, "token 2 (column 3)"},        /* a negative onset */
@@ -1204,7 +1241,7 @@ static void test_extras_in_json(void) {
     options.features[0].last = 3;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false, NULL};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 4, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
     assert(motive_from_json(EXTRAS_JSON, &options, &again, &error) == MOTIVE_OK);
     assert(!again.accompaniment && again.feature_count == 1 && again.chord_count == 1);
     assert(again.chords[0].degree == 4 && strcmp(again.features[0].label, "x") == 0);
@@ -1219,17 +1256,17 @@ static void test_extras_errors(void) {
     MotiveOptions options = base;
     options.has_harmony = true;
     options.harmony_count = 2;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false, NULL};
-    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false, NULL}; /* at the end of a one-bar motive */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 1, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
+    options.harmony[1] = (MotiveSketchChord){{1, 1}, 5, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false}; /* at the end of a one-bar motive */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "harmony[1]") == 0);
 
     options = base;
     options.has_harmony = true;
     options.harmony_count = 1;
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false, NULL};
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 8, 0, 0, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false};
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
-    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false, NULL}; /* a third inversion needs a seventh */
+    options.harmony[0] = (MotiveSketchChord){{0, 1}, 5, 0, 3, false, NULL, false, STANDARD_TONALITY_NUMERAL_MAJOR, false, 0, 0, false}; /* a third inversion needs a seventh */
     assert(motive_from_notes_text("C4:q E4:q G4:q C5:q", &options, &motive, &error) == MOTIVE_ERR_VALUE);
 
     options = base;
@@ -1551,6 +1588,7 @@ int main(void) {
     test_analysis_by_form();
     test_render_in_another_key();
     test_harmony_text();
+    test_harmony_numerals();
     test_harmony_errors();
     test_feature_and_role_text();
     test_extras_in_json();

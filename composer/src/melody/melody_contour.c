@@ -11,6 +11,10 @@
 #define SOFT_RULES 4
 
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params) {
+    /* The plan's climax (R-746) is where it is. */
+    if (context->has_climax) {
+        return context->climax.offset;
+    }
     unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
     if (!context->idea) {
         return position_div(position_mul(context->length, (long long)position), CLIMAX_SCALE);
@@ -48,12 +52,27 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
         top = melody->notes[i].pitch > top ? melody->notes[i].pitch : top;
     }
     out->motive_top = top;
+    /* Nothing placed before the first note (a rhythm-only motive, R-746): the arch rises from the melody before, else the middle. */
+    if (first == 0) {
+        top = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : (params->range_low + params->range_high) / 2;
+    }
     /* The climax of a phrase is higher than every note of the phrase written before it. */
     if (context->idea && context->phrase_has_top && context->phrase_top > top) {
         top = context->phrase_top;
     }
     out->in_motive = true;
     out->cap = top - 1;
+
+    /* The plan's climax in this target (R-746) is the contour's: its note and pitch, in place of a choice. */
+    for (size_t j = 0; context->climax_here && j < melody->count; j++) {
+        if (rational_cmp(melody->notes[j].onset, context->climax.offset) == 0) {
+            out->in_motive = j < first;
+            out->climax = j;
+            out->climax_pitch = context->climax.midi;
+            out->cap = context->climax.midi - 1;
+            return true;
+        }
+    }
 
     /*
      * The climax is the anchor nearest the place asked for, other than the last note, which is the cadence's. A target

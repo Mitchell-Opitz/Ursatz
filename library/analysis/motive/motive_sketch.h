@@ -7,6 +7,7 @@
 #include "model/core/rational.h"
 #include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
+#include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/vocabulary/non_chord_tone.h"
 
 /*
@@ -39,7 +40,10 @@ typedef struct {
 } MotiveSketchNote;
 
 /* degree 1 to 7, alteration -1/0/1, inversion 0 to 3. color (R-727) is a snapshot-owned chord type whose added members (a ninth, a sixth) the
-   chord sounds beside its own third and fifth, or whose quartal members it sounds instead; NULL for a plain chord. */
+   chord sounds beside its own third and fifth, or whose quartal members it sounds instead; NULL for a plain chord.
+   quality_given (R-744) is true when the chord text named the quality (a lower-case numeral, "o", "+", the o-slash, "M" or "maj7"); quality is
+   then the numeral's quality and `seventh` is whether it is a seventh. has_target is an applied chord (V7/V): target_degree 1 to 7 and
+   target_alteration -1, 0 or 1 name its target, target_minor whether the text wrote it lower case (V7/vi: kept so the text writes back as it was). All of these are false or 0 for a chord that names none. */
 typedef struct {
     Rational onset;
     int degree;
@@ -47,6 +51,12 @@ typedef struct {
     int inversion;
     bool seventh;
     const ChordType *color;
+    bool quality_given;
+    StandardTonalityNumeralQuality quality;
+    bool has_target;
+    int target_degree;
+    int target_alteration;
+    bool target_minor;
 } MotiveSketchChord;
 
 /* label 1 to 8 characters; first and last are 0-based note indices, inclusive. */

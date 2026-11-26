@@ -7,13 +7,14 @@ source and folder's kind, relations point at existing ids, citations name a sour
 spell its steps, an instrument's range holds its examples, an ensemble's slots name instruments, a vocabulary entry's code is its
 subtype's own, a rule's code is unique in its subtype with its message placeholders and parameters in the allowed form, a texture's category is a texture's code, a progression type's example chords follow its type, a formal function's
 harmony ids are progression types and its contrast target a formal function, and a theme type's ideas, units and examples agree with
-its functions. One line per problem,
+its functions, and a pattern's rhythm fills one bar of its meter and its accompaniment steps name real meters and members. One line per problem,
 "knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
 """
 import json
 import os
 import re
 import sys
+from fractions import Fraction
 
 KINDS = {
     "material", "chord-type", "voicing", "vocabulary", "schema", "relation", "function", "theme-type", "form", "operation",
@@ -505,6 +506,52 @@ def check_cadence_kind(path, entry, materials):
                 number, example["numerals"], content["material"], derived))
 
 
+PATTERN_METERS = {"2/4": Fraction(2, 4), "3/4": Fraction(3, 4), "4/4": Fraction(4, 4), "6/8": Fraction(6, 8)}
+PATTERN_DURATIONS = {"w": Fraction(1), "h": Fraction(1, 2), "q": Fraction(1, 4), "e": Fraction(1, 8), "s": Fraction(1, 16), "t": Fraction(1, 32)}
+
+
+def pattern_duration(text):
+    """The length in whole notes of a note-list token (x:q., r:e3, x:h~), or None when it is not one."""
+    match = re.fullmatch(r"[xr]:([whqest])(\.{0,2}|3)~?", text)
+    if match is None:
+        return None
+    value = PATTERN_DURATIONS[match.group(1)]
+    suffix = match.group(2)
+    if suffix == "3":
+        return value * 2 / 3
+    return value * (2 - Fraction(1, 2 ** len(suffix)))
+
+
+def check_pattern(path, entry):
+    """A rhythm cell's tokens fill one bar of its meter; an accompaniment's by_meter keys are meters and its members 0 to 7."""
+    content = entry.get("content", {})
+    if entry.get("subtype") == "rhythm":
+        rhythm, meter = content.get("rhythm"), content.get("meter")
+        if not isinstance(rhythm, str) or meter not in PATTERN_METERS:
+            return
+        total = Fraction(0)
+        for token in rhythm.split():
+            length = pattern_duration(token)
+            if length is None:
+                problem(path, entry["id"], "content.rhythm: '%s' is not a note-list token" % token)
+                return
+            total += length
+        if total != PATTERN_METERS[meter]:
+            problem(path, entry["id"], "content.rhythm: the durations fill %s of a whole note, not one bar of %s" % (total, meter))
+    elif entry.get("subtype") == "accompaniment":
+        lists = [content.get("steps")]
+        by_meter = content.get("by_meter")
+        if isinstance(by_meter, dict):
+            for key, steps in by_meter.items():
+                if key not in PATTERN_METERS:
+                    problem(path, entry["id"], "content.by_meter: '%s' is not a meter of the schema" % key)
+                lists.append(steps)
+        for steps in lists:
+            for step in steps if isinstance(steps, list) else []:
+                if isinstance(step, dict) and "member" in step and not (isinstance(step["member"], int) and 0 <= step["member"] <= 7):
+                    problem(path, entry["id"], "content.steps: member %s is not 0 to 7" % step["member"])
+
+
 def check_voicing(path, entry, chord_type_ids):
     """Members ascend from the root at 0, an example's pitches are the members on its root, and every fit is a chord-type entry."""
     content = entry.get("content", {})
@@ -563,7 +610,7 @@ def main(argv):
     vocabulary_entries = []
     rule_entries = []
     function_entries, theme_type_entries = {}, {}
-    chord_type_ids, voicing_entries = set(), []
+    chord_type_ids, voicing_entries, pattern_entries = set(), [], []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "schema":
@@ -641,6 +688,8 @@ def main(argv):
                     chord_type_ids.add(entry_id)
                 if kind == "voicing" and isinstance(entry.get("content"), dict):
                     voicing_entries.append((rel, entry))
+                if kind == "pattern" and isinstance(entry.get("content"), dict):
+                    pattern_entries.append((rel, entry))
                 if kind == "relation":
                     relation_entries.append((rel, entry))
                 if kind == "instrument" and subtype == "instrument":
@@ -668,6 +717,8 @@ def main(argv):
             check_cadence_kind(rel, entry, materials)
     for rel, entry in voicing_entries:
         check_voicing(rel, entry, chord_type_ids)
+    for rel, entry in pattern_entries:
+        check_pattern(rel, entry)
     check_rule(rule_entries)
     progression_ids = {entry["id"] for _, entry in vocabulary_entries if entry.get("subtype") == "progression-type"}
     for rel, entry in function_entries.values():

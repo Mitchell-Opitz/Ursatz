@@ -3,7 +3,7 @@
 The `listen` command of `ursatz`: a batch of motifs or themes from fixed seeds and one settings file, written as files a listening session plays and reads. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>]
+ursatz listen --what <motifs|themes> --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material <word>] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy <name>] [--into <form>] [--development <name>] [--bars <n>] [--check] [--motif <file>] [--theme-request <file>] [--blueprint <file>]
 ursatz listen --print-settings
 ```
 
@@ -31,9 +31,10 @@ ursatz listen --print-settings
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
 | `--motif <file>` | Themes: the motif of every sample, anything the [`motive`](cli-motive.md) command reads (a note list, MusicXML, MIDI, a motive document). It is read in key C and the mode. Absent: a generated motif for each sample, made with the sample's seed, the mode, meter, strategy, style and settings. |
 | `--theme-request <file>` | Themes: a [theme request](../../composer/docs/theme-request.md), for example a GUI composed theme's `request.json`, with its `seed`, `suggest`, `midi`, `musicxml` and, when `--settings` is given, `preferences` replaced. `--style`, `--blend`, `--tempo` and `--check` replace theirs when given. |
+| `--blueprint <file>` | Themes: a [theme request with a blueprint](../../composer/docs/blueprints.md), as its JSON or as [Ursatz Text](../../composer/docs/blueprints.md#the-text-form) (`ursatz-text 1 blueprint`, read by the workshop's tool `blueprint-parse`), made as `--theme-request` is: the sample's `seed`, `suggest`, `midi`, `musicxml` and `preferences` replace the request's, and `--style`, `--blend`, `--tempo` and `--check` replace theirs when given. A file with no `blueprint` member, or a text with a mistake (`line 3: bar 3 is out of order: the next bar is 2`), exits 1. |
 | `--plans` | Themes: put each theme's plan in its JSON (`themes[0].plan`), so `ursatz critique` can read the theme ([cli-critique.md](cli-critique.md)). The notes, the MIDI file and the MusicXML are the same bytes as without it. Refused with `--what motifs`. |
 
-`--motif` and `--theme-request` together exit 1. A theme built from a motif is a request of schema `ursatz-theme-request` version 2: key C, the mode, the meter, `--into`, `--bars`, `--development`, one motive `M1` (the motif's degrees, pickup, harmony and features, `form` full, role melodic) in the `basic` slot.
+`--motif` and `--theme-request` together exit 1, and `--blueprint` with either of them. A theme built from a motif is a request of schema `ursatz-theme-request` version 2: key C, the mode, the meter, `--into`, `--bars`, `--development`, one motive `M1` (the motif's degrees, pickup, harmony and features, `form` full, role melodic) in the `basic` slot.
 
 ## Files
 
@@ -46,7 +47,7 @@ For sample `i` (two digits from 01), in `--out-dir`:
 | `<i>.json` | The API response of the sample. |
 | `listen.jsonl` | One line per sample, appended. |
 
-A line of `listen.jsonl`: `{"index", "seed", "what", "motif" ("generated" or the file path), "theme_request" (path or null), "style", "blend", "settings" (the file path or null), "preferences" (the document sent or null), "files" [...], "status"}`. `status` is `ok`, or why the sample was not made (`stuck: <path>: <message>` when no seed could be composed, `refused: <path>: <message>` for a request the API refused); such a sample has no files and the command goes on. A style can draw a motif too long for its theme; that sample is stuck and the next one is made.
+A line of `listen.jsonl`: `{"index", "seed", "what", "motif" ("generated" or the file path), "theme_request" (the path of `--theme-request` or `--blueprint`, or null), "style", "blend", "settings" (the file path or null), "preferences" (the document sent or null), "files" [...], "status"}`. `status` is `ok`, or why the sample was not made (`stuck: <path>: <message>` when no seed could be composed, `refused: <path>: <message>` for a request the API refused); such a sample has no files and the command goes on. A style can draw a motif too long for its theme; that sample is stuck and the next one is made.
 
 Exit status: 0 when at least one sample was written; 1 for a bad option, a settings file outside its limits or an unreadable file; 2 when no sample could be composed; 3 when a file could not be written.
 

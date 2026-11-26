@@ -197,6 +197,10 @@ bool melody_realize(const MelodyContext *context, const MelodyFillParams *params
     unsigned types[MELODY_MAX_NOTES];
     bool loose[MELODY_MAX_NOTES];
     MelodyFillParams need = *params;
+    /* A rhythm-only motive has no notes to realize: its notes are placed as the stage's own (R-746). */
+    if (context->motive_rhythm_only) {
+        return true;
+    }
     Realize *r = calloc(1, sizeof(*r));
     bool ok = r && context->motive_count > 0 && context->motive_count <= out->count;
     /* A suspension is held into a chord it is not a tone of: here it is a clash, whatever the parameters allow. */
@@ -243,6 +247,11 @@ bool melody_realize(const MelodyContext *context, const MelodyFillParams *params
         }
     }
     ok = ok && settle(r, keep_figures);
+    /* A motive note where an anchor or the climax is takes its pitch (R-746). */
+    for (size_t k = 0; ok && k < r->count; k++) {
+        int fixed = melody_fixed_pitch(context, out->notes[k].onset);
+        out->notes[k].pitch = fixed >= 0 ? fixed : out->notes[k].pitch;
+    }
     if (ok && keep_figures) {
         ok = survey(r, types, loose);
         for (size_t k = 0; ok && k < r->count; k++) {
@@ -264,6 +273,11 @@ size_t melody_realize_shifts(const MelodyContext *context, const MelodyFillParam
     int high = 0;
     size_t count = 0;
     bool climax = context->idea && context->phrase_has_top && melody_role(context, params) == MELODY_ROLE_CLIMAX;
+    /* A rhythm-only motive is placed at no octave of its own: one attempt shape, shift 0. */
+    if (context->motive_rhythm_only) {
+        shifts[0] = 0;
+        return context->motive_count > 0 ? 1 : 0;
+    }
     for (size_t k = 0; k < context->motive_count; k++) {
         low = context->motive_pitch[k] < low ? context->motive_pitch[k] : low;
         high = context->motive_pitch[k] > high ? context->motive_pitch[k] : high;

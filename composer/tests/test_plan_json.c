@@ -280,7 +280,9 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
                a->params.accompaniment.texture == b->params.accompaniment.texture &&
                a->params.accompaniment.low == b->params.accompaniment.low &&
-               a->params.accompaniment.high == b->params.accompaniment.high;
+               a->params.accompaniment.high == b->params.accompaniment.high &&
+               strcmp(a->params.accompaniment.motive_node, b->params.accompaniment.motive_node) == 0 &&
+               strcmp(a->params.accompaniment.pattern_id, b->params.accompaniment.pattern_id) == 0;
     case PLAN_CONSTRAINT_VOICING:
         return a->params.voicing.write_soprano == b->params.voicing.write_soprano;
     case PLAN_CONSTRAINT_COUNTERPOINT:
@@ -350,6 +352,12 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         }
         return true;
     }
+    case PLAN_CONSTRAINT_ANCHOR:
+        return rational_cmp(a->params.anchor.offset, b->params.anchor.offset) == 0 && a->params.anchor.midi == b->params.anchor.midi;
+    case PLAN_CONSTRAINT_EVENT:
+        return rational_cmp(a->params.event.offset, b->params.event.offset) == 0 && a->params.event.type == b->params.event.type;
+    case PLAN_CONSTRAINT_CLIMAX:
+        return rational_cmp(a->params.climax.offset, b->params.climax.offset) == 0 && a->params.climax.midi == b->params.climax.midi;
     }
     return false;
 }
@@ -467,6 +475,241 @@ static void test_round_trip(void) {
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 1;
     assert(plan_node_add_constraint(parsed, 6, &length) == PLAN_ERR_GIVEN_LOCKED);
+
+    free(text);
+    free(again);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+}
+
+/*
+ * An accompaniment constraint that names a K11 pattern entry (R-745): the pattern "entry" with its pattern_id round-trips, the id is written
+ * only when set, and the constraint is refused without an id for the entry or with an id for another pattern.
+ */
+static char *replace_all(const char *text, const char *from, const char *to);
+
+static void test_pattern_id(void) {
+    static const char *const ID = "michelle.pattern.arpeggio-wave";
+    Plan *plan = build_sentence_plan();
+    NodeId root = plan_root(plan);
+    PlanJsonError error;
+    PlanConstraint plain;
+    memset(&plain, 0, sizeof(plain));
+    plain.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
+    plain.params.accompaniment.pattern = PLAN_ACCOMPANIMENT_ALBERTI;
+    plain.params.accompaniment.texture = -1;
+    assert(plan_node_add_constraint(plan, root, &plain) == PLAN_OK);
+    char *without = plan_to_json(plan, test_plan_producer(), &error);
+    assert(without && strstr(without, "\"pattern_id\"") == NULL);
+
+    PlanConstraint entry = plain;
+    entry.params.accompaniment.pattern = PLAN_ACCOMPANIMENT_ENTRY;
+    assert(plan_node_add_constraint(plan, root, &entry) == PLAN_ERR_BAD_PAYLOAD); /* an entry names its id */
+    snprintf(entry.params.accompaniment.pattern_id, sizeof(entry.params.accompaniment.pattern_id), "%s", ID);
+    assert(plan_node_add_constraint(plan, root, &entry) == PLAN_OK);
+    PlanConstraint other = plain;
+    snprintf(other.params.accompaniment.pattern_id, sizeof(other.params.accompaniment.pattern_id), "%s", ID);
+    assert(plan_node_add_constraint(plan, root, &other) == PLAN_ERR_BAD_PAYLOAD); /* and no other pattern takes one */
+
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
+    assert(text && strstr(text, "\"pattern\": \"entry\"") && strstr(text, "\"pattern_id\": \"michelle.pattern.arpeggio-wave\""));
+    Plan *parsed = NULL;
+    expect_ok(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
+    assert(again && strcmp(text, again) == 0);
+    bool found = false;
+    for (size_t c = 0; c < plan_node_constraint_count(parsed, root); c++) {
+        const PlanConstraint *read = plan_node_constraint_at(parsed, root, c);
+        found = found || (read->kind == PLAN_CONSTRAINT_ACCOMPANIMENT && read->params.accompaniment.pattern == PLAN_ACCOMPANIMENT_ENTRY &&
+                          strcmp(read->params.accompaniment.pattern_id, ID) == 0);
+    }
+    assert(found);
+
+    /* A file that names the entry with no id, or an id with another pattern, is refused. */
+    char *bad = replace_all(text, "\"pattern_id\": \"michelle.pattern.arpeggio-wave\"", "\"low\": 0");
+    Plan *refused = (Plan *)0x1;
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) != PLAN_OK && refused == NULL);
+    free(bad);
+    bad = replace_all(text, "\"pattern\": \"entry\"", "\"pattern\": \"alberti\"");
+    refused = (Plan *)0x1;
+    assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) != PLAN_OK && refused == NULL);
+    free(bad);
+    free(without);
+    free(text);
+    free(again);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+}
+
+static void expect_error(const char *text, PlanResult expected, const char *expected_path);
+
+/* The first span of a lane in a plan. */
+static LaneSpanId first_span_of(const Plan *plan, PlanLaneKind lane) {
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_lane_span_lane(plan, id) == lane) {
+            return id;
+        }
+    }
+    assert(false);
+    return PLAN_LANE_SPAN_NONE;
+}
+
+static PlanConstraint melody_constraint(PlanConstraintKind kind, long num, long den, int value) {
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = kind;
+    Rational offset;
+    assert(rational_make(num, den, &offset) == RATIONAL_OK);
+    if (kind == PLAN_CONSTRAINT_ANCHOR) {
+        constraint.params.anchor = (PlanAnchor){offset, value};
+    } else if (kind == PLAN_CONSTRAINT_EVENT) {
+        constraint.params.event = (PlanEvent){offset, (PlanEventType)value};
+    } else {
+        constraint.params.climax = (PlanClimax){offset, value};
+    }
+    return constraint;
+}
+
+/* The text of a plan read must be refused, and the message names `why`. */
+static void expect_refusal(const char *text, const char *why) {
+    Plan *plan = (Plan *)0x1;
+    PlanJsonError error;
+    memset(&error, 0, sizeof(error));
+    assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &plan, &error) == PLAN_ERR_FORMAT);
+    assert(plan == NULL);
+    if (strstr(error.message, why) == NULL) {
+        fprintf(stderr, "expected '%s' in '%s'\n", why, error.message);
+    }
+    assert(strstr(error.message, why) != NULL);
+}
+
+/*
+ * The melody constraints (R-746): an anchor, an event and a climax go on a melody span below its length, one anchor and one event to an
+ * offset, one climax to a plan; a plan holding all three writes, reads back equal and is valid against the schema (the written file).
+ */
+static void test_melody_constraints(void) {
+    Plan *plan = build_sentence_plan();
+    PlanJsonError error;
+    const LaneSpanId melody = first_span_of(plan, PLAN_LANE_MELODY);
+    const LaneSpanId harmony_lane = first_span_of(plan, PLAN_LANE_HARMONY);
+    const NodeId root = plan_root(plan);
+
+    PlanConstraint anchor = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 4, 74);
+    PlanConstraint second_anchor = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 2, 76);
+    PlanConstraint event = melody_constraint(PLAN_CONSTRAINT_EVENT, 0, 1, PLAN_EVENT_APPOGGIATURA);
+    PlanConstraint second_event = melody_constraint(PLAN_CONSTRAINT_EVENT, 5, 8, PLAN_EVENT_RETARDATION);
+    PlanConstraint climax = melody_constraint(PLAN_CONSTRAINT_CLIMAX, 3, 8, 80);
+    assert(plan_lane_span_add_constraint(plan, melody, &anchor) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(plan, melody, &second_anchor) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(plan, melody, &event) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(plan, melody, &second_event) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(plan, melody, &climax) == PLAN_OK);
+
+    /* Every event type is one the plan writes by its word. */
+    static const char *const WORDS[] = {"appoggiatura", "suspension", "passing", "neighbor", "escape", "anticipation", "retardation"};
+    char *text = plan_to_json(plan, test_plan_producer(), &error);
+    assert(text && strstr(text, "\"kind\": \"anchor\"") && strstr(text, "\"kind\": \"event\"") && strstr(text, "\"kind\": \"climax\""));
+    assert(strstr(text, "\"offset\": \"1/4\"") && strstr(text, "\"midi\": 74") && strstr(text, "\"offset\": \"0/1\"") &&
+           strstr(text, "\"type\": \"appoggiatura\"") && strstr(text, "\"offset\": \"3/8\"") && strstr(text, "\"midi\": 80"));
+    Plan *parsed = NULL;
+    expect_ok(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, test_plan_producer(), &error);
+    assert(again && strcmp(text, again) == 0);
+    assert(plan_lane_span_constraint_count(parsed, first_span_of(parsed, PLAN_LANE_MELODY)) == 5);
+    test_write_text("plan_written_melody_constraints.json", text);
+    for (int type = PLAN_EVENT_APPOGGIATURA; type <= PLAN_EVENT_RETARDATION; type++) {
+        Plan *typed = build_sentence_plan();
+        PlanConstraint each = melody_constraint(PLAN_CONSTRAINT_EVENT, 1, 8, type);
+        assert(plan_lane_span_add_constraint(typed, first_span_of(typed, PLAN_LANE_MELODY), &each) == PLAN_OK);
+        char *written = plan_to_json(typed, test_plan_producer(), &error);
+        char expected[64];
+        snprintf(expected, sizeof(expected), "\"type\": \"%s\"", WORDS[type]);
+        assert(written && strstr(written, expected));
+        Plan *back = NULL;
+        expect_ok(plan_from_json(test_knowledge(), written, composer_plan_read_hooks(), &back, &error), &error);
+        assert(plans_equal(typed, back));
+        free(written);
+        plan_destroy(typed);
+        plan_destroy(back);
+    }
+
+    /* Refused: not on a node, not on another lane's span. */
+    assert(plan_node_add_constraint(plan, root, &anchor) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_node_add_constraint(plan, root, &event) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_node_add_constraint(plan, root, &climax) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_lane_span_add_constraint(plan, harmony_lane, &anchor) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_lane_span_add_constraint(plan, harmony_lane, &event) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_lane_span_add_constraint(plan, harmony_lane, &climax) == PLAN_ERR_BAD_PAYLOAD);
+    /* An offset at or past the span's end (one whole note here), or below 0. */
+    PlanConstraint late = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 1, 60);
+    assert(plan_lane_span_add_constraint(plan, melody, &late) == PLAN_ERR_BAD_PAYLOAD);
+    late = melody_constraint(PLAN_CONSTRAINT_EVENT, 3, 2, PLAN_EVENT_PASSING);
+    assert(plan_lane_span_add_constraint(plan, melody, &late) == PLAN_ERR_BAD_PAYLOAD);
+    late = melody_constraint(PLAN_CONSTRAINT_CLIMAX, 1, 1, 60);
+    assert(plan_lane_span_add_constraint(plan, melody, &late) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint negative = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 4, 60);
+    negative.params.anchor.offset.num = -1;
+    assert(plan_lane_span_add_constraint(plan, melody, &negative) == PLAN_ERR_BAD_PAYLOAD);
+    negative.params.anchor.offset = (Rational){1, 0};
+    assert(plan_lane_span_add_constraint(plan, melody, &negative) == PLAN_ERR_BAD_PAYLOAD);
+    /* A pitch outside 0 to 127, an event type that is none. */
+    PlanConstraint high = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 8, 128);
+    assert(plan_lane_span_add_constraint(plan, melody, &high) == PLAN_ERR_BAD_PAYLOAD);
+    high = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 1, 8, -1);
+    assert(plan_lane_span_add_constraint(plan, melody, &high) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint bad_type = melody_constraint(PLAN_CONSTRAINT_EVENT, 1, 8, 7);
+    assert(plan_lane_span_add_constraint(plan, melody, &bad_type) == PLAN_ERR_BAD_PAYLOAD);
+    bad_type = melody_constraint(PLAN_CONSTRAINT_EVENT, 1, 8, -1);
+    assert(plan_lane_span_add_constraint(plan, melody, &bad_type) == PLAN_ERR_BAD_PAYLOAD);
+    /* Two anchors or two events at one offset; a second climax anywhere in the plan. */
+    PlanConstraint same_anchor = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 2, 8, 70);
+    assert(plan_lane_span_add_constraint(plan, melody, &same_anchor) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint same_event = melody_constraint(PLAN_CONSTRAINT_EVENT, 0, 4, PLAN_EVENT_ESCAPE);
+    assert(plan_lane_span_add_constraint(plan, melody, &same_event) == PLAN_ERR_BAD_PAYLOAD);
+    same_event = melody_constraint(PLAN_CONSTRAINT_EVENT, 1, 16, PLAN_EVENT_ESCAPE);
+    assert(plan_lane_span_add_constraint(plan, melody, &same_event) == PLAN_OK);
+    same_event = melody_constraint(PLAN_CONSTRAINT_EVENT, 2, 32, PLAN_EVENT_ESCAPE);
+    assert(plan_lane_span_add_constraint(plan, melody, &same_event) == PLAN_ERR_BAD_PAYLOAD);
+    PlanConstraint another_climax = melody_constraint(PLAN_CONSTRAINT_CLIMAX, 1, 8, 79);
+    assert(plan_lane_span_add_constraint(plan, melody, &another_climax) == PLAN_ERR_BAD_PAYLOAD);
+    /* An anchor and an event may share an offset: they are different things to the melody stage. */
+    PlanConstraint shared = melody_constraint(PLAN_CONSTRAINT_ANCHOR, 5, 8, 72);
+    assert(plan_lane_span_add_constraint(plan, melody, &shared) == PLAN_OK);
+
+    /* A file is refused the same way, with the reason. */
+    char *bad = replace_all(text, "\"offset\": \"3/8\"", "\"offset\": \"1/1\"");
+    expect_refusal(bad, "climax: the offset is at or past the span's end");
+    free(bad);
+    bad = replace_all(text, "\"offset\": \"1/2\"", "\"offset\": \"1/4\"");
+    expect_refusal(bad, "anchor: two anchors at one offset on a span");
+    free(bad);
+    bad = replace_all(text, "\"offset\": \"5/8\"", "\"offset\": \"0/1\"");
+    expect_refusal(bad, "event: two events at one offset on a span");
+    free(bad);
+    bad = replace_all(text, "\"kind\": \"anchor\"", "\"kind\": \"climax\"");
+    expect_refusal(bad, "climax: at most one in a plan");
+    free(bad);
+    bad = replace_all(text, "\"kind\": \"harmony_shape\",", "\"kind\": \"anchor\", \"offset\": \"0/1\", \"midi\": 60,");
+    expect_refusal(bad, "anchor: on a melody span only");
+    free(bad);
+    bad = replace_all(text, "\"kind\": \"length_bars\",", "\"kind\": \"event\", \"offset\": \"0/1\", \"type\": \"passing\", \"x\": 0,");
+    expect_refusal(bad, "event: on a melody span only");
+    free(bad);
+    bad = replace_all(text, "\"kind\": \"length_bars\",", "\"kind\": \"climax\", \"offset\": \"0/1\", \"midi\": 60, \"x\": 0,");
+    expect_refusal(bad, "climax: on a melody span only");
+    free(bad);
+    /* The members: a bare number is no offset, a pitch above 127 and a word that is no event type are named. */
+    bad = replace_all(text, "\"offset\": \"1/4\"", "\"offset\": \"0\"");
+    expect_error(bad, PLAN_ERR_FORMAT, NULL);
+    free(bad);
+    bad = replace_all(text, "\"midi\": 74", "\"midi\": 128");
+    expect_error(bad, PLAN_ERR_FORMAT, NULL);
+    free(bad);
+    bad = replace_all(text, "\"type\": \"appoggiatura\"", "\"type\": \"trill\"");
+    expect_error(bad, PLAN_ERR_FORMAT, NULL);
+    free(bad);
 
     free(text);
     free(again);
@@ -1472,6 +1715,8 @@ static void test_format_five_reads(void) {
 
 int main(void) {
     test_round_trip();
+    test_pattern_id();
+    test_melody_constraints();
     test_old_transforms();
     test_motive_tones();
     test_borrowed_harmony();

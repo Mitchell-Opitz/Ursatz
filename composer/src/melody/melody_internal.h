@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <plan/plan_constraint.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive.h>
 
@@ -24,6 +25,9 @@
 #define MELODY_PAYLOAD_MAGIC 0x4D454C31UL
 /* The smallest leap, in semitones, that a step the other way is asked to follow. */
 #define MELODY_RECOVER_FROM 5
+/* The most anchor and event constraints a target reads (R-746): eight anchors and four events a bar, over eight bars. */
+#define MELODY_MAX_ANCHORS 64
+#define MELODY_MAX_EVENTS 32
 
 /* One note of the bass lane: when it sounds, its pitch, and the chord it sounds under. */
 typedef struct {
@@ -84,6 +88,23 @@ typedef struct {
      * break (R-335): the motive is given material, so a candidate with motive notes is not rejected for them.
      */
     unsigned motive_waived;
+    /*
+     * A rhythm-only motive (R-746): its node's motive_tones label every note "rhythm". Its onsets and durations are laid out as
+     * notes of the phrase (motive_index -1, placed as generated notes are) and its pitches are not read; it waives no rule.
+     */
+    bool motive_rhythm_only;
+    /*
+     * The melody constraints (R-746) of the target, offsets from the target's start (after its pickup; one in the pickup is not
+     * read), at most MELODY_MAX_ANCHORS and MELODY_MAX_EVENTS. has_climax is a climax anywhere in the plan (at most one): its
+     * offset from this target's start, which may lie before it or past its end; climax_here when it falls inside the target.
+     */
+    size_t anchor_count;
+    PlanAnchor anchors[MELODY_MAX_ANCHORS];
+    size_t event_count;
+    PlanEvent events[MELODY_MAX_EVENTS];
+    bool has_climax;
+    bool climax_here;
+    PlanClimax climax;
 
     /*
      * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
@@ -167,6 +188,7 @@ typedef struct {
     int motive_index;
     bool strong; /* it starts on a cell */
     size_t chord; /* the chord sounding at its onset */
+    bool event;   /* an event starts with it (R-746): a chosen non-chord tone, placed after the notes around it */
 } MelodyNote;
 
 /* A candidate's payload. */
@@ -196,6 +218,14 @@ void melody_context_zero(MelodyContext *context);
 
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
+
+/*
+ * The pitch a note starting at a position must have (R-746): the climax's when the plan's climax falls there, else an anchor's;
+ * -1 for none.
+ */
+int melody_fixed_pitch(const MelodyContext *context, Rational position);
+/* The event that starts at a position of the target, or NULL. */
+const PlanEvent *melody_event_at(const MelodyContext *context, Rational position);
 
 /* The index of the chord sounding at a position of the phrase. */
 size_t melody_chord_at(const MelodyContext *context, Rational position);
@@ -242,7 +272,9 @@ bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *p
 
 /*
  * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
- * held into the next chord. The others, when non-chord tones are allowed, are filled in between these.
+ * held into the next chord. The others, when non-chord tones are allowed, are filled in between these. A note with a fixed
+ * pitch (an anchor's or the climax's, R-746) is an anchor and so is a note right beside an event; an event's note otherwise
+ * is not, whatever its beat, but for the first and the last note (placed as anchors, then moved to the event's pitch).
  */
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i);

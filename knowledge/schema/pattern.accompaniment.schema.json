@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K11 pattern, accompaniment: the figure an accompaniment writes for each unit of a bar",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "grid",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "grid": {
+          "enum": [
+            "beat",
+            "eighth"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "oneOf": [
+              {
+                "const": "rest"
+              },
+              {
+                "const": "chord"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "member"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 7
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "bass_octave"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "bass_octave": {
+                    "const": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "by_meter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "2/4": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "oneOf": [
+                  {
+                    "const": "rest"
+                  },
+                  {
+                    "const": "chord"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "member"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "member": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 7
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "bass_octave"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "bass_octave": {
+                        "const": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "3/4": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "oneOf": [
+                  {
+                    "const": "rest"
+                  },
+                  {
+                    "const": "chord"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "member"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "member": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 7
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "bass_octave"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "bass_octave": {
+                        "const": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "4/4": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "oneOf": [
+                  {
+                    "const": "rest"
+                  },
+                  {
+                    "const": "chord"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "member"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "member": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 7
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "bass_octave"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "bass_octave": {
+                        "const": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "6/8": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "oneOf": [
+                  {
+                    "const": "rest"
+                  },
+                  {
+                    "const": "chord"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "member"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "member": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 7
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "bass_octave"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "bass_octave": {
+                        "const": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "compound": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

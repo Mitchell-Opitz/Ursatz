@@ -1,0 +1,196 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "schoenberg",
+ "entries": [
+  {
+   "id": "schoenberg.pattern.block",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "block chords",
+   "content": {
+    "grid": "beat",
+    "steps": [
+     "chord"
+    ],
+    "compound": true
+   },
+   "citations": [
+    {
+     "source": "schoenberg",
+     "chapter": 9,
+     "note": "the chord struck and held on each beat"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "chord"
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "schoenberg.pattern.arpeggiated",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "arpeggiated chords",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     {
+      "member": 0
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     },
+     {
+      "member": 1
+     }
+    ],
+    "compound": true
+   },
+   "citations": [
+    {
+     "source": "schoenberg",
+     "chapter": 9,
+     "note": "a broken chord in eighths"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      {
+       "member": 0
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      }
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "schoenberg.pattern.alberti",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "Alberti bass",
+   "content": {
+    "grid": "eighth",
+    "steps": [
+     {
+      "member": 0
+     },
+     {
+      "member": 2
+     },
+     {
+      "member": 1
+     },
+     {
+      "member": 2
+     }
+    ],
+    "compound": false
+   },
+   "citations": [
+    {
+     "source": "schoenberg",
+     "chapter": 9,
+     "note": "the Alberti figure: bottom, top, middle, top"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      {
+       "member": 0
+      },
+      {
+       "member": 2
+      },
+      {
+       "member": 1
+      },
+      {
+       "member": 2
+      }
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "schoenberg.pattern.oom-pah",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "oom-pah",
+   "content": {
+    "grid": "beat",
+    "steps": [
+     "rest",
+     "chord"
+    ],
+    "compound": true,
+    "by_meter": {
+     "3/4": [
+      "rest",
+      "chord",
+      "chord"
+     ],
+     "4/4": [
+      "rest",
+      "chord",
+      "rest",
+      "chord"
+     ],
+     "2/4": [
+      "rest",
+      "chord"
+     ],
+     "6/8": [
+      "rest",
+      "chord"
+     ]
+    }
+   },
+   "citations": [
+    {
+     "source": "schoenberg",
+     "chapter": 9,
+     "note": "the bass on the strong beat, the chord after it"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "rest",
+      "chord",
+      "rest",
+      "chord"
+     ]
+    }
+   ],
+   "version": 1
+  }
+ ]
+}

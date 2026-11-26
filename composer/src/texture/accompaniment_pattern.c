@@ -1,7 +1,9 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <theory/vocabulary/texture_rules.h>
 
 #include "texture/texture_internal.h"
@@ -14,21 +16,68 @@
 #define FIRST_SLACK 4
 #define VOICING_MAX 4096
 
-/* The order of the notes of a figure, as indexes into a voicing from low to high, by the eighth of the bar mod 4. */
-static const int ARPEGGIO[4] = {0, 1, 2, 1};
-static const int ALBERTI[4] = {0, 2, 1, 2};
+/* The K11 entries of today's four patterns (R-745, Schoenberg ch. IX), by pattern: the figure each writes is theirs. */
+static const char *const FIGURE_IDS[] = {NULL,
+                                         "schoenberg.pattern.block",
+                                         "schoenberg.pattern.arpeggiated",
+                                         "schoenberg.pattern.alberti",
+                                         "schoenberg.pattern.oom-pah"};
 
-const char *accomp_pattern_name(PlanAccompanimentPattern pattern) {
-    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
-    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_MOTIVE ? NAMES[pattern] : "?";
+/*
+ * The figure a pattern writes, from the accompaniment entry: the pattern ENTRY's own, or the entry of one of the four named above in
+ * the snapshot the stage holds. NULL for another pattern, for a snapshot without the entry and for an entry that is a rhythm cell.
+ */
+static const PatternAccompaniment *pattern_figure(const AccompContext *context, PlanAccompanimentPattern pattern) {
+    const PatternEntry *entry = NULL;
+    if (pattern == PLAN_ACCOMPANIMENT_ENTRY) {
+        entry = context->entry;
+    } else if (pattern >= PLAN_ACCOMPANIMENT_BLOCK && pattern <= PLAN_ACCOMPANIMENT_OOM_PAH && context->composer_chords &&
+               context->composer_chords->knowledge) {
+        entry = knowledge_snapshot_pattern(context->composer_chords->knowledge, FIGURE_IDS[pattern]);
+    }
+    return entry && !entry->is_rhythm ? &entry->accompaniment : NULL;
 }
 
-size_t accomp_pattern_voices(PlanAccompanimentPattern pattern) {
-    return pattern == PLAN_ACCOMPANIMENT_BLOCK || pattern == PLAN_ACCOMPANIMENT_OOM_PAH ? 3 : 1;
+/* The steps the figure has for the context's meter: those of its `by_meter` row for "<beats>/<unit>", else its default steps. */
+static const PatternStep *figure_steps(const AccompContext *context, const PatternAccompaniment *figure, size_t *count) {
+    char meter[16];
+    snprintf(meter, sizeof meter, "%d/%d", context->meter.beats_per_bar, context->meter.beat_unit);
+    for (size_t m = 0; m < figure->meter_count; m++) {
+        if (strcmp(figure->meters[m].meter, meter) == 0 && figure->meters[m].step_count > 0) {
+            *count = figure->meters[m].step_count;
+            return figure->meters[m].steps;
+        }
+    }
+    *count = figure->step_count;
+    return figure->steps;
+}
+
+const char *accomp_pattern_name(PlanAccompanimentPattern pattern) {
+    static const char *const NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive", "entry"};
+    return pattern >= PLAN_ACCOMPANIMENT_ANY && pattern <= PLAN_ACCOMPANIMENT_ENTRY ? NAMES[pattern] : "?";
+}
+
+/* Whether the pattern has a figure to write and may be written in the meter (a figure that is `compound` false is not written in 6/8). */
+static bool figure_fits(const AccompContext *context, PlanAccompanimentPattern pattern) {
+    const PatternAccompaniment *figure = pattern_figure(context, pattern);
+    return figure && (figure->compound || !context->compound);
+}
+
+/* How many voices a figure writes: three where it has a `chord` step (every voice of the chord), else one. */
+static size_t figure_voices(const PatternStep *steps, size_t count) {
+    for (size_t s = 0; s < count; s++) {
+        if (steps[s].kind == PATTERN_STEP_CHORD) {
+            return 3;
+        }
+    }
+    return 1;
 }
 
 bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern) {
-    if (pattern == PLAN_ACCOMPANIMENT_ALBERTI && context->compound) {
+    if (pattern == PLAN_ACCOMPANIMENT_ENTRY) {
+        return context->pattern == PLAN_ACCOMPANIMENT_ENTRY && figure_fits(context, pattern);
+    }
+    if (pattern >= PLAN_ACCOMPANIMENT_BLOCK && pattern <= PLAN_ACCOMPANIMENT_OOM_PAH && !figure_fits(context, pattern)) {
         return false;
     }
     if (pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
@@ -255,11 +304,48 @@ static void beat_window(const AccompContext *context, Rational start, Rational e
     }
 }
 
-/* Whether the beat is one an oom-pah rests on: the strong beats, the first of a bar and the third of four. */
-static bool rests_on(const AccompContext *context, Rational start) {
-    long long beats_in_bar = position_floor_units(context->bar, context->beat);
-    long long index = position_floor_units(position_remainder(position_add(start, context->phase), context->bar), context->beat);
-    return beats_in_bar % 2 == 0 ? index % 2 == 0 : index == 0;
+/*
+ * The index of the unit of a figure that starts at `at`, which the figure's steps are read by (modulo their count). On a beat grid the
+ * unit is a beat and counts from the bar. On an eighth grid it counts the eighths of the bar for a chord that starts on the meter's
+ * cells, and from the chord's start for one that starts off them.
+ */
+static size_t unit_index(const AccompContext *context, const PatternAccompaniment *figure, Rational chord_start, Rational at) {
+    Rational in_bar = position_remainder(position_add(at, context->phase), context->bar);
+    if (figure->beat_grid) {
+        return (size_t)position_floor_units(in_bar, context->beat);
+    }
+    bool on_cells = position_is_multiple(position_add(chord_start, context->phase), context->cell);
+    return (size_t)(on_cells ? position_floor_units(in_bar, ACCOMP_EIGHTH) : position_floor_units(position_sub(at, chord_start), ACCOMP_EIGHTH));
+}
+
+/* The end of the unit that starts at `at` inside the beat that ends at `beat_end`: the beat's end on a beat grid, an eighth on the other. */
+static Rational unit_end(const PatternAccompaniment *figure, Rational at, Rational beat_end) {
+    Rational after = position_add(at, ACCOMP_EIGHTH);
+    return figure->beat_grid || rational_cmp(after, beat_end) >= 0 ? beat_end : after;
+}
+
+/* Whether any unit of the beat [start, end) has a step that sounds a voicing (`chord` or `member`): a beat with none is not voiced. */
+static bool beat_sounds_voicing(const AccompContext *context, const PatternAccompaniment *figure, const PatternStep *steps, size_t count,
+                                Rational chord_start, Rational start, Rational end) {
+    for (Rational at = start; rational_cmp(at, end) < 0; at = unit_end(figure, at, end)) {
+        PatternStepKind kind = steps[unit_index(context, figure, chord_start, at) % count].kind;
+        if (kind == PATTERN_STEP_CHORD || kind == PATTERN_STEP_MEMBER) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The pitch of the bass note sounding at `at`, plus the octave a `bass_octave` step writes; false when no bass note sounds. */
+static bool bass_octave_at(const AccompContext *context, Rational at, int *pitch) {
+    for (size_t i = 0; i < context->bass_count; i++) {
+        const AccompLine *line = &context->bass[i];
+        if (rational_cmp(line->onset, at) <= 0 && rational_cmp(line->end, at) > 0) {
+            *pitch = line->pitch + 12;
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool add_note(AccompCandidate *candidate, size_t voice, Rational onset, Rational duration, int pitch) {
@@ -404,7 +490,6 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     memset(out, 0, sizeof(*out));
     out->magic = ACCOMP_PAYLOAD_MAGIC;
     out->pattern = pattern;
-    out->voices = accomp_pattern_voices(pattern);
     if (!accomp_pattern_allowed(context, pattern) || !position_is_positive(context->beat)) {
         return false;
     }
@@ -423,24 +508,33 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         }
     }
     if (pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
+        out->voices = 1;
         return build_motive(context, out);
     }
+    const PatternAccompaniment *figure = pattern_figure(context, pattern);
+    size_t step_count = 0;
+    const PatternStep *steps = figure ? figure_steps(context, figure, &step_count) : NULL;
+    if (!figure || step_count == 0) {
+        return false;
+    }
+    out->voices = figure_voices(steps, step_count);
 
-    /* The chord on each beat, in the position nearest the one before. */
+    /* The chord on each beat that sounds one, in the position nearest the one before. A beat of rests draws nothing. */
     const int *previous = NULL;
     size_t previous_size = 0;
     for (size_t b = 0; b < out->beat_count; b++) {
         Rational start = out->beat_start[b];
+        size_t chord = accomp_chord_at(context, start);
         int pcs[3];
         int low;
         int high;
-        if (pattern == PLAN_ACCOMPANIMENT_OOM_PAH && rests_on(context, start)) {
+        if (!beat_sounds_voicing(context, figure, steps, step_count, context->chord_start[chord], start, out->beat_end[b])) {
             continue;
         }
-        voiced_pcs(context, accomp_chord_at(context, start), pcs);
+        voiced_pcs(context, chord, pcs);
         beat_window(context, start, out->beat_end[b], &low, &high);
-        if (pattern == PLAN_ACCOMPANIMENT_BLOCK && context->chord_voiced[accomp_chord_at(context, start)] &&
-            voice_block(context, accomp_chord_at(context, start), start, out->beat_end[b], out->voicing[b], &out->voicing_size[b])) {
+        if (pattern == PLAN_ACCOMPANIMENT_BLOCK && context->chord_voiced[chord] &&
+            voice_block(context, chord, start, out->beat_end[b], out->voicing[b], &out->voicing_size[b])) {
             out->voiced[b] = true;
             previous = out->voicing[b];
             previous_size = out->voicing_size[b];
@@ -458,48 +552,42 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         previous_size = out->voicing_size[b];
     }
 
-    switch (pattern) {
-    case PLAN_ACCOMPANIMENT_BLOCK:
-    case PLAN_ACCOMPANIMENT_OOM_PAH:
-        for (size_t b = 0; b < out->beat_count; b++) {
-            for (size_t voice = 0; out->voiced[b] && voice < out->voicing_size[b]; voice++) {
-                /* Voice 1 is the top of the chord. */
-                if (!add_note(out, voice, out->beat_start[b], position_sub(out->beat_end[b], out->beat_start[b]),
-                              out->voicing[b][out->voicing_size[b] - 1 - voice])) {
+    /* The notes: each beat is cut into the figure's units, and a unit writes its step. */
+    for (size_t b = 0; b < out->beat_count; b++) {
+        Rational chord_start = context->chord_start[accomp_chord_at(context, out->beat_start[b])];
+        size_t size = out->voicing_size[b];
+        for (Rational at = out->beat_start[b]; rational_cmp(at, out->beat_end[b]) < 0; at = unit_end(figure, at, out->beat_end[b])) {
+            size_t unit = unit_index(context, figure, chord_start, at);
+            Rational length = position_sub(unit_end(figure, at, out->beat_end[b]), at);
+            const PatternStep *step = &steps[unit % step_count];
+            int bass = 0;
+            switch (step->kind) {
+            case PATTERN_STEP_REST:
+                break;
+            case PATTERN_STEP_CHORD:
+                for (size_t voice = 0; out->voiced[b] && voice < size; voice++) {
+                    /* Voice 1 is the top of the chord. */
+                    if (!add_note(out, voice, at, length, out->voicing[b][size - 1 - voice])) {
+                        return false;
+                    }
+                }
+                break;
+            case PATTERN_STEP_MEMBER: {
+                /* A voicing of two notes is the low one and the high one over again, one of a single note. A member past the top is the top. */
+                size_t index = size >= 3 ? ((size_t)step->member < size ? (size_t)step->member : size - 1) : (size == 2 ? unit % 2 : 0);
+                if (out->voiced[b] && !add_note(out, 0, at, length, out->voicing[b][index])) {
                     return false;
                 }
+                break;
             }
-        }
-        return true;
-    case PLAN_ACCOMPANIMENT_ARPEGGIATED:
-    case PLAN_ACCOMPANIMENT_ALBERTI: {
-        const int *figure = pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED ? ARPEGGIO : ALBERTI;
-        for (size_t b = 0; b < out->beat_count; b++) {
-            size_t chord = accomp_chord_at(context, out->beat_start[b]);
-            Rational chord_start = context->chord_start[chord];
-            /* A chord on the meter's cells goes by the eighths of the bar; one that starts off them, by its own. */
-            bool on_cells = position_is_multiple(position_add(chord_start, context->phase), context->cell);
-            /* A voicing of two notes is the low one and the high one over again, one of a single note. */
-            size_t size = out->voicing_size[b];
-            for (Rational at = out->beat_start[b]; out->voiced[b] && rational_cmp(at, out->beat_end[b]) < 0;
-                 at = position_add(at, ACCOMP_EIGHTH)) {
-                long long eighth = on_cells ? position_floor_units(
-                                                  position_remainder(position_add(at, context->phase), context->bar),
-                                                  ACCOMP_EIGHTH)
-                                            : position_floor_units(position_sub(at, chord_start), ACCOMP_EIGHTH);
-                int index = size == 3 ? figure[eighth % 4] : (size == 2 ? (int)(eighth % 2) : 0);
-                Rational after = position_add(at, ACCOMP_EIGHTH);
-                Rational length = rational_cmp(after, out->beat_end[b]) < 0 ? ACCOMP_EIGHTH : position_sub(out->beat_end[b], at);
-                if (!add_note(out, 0, at, length, out->voicing[b][index])) {
+            case PATTERN_STEP_BASS_OCTAVE:
+                /* The bass note sounding then, an octave up: the judge refuses it only where it leaves the range or meets the melody. */
+                if (bass_octave_at(context, at, &bass) && !add_note(out, 0, at, length, bass)) {
                     return false;
                 }
+                break;
             }
         }
-        return true;
     }
-    case PLAN_ACCOMPANIMENT_MOTIVE:
-    case PLAN_ACCOMPANIMENT_ANY:
-        break;
-    }
-    return false;
+    return true;
 }

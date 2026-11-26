@@ -1,0 +1,109 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "D",
+ "material": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 76,
+ "preferences": {
+  "melody": {
+   "waive": [
+    "forbidden-outline"
+   ]
+  }
+ },
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "iadd9",
+    "rhythm": "x:h x:e x:e x:q",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "E5"
+     }
+    ],
+    "events": [
+     {
+      "at": "0",
+      "type": "appoggiatura"
+     }
+    ]
+   },
+   {
+    "chords": "VIadd9",
+    "rhythm": "x:q. x:e x:q x:q"
+   },
+   {
+    "chords": "VIIadd9",
+    "job": "running"
+   },
+   {
+    "chords": "Vsus4 V@2",
+    "rhythm": "x:q. x:h~ x:e",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "D5"
+     },
+     {
+      "at": "3/2",
+      "pitch": "C#5"
+     }
+    ],
+    "events": [
+     {
+      "at": "3/2",
+      "type": "anticipation"
+     }
+    ]
+   },
+   {
+    "chords": "iadd9",
+    "rhythm": "x:h x:e x:e x:q"
+   },
+   {
+    "chords": "VImaj9",
+    "rhythm": "x:q. x:e x:h",
+    "anchors": [
+     {
+      "at": "2",
+      "pitch": "A5"
+     }
+    ]
+   },
+   {
+    "chords": "ivadd9 V7@2",
+    "rhythm": "x:q. x:e x:e x:e x:q"
+   },
+   {
+    "chords": "iadd9",
+    "rhythm": "x:q x:h.",
+    "anchors": [
+     {
+      "at": "0",
+      "pitch": "E5"
+     }
+    ],
+    "events": [
+     {
+      "at": "0",
+      "type": "appoggiatura"
+     }
+    ]
+   }
+  ],
+  "climax": {
+   "bar": 6,
+   "at": "0",
+   "pitch": "Bb5"
+  },
+  "accompaniment": {
+   "pattern": "michelle.pattern.arpeggio-eight"
+  }
+ }
+}

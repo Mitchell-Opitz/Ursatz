@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <plan/plan_state.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/locks.h>
 
 #include "texture/texture_internal.h"
@@ -228,6 +229,15 @@ bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *comp
         return false;
     }
     out->pattern = constraint.params.accompaniment.pattern;
+    if (out->pattern == PLAN_ACCOMPANIMENT_ENTRY) {
+        /* The entry is the snapshot's accompaniment pattern of the id; a snapshot without it, or a rhythm cell, leaves nothing to write. */
+        out->entry = composer_chords && composer_chords->knowledge
+                         ? knowledge_snapshot_pattern(composer_chords->knowledge, constraint.params.accompaniment.pattern_id)
+                         : NULL;
+        if (!out->entry || out->entry->is_rhythm) {
+            return false;
+        }
+    }
     out->texture = constraint.params.accompaniment.texture;
     out->low = constraint.params.accompaniment.low ? constraint.params.accompaniment.low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
     out->high =
@@ -382,7 +392,7 @@ static bool operator_applies(const Plan *plan, FillTarget target, void *context)
     read = malloc(sizeof(*read));
     if (read && accomp_read(plan, (LaneSpanId)target.id, composer_context_chords(context), read)) {
         /* A pattern the meter does not allow, or the texture does not, is one the operator cannot write. */
-        for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; !applies && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
+        for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; !applies && p <= PLAN_ACCOMPANIMENT_ENTRY; p++) {
             applies = accomp_pattern_allowed(read, p);
         }
     }
@@ -408,8 +418,9 @@ static bool same_notes(const AccompCandidate *a, const AccompCandidate *b) {
     return true;
 }
 
-static void candidate_label(const AccompCandidate *candidate, char *label, size_t size) {
-    int used = snprintf(label, size, "%s", accomp_pattern_name(candidate->pattern));
+static void candidate_label(const AccompContext *context, const AccompCandidate *candidate, char *label, size_t size) {
+    int used = snprintf(label, size, "%s", candidate->pattern == PLAN_ACCOMPANIMENT_ENTRY && context->entry ? context->entry->id
+                                                                                                          : accomp_pattern_name(candidate->pattern));
     for (size_t b = 0; used > 0 && (size_t)used + 1 < size && b < candidate->beat_count && b < 3; b++) {
         if (candidate->voiced[b]) {
             used += snprintf(label + used, size - (size_t)used, candidate->voicing_size[b] == 3 ? " %d-%d-%d" : " %d-%d",
@@ -426,7 +437,7 @@ static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng,
     AccompCandidate *scratch = malloc(sizeof(*scratch));
     AccompCandidate *kept[16];
     size_t kept_count = 0;
-    PlanAccompanimentPattern allowed[5];
+    PlanAccompanimentPattern allowed[6];
     size_t allowed_count = 0;
     bool ok = read && scratch;
     if (wanted > 16) {
@@ -438,7 +449,7 @@ static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng,
     if (ok && params != NULL) {
         accomp_set_voicing(read, params->knowledge, params->voicing);
     }
-    for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_MOTIVE; p++) {
+    for (PlanAccompanimentPattern p = PLAN_ACCOMPANIMENT_BLOCK; ok && p <= PLAN_ACCOMPANIMENT_ENTRY; p++) {
         if (accomp_pattern_allowed(read, p)) {
             allowed[allowed_count++] = p;
         }
@@ -468,7 +479,7 @@ static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng,
             break;
         }
         *payload = *scratch;
-        candidate_label(payload, label, sizeof(label));
+        candidate_label(read, payload, label, sizeof(label));
         ok = fill_candidates_add(out, label, payload, free);
         kept[kept_count++] = payload;
     }

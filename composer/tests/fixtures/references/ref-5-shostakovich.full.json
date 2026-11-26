@@ -1,0 +1,88 @@
+{
+ "schema": "ursatz-theme-request",
+ "schema_version": 2,
+ "into": "period",
+ "key": "C",
+ "material": "minor",
+ "meter": "4/4",
+ "bars": 8,
+ "cadence": "PAC",
+ "development": "balanced",
+ "tempo": 132,
+ "blueprint": {
+  "bars": [
+   {
+    "chords": "I",
+    "melody": "G4:e. C5:s Eb5:e. D5:s C5:q G5:q",
+    "bass": "C3:q G3:q G2:q G3:q",
+    "inner": [
+     "r:q C4:q r:q C4:q",
+     "r:q Eb4:q r:q Eb4:q"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "Ab5:e G5:e Db5:q C5:e B4:e C5:q",
+    "bass": "C3:q G3:q G2:q G3:q",
+    "inner": [
+     "r:q C4:q r:q C4:q",
+     "r:q Eb4:q r:q Eb4:q"
+    ]
+   },
+   {
+    "chords": "VI",
+    "melody": "Eb5:e. C5:s Ab4:e. Ab5:s G5:q F5:q",
+    "bass": "Ab2:q Ab3:q Eb2:q Ab3:q",
+    "inner": [
+     "r:q C4:q r:q C4:q",
+     "r:q Eb4:q r:q Eb4:q"
+    ]
+   },
+   {
+    "chords": "V7",
+    "melody": "Eb5:e D5:e B4:e Ab4:e G4:h",
+    "bass": "G2:q F3:q D2:q F3:q",
+    "inner": [
+     "r:q Ab3:q r:q Ab3:q",
+     "r:q B3:q r:q B3:q"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "G4:e. C5:s Eb5:e. D5:s C5:q G5:q",
+    "bass": "C3:q G3:q G2:q G3:q",
+    "inner": [
+     "r:q C4:q r:q C4:q",
+     "r:q Eb4:q r:q Eb4:q"
+    ]
+   },
+   {
+    "chords": "#vii",
+    "melody": "G5:e F#5:e C5:q B4:e A#4:e B4:q",
+    "bass": "B2:q F#3:q F#2:q F#3:q",
+    "inner": [
+     "r:q B3:q r:q B3:q",
+     "r:q D4:q r:q D4:q"
+    ]
+   },
+   {
+    "chords": "bII V7@2",
+    "melody": "Db5:e. F5:s Ab5:q G5:e F5:e D5:e B4:e",
+    "bass": "Db3:q F3:q G2:q F3:q",
+    "inner": [
+     "r:q Ab3:q r:q B3:q",
+     "r:q Db4:q r:q D4:q"
+    ]
+   },
+   {
+    "chords": "I",
+    "melody": "C5:q r:q G4:e C4:e r:q",
+    "bass": "C2:q r:q G2:e C2:e r:q",
+    "inner": [
+     "C3:q r:q r:e r:e r:q",
+     "r:q r:q r:e r:e r:q"
+    ]
+   }
+  ]
+ }
+}

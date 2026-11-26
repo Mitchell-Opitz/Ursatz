@@ -19,6 +19,18 @@ const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     return NULL;
 }
 
+bool harmony_tones_rhythm_only(const PlanMotiveTones *tones) {
+    if (!tones || tones->label_count == 0) {
+        return false;
+    }
+    for (size_t i = 0; i < tones->label_count; i++) {
+        if (strcmp(tones->labels[i], HARMONY_TONE_RHYTHM) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /*
  * The chords of developed motives (R-344): what the motives stage wrote on each idea's motive node (its motive_tones)
  * read as chords over the cells of a harmony target.
@@ -27,15 +39,26 @@ const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
 /*
  * One diatonic chord of the numeral, one cell long. A motive writes its harmony as degrees whatever the mode ("I" for
  * the tonic of a minor key too, R-195), so only the degree, the inversion and the seventh are read, not the case. False for
- * an altered chord or one aimed at another (applied), which the harmony operators write as they do.
+ * an altered chord or one aimed at another (applied), which the harmony operators write as they do, and for one whose text names a
+ * quality (a lower-case numeral or a mark, R-744) other than the key's own on that degree: it is borrowed, as an altered one is.
  */
 static bool tone_chord(const HarmonyKind *kind, const char *numeral, PhraseChord *out) {
     StandardTonalityNumeralText parsed;
     if (!standard_tonality_numeral_parse(numeral, &parsed) || parsed.alteration != 0 || parsed.has_target) {
         return false;
     }
-    return harmony_make_chord_in(kind, parsed.degree, parsed.inversion,
-                                 standard_tonality_numeral_quality_is_seventh(parsed.quality), false, 1, out);
+    if (!harmony_make_chord_in(kind, parsed.degree, parsed.inversion,
+                               standard_tonality_numeral_quality_is_seventh(parsed.quality), false, 1, out)) {
+        return false;
+    }
+    /* An upper-case triad or dominant seventh names no quality: the chord is the key's own. */
+    if (parsed.quality == STANDARD_TONALITY_NUMERAL_MAJOR || parsed.quality == STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH) {
+        return true;
+    }
+    char own_text[PLAN_ROMAN_NUMERAL_MAX];
+    StandardTonalityNumeralText own;
+    return harmony_roman_format_in(kind, &out->chord, own_text) && standard_tonality_numeral_parse(own_text, &own) &&
+           own.quality == parsed.quality;
 }
 
 /* The cell of the request that holds the time (counted from the plan's start), or false when it is outside. */
@@ -119,7 +142,8 @@ void harmony_motive_read(const Plan *plan, PhraseRequest *request) {
             continue;
         }
         const PlanMotiveTones *tones = node_tones(plan, ref.params.motive.motive);
-        if (!tones || tones->chord_count == 0) {
+        /* A rhythm-only motive's labels carry no chords of its own (R-746). */
+        if (!tones || tones->chord_count == 0 || harmony_tones_rhythm_only(tones)) {
             continue;
         }
         PlanSpan melody = plan_lane_span_span(plan, ids[i]);

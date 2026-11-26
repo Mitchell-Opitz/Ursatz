@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K11 pattern, rhythm: one bar of a rhythm cell, the jobs it serves",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "meter",
+        "rhythm",
+        "jobs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "meter": {
+          "enum": [
+            "2/4",
+            "3/4",
+            "4/4",
+            "6/8"
+          ]
+        },
+        "rhythm": {
+          "type": "string",
+          "pattern": "^[xr]:[whqest](\\.{0,2}|3)~?( [xr]:[whqest](\\.{0,2}|3)~?)*$"
+        },
+        "jobs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "running",
+              "long",
+              "syncopated",
+              "cadence"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

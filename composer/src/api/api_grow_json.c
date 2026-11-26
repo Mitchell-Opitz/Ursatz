@@ -809,7 +809,7 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
         ok = cJSON_AddItemToObject(root, "construction", given_construction_json(&setup->construction));
     }
     if (ok && setup->has_accompaniment) {
-        ok = cJSON_AddStringToObject(root, "accompaniment", api_accompaniment_name(setup->accompaniment.pattern)) != NULL;
+        ok = cJSON_AddStringToObject(root, "accompaniment", api_accompaniment_text(&setup->accompaniment)) != NULL;
         if (ok && setup->accompaniment.texture >= 0) {
             ok = cJSON_AddStringToObject(root, "texture", standard_texture_name((StandardTexture)setup->accompaniment.texture)) !=
                  NULL;

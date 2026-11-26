@@ -31,7 +31,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 | `construction` | API 1.18, `null` (default) or `{"ideas": {"<idea name>": bars, ...}, "extensions": [{"kind", "idea", "bars", "varied"}]}`: the bars of each idea of the theme (the idea names of `ideas`: `basic idea`, `repetition`, `contrasting idea`, ...) and up to 3 extensions (`kind` `repeat`, `stretch`, `addition` or `evaded`; `idea` is required for a repeat and a stretch; `bars` 0 to 4, 0 for the default; `varied` for a repeat). The ideas and the extensions must add up to `bars`. The construction is `given` ([grow-construction.md](grow-construction.md)). |
 | `cadence`, `first_cadence` | As the options of [grow](../../cli/docs/cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
 | `development` | `melody`, `balanced` (default) or `theme` (ch. XI, API 1.9): how far the presentation and the continuation stray from the motif. `melody` keeps them close (exact repetitions, a segment `a` and the next segment, liquidation of one step at most); `theme` develops it (sequences, segment `b`, fragment 2 always a sequence, liquidation of two steps or more). The weights are in [grow-development.md](grow-development.md). The brief of the result and the explanation name it. |
-| `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. The pattern `block` also takes `"voicing": "<id>"` ([modes](modes.md#voicings)). |
+| `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah" or the id of a K11 accompaniment entry, such as "michelle.pattern.arpeggio-wave"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. The pattern `block` also takes `"voicing": "<id>"` ([modes](modes.md#voicings)). |
 | `voicing` | `null`, `"satb"` (alto and tenor under the grown melody) or `"chorale"` (four parts, the melody written too). Not with an accompaniment. |
 | `style`, `style_weight`, `without` | An absolute path to a style model file, how strongly it is preferred, and the categories to read it without (the per-item switch for the motive categories, R-162). `style_weight` and `without` are read only with a `style`. A style gives the mode (`mode: "style"`), the tempo and the note density (R-163). |
 | `tempo` | `null`, or quarter notes per minute as a string or number. It wins over the style's. |
@@ -102,8 +102,19 @@ The motive of an idea must fit it as a slot motive does (exit 2 when it does not
 the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](../../cli/docs/cli-motive.md)) relative to the bar: Roman
 numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
 the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
-multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. The
-numerals are diatonic (no `b` or `#`).
+multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. A numeral
+with `b` or `#` is a borrowed chord (R-729).
+
+Chord text (R-744). A lower-case numeral names a minor triad (`ii`, `iv`, `v`), `o` a diminished one, `+` an augmented one. Where the
+key's own chord on that degree has that quality it is the plain chord; where it differs (`iv` in C major, `v` in C minor, `#vii` in C
+minor) it is read by the nearest mode on the tonic that holds it, as `bVI` is, and a borrowed tonic, an augmented triad and a seventh with
+an `#` or `b` are refused (`chords bar <n>: that chord is not the key's own and not in a mode on the key's tonic`). An applied chord
+(`V/V`, `V7/V`, `V65/x`, `viio/x`, `viio7/x`) is the plan's applied numeral; it is refused in a modal key (`chords bar <n>: applied
+chords are not given in a modal key`) and for a target the library does not tonicize (`'<text>' is not an applied chord the Composer
+writes`). `maj7` (`IVmaj7`, `IVM7`) is the seventh chord `7` of the key where the key's chord on the degree is a major seventh, else
+refused (`IVmaj7 is not this key's seventh chord; write it as IV7 or with its own quality`). The suffixes `sus2` and `sus4` go on a
+triad of the key like the color suffixes and sound the root, the second or fourth, and the fifth, with no third. Four chords a bar
+and off-cell onsets are not given yet.
 
 The chords are Given: the harmony stage fills only what they leave open, the bass and the melody are written over them, and
 none of them is changed. The harmony and bass operators write chords on the cells of the meter (one for a bar of 2/4 or 3/4,
@@ -116,6 +127,13 @@ that cannot arrive it (a last bar `V` under a perfect cadence) exits 2 before an
 seeding (a gap between two Given chords nothing connects) exit 2 with `the given chords in bar <n> do not allow the <cadence>`
 (path `/chords` in the API), `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
 list as read.
+
+## Blueprint
+
+`blueprint` (API 4.8, R-743) gives the theme bar by bar: each bar's chords, a melody or a rhythm or a rhythm job, anchors,
+events, a bass and inner voices, and the theme's climax and accompaniment; what a bar leaves out is composed. With it
+`motives` and `slots` are optional (only `slots.basic` is read), and `chords`, `accompaniment` and `ideas` are refused. The
+members, every rule and refusal, the jobs and how a blueprint becomes the plan are in [blueprints.md](blueprints.md).
 
 ## Refusals before composing
 
@@ -134,7 +152,7 @@ before it seeds; Compose gives the same message and path. One refusal is given, 
 | `/ideas/<name>` | the same for the motif of an idea |
 | `/slots/contrasting`, `/ideas/<name>` | given beside a part-length basic motif |
 | `/accompaniment`, `/voicing` | the accompaniment is not valid, or a voicing is given with one |
-| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant |
+| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant (a color such as `iadd9` is root position; a figure 6 or 64 inverts) |
 
 What fails only while seeding (a theme no seed can write) is not found by validation.
 

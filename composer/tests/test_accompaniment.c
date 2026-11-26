@@ -303,6 +303,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
         }
         break;
     case PLAN_ACCOMPANIMENT_MOTIVE:
+    case PLAN_ACCOMPANIMENT_ENTRY:
     case PLAN_ACCOMPANIMENT_ANY:
         break;
     }
@@ -607,6 +608,154 @@ static void test_motive_pattern_needs_its_motive(void) {
     }
 }
 
+/*
+ * The reference patterns (R-745, michelle.pattern.*): a K11 entry asked for by its id as the pattern ENTRY. Each is run over a steady
+ * piece (a bass note and a held melody note a bar), seeds 1 to 8, held to the rules of accompaniment_check.h, and to its figure.
+ */
+static PlanAccompaniment ask_entry(const char *id) {
+    PlanAccompaniment accompaniment = ask(PLAN_ACCOMPANIMENT_ENTRY, -1);
+    snprintf(accompaniment.pattern_id, sizeof(accompaniment.pattern_id), "%s", id);
+    return accompaniment;
+}
+
+/* A steady piece of the meter composed with the entry; the fill's outcome is asserted complete and the rules checked. */
+static Piece compose_entry(const char *id, int beats, int unit, int voices, unsigned long seed) {
+    Piece piece = built_piece(beats, unit, true);
+    open_voices(&piece, ask_entry(id), voices);
+    FillOutcome outcome = accompany(piece.plan, seed);
+    assert(outcome.status == FILL_STATUS_COMPLETE && outcome.steps == 1);
+    assert(check_accompaniment(piece.plan, piece.span, c_major(), PLAN_ACCOMPANIMENT_DEFAULT_LOW, PLAN_ACCOMPANIMENT_DEFAULT_HIGH) > 0);
+    fill_outcome_destroy(&outcome);
+    return piece;
+}
+
+/* The notes of voice 1, in order: each starts on an eighth of its bar, and `bar` and `eighth` say which. */
+static size_t top_notes(const Piece *piece, CheckNote *top) {
+    size_t count = voice_notes(piece, 1, top);
+    for (size_t n = 0; n < count; n++) {
+        assert(top[n].onset % (CHECK_TICKS / 8) == 0 && top[n].end - top[n].onset <= piece->beat);
+    }
+    return count;
+}
+
+static long eighth_of_bar(const Piece *piece, const CheckNote *note) {
+    return (note->onset % piece->bar) / (CHECK_TICKS / 8);
+}
+
+/* arpeggio-eight in 4/4: the eight eighths of a bar, the first a rest, then low, middle, high, middle, low, middle, low. */
+static void test_arpeggio_eight(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = compose_entry("michelle.pattern.arpeggio-eight", 4, 4, 3, seed);
+        CheckNote top[CHECK_MAX_NOTES];
+        CheckNote others[CHECK_MAX_NOTES];
+        size_t count = top_notes(&piece, top);
+        assert(count == 8 * 7);
+        for (size_t n = 0; n < count; n++) {
+            assert(eighth_of_bar(&piece, &top[n]) == (long)(n % 7) + 1 && top[n].end - top[n].onset == CHECK_TICKS / 8);
+        }
+        for (size_t bar = 0; bar < 8; bar++) {
+            const CheckNote *figure = &top[bar * 7];
+            assert(figure[0].pitch < figure[1].pitch && figure[1].pitch < figure[2].pitch && figure[3].pitch == figure[1].pitch);
+            assert(figure[4].pitch == figure[0].pitch && figure[5].pitch == figure[1].pitch && figure[6].pitch == figure[0].pitch);
+        }
+        assert(voice_notes(&piece, 2, others) == 0 && voice_notes(&piece, 3, others) == 0);
+        plan_destroy(piece.plan);
+    }
+}
+
+/* arpeggio-wave in 3/4: the six eighths of a bar, the first a rest, then low, middle, high, middle, low. */
+static void test_arpeggio_wave(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = compose_entry("michelle.pattern.arpeggio-wave", 3, 4, 1, seed);
+        CheckNote top[CHECK_MAX_NOTES];
+        size_t count = top_notes(&piece, top);
+        assert(count == 8 * 5);
+        for (size_t n = 0; n < count; n++) {
+            assert(eighth_of_bar(&piece, &top[n]) == (long)(n % 5) + 1 && top[n].end - top[n].onset == CHECK_TICKS / 8);
+        }
+        for (size_t bar = 0; bar < 8; bar++) {
+            const CheckNote *figure = &top[bar * 5];
+            assert(figure[0].pitch < figure[1].pitch && figure[1].pitch < figure[2].pitch && figure[3].pitch == figure[1].pitch);
+            assert(figure[4].pitch == figure[0].pitch);
+        }
+        plan_destroy(piece.plan);
+    }
+}
+
+/* compound-oom-pah in 6/8: the chord on the third and the sixth eighth of each bar and nowhere else, in all three voices. */
+static void test_compound_oom_pah(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = compose_entry("michelle.pattern.compound-oom-pah", 6, 8, 3, seed);
+        CheckNote voice[CHECK_MAX_NOTES];
+        size_t first = 0;
+        for (int v = 1; v <= 3; v++) {
+            size_t count = voice_notes(&piece, v, voice);
+            assert(count == 8 * 2 && (first == 0 || count == first));
+            first = count;
+            for (size_t n = 0; n < count; n++) {
+                assert(eighth_of_bar(&piece, &voice[n]) == (n % 2 == 0 ? 2 : 5) && voice[n].end - voice[n].onset == CHECK_TICKS / 8);
+            }
+        }
+        plan_destroy(piece.plan);
+    }
+}
+
+/* octave-pulse: the bass note sounding, an octave up, on every off-beat eighth of the bar. */
+static void test_octave_pulse(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = compose_entry("michelle.pattern.octave-pulse", 4, 4, 1, seed);
+        CheckNote top[CHECK_MAX_NOTES];
+        size_t count = top_notes(&piece, top);
+        assert(count == 8 * 4);
+        for (size_t n = 0; n < count; n++) {
+            assert(eighth_of_bar(&piece, &top[n]) == 2 * (long)(n % 4) + 1 && top[n].end - top[n].onset == CHECK_TICKS / 8);
+            assert(top[n].pitch == BASS[n / 4] + 12);
+        }
+        plan_destroy(piece.plan);
+    }
+}
+
+/* ostinato in 3/4: low, rest, low, low, middle, rest, over the six eighths; it is not written in 6/8, where the target stays open. */
+static void test_ostinato(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Piece piece = compose_entry("michelle.pattern.ostinato", 3, 4, 1, seed);
+        CheckNote top[CHECK_MAX_NOTES];
+        size_t count = top_notes(&piece, top);
+        assert(count == 8 * 4);
+        static const long AT[4] = {0, 2, 3, 4};
+        for (size_t n = 0; n < count; n++) {
+            assert(eighth_of_bar(&piece, &top[n]) == AT[n % 4]);
+        }
+        for (size_t bar = 0; bar < 8; bar++) {
+            const CheckNote *figure = &top[bar * 4];
+            assert(figure[0].pitch == figure[1].pitch && figure[1].pitch == figure[2].pitch && figure[3].pitch > figure[0].pitch);
+        }
+        plan_destroy(piece.plan);
+    }
+    Piece piece = wandering_6_8();
+    LaneSpanId target = open_voices(&piece, ask_entry("michelle.pattern.ostinato"), 1);
+    FillOutcome outcome = accompany(piece.plan, 1);
+    assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck_count == 1);
+    assert(outcome.stuck[0].target.id == target && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
+    assert(plan_lane_span_state(piece.plan, target) == PLAN_STATE_CONSTRAINED);
+    fill_outcome_destroy(&outcome);
+    plan_destroy(piece.plan);
+}
+
+/* An entry the snapshot does not hold, and one that is a rhythm cell, leave the target open. */
+static void test_entry_needs_its_pattern(void) {
+    static const char *const MISSING[] = {"michelle.pattern.nowhere", "michelle.pattern.run-eight"};
+    for (size_t i = 0; i < sizeof MISSING / sizeof MISSING[0]; i++) {
+        Piece piece = steady_4_4();
+        LaneSpanId target = open_voices(&piece, ask_entry(MISSING[i]), 1);
+        FillOutcome outcome = accompany(piece.plan, 1);
+        assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
+        assert(plan_lane_span_state(piece.plan, target) == PLAN_STATE_CONSTRAINED);
+        fill_outcome_destroy(&outcome);
+        plan_destroy(piece.plan);
+    }
+}
+
 /* The pitches of every inner voice that start at a bar, low to high. */
 static size_t block_at_bar(const Piece *piece, long bar_index, int out[ACCOMP_TEST_VOICES]) {
     size_t count = 0;
@@ -692,6 +841,12 @@ int main(void) {
     test_motive_pattern_needs_its_motive();
     test_constraint();
     test_patterns();
+    test_arpeggio_eight();
+    test_arpeggio_wave();
+    test_compound_oom_pah();
+    test_octave_pulse();
+    test_ostinato();
+    test_entry_needs_its_pattern();
     test_alberti_refused_in_compound_meter();
     test_unused_voices_are_written_empty();
     test_texture_chooses_patterns();

@@ -8,6 +8,7 @@
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/knowledge_snapshot.h"
+#include "theory/knowledge/pattern_entry.h"
 #include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/voicing_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
@@ -42,6 +43,8 @@ typedef struct {
     const char *against_target;
     VoicingEntry voicing;
     bool has_voicing;
+    PatternEntry pattern;
+    bool has_pattern;
     const char *fit_targets[CHORD_TYPE_MEMBER_MAX]; /* the ids a voicing fits, resolved once every entry is read */
     const char *cadence_material_target;            /* the id a modal cadence kind names, resolved likewise */
     ThemeType theme_type;
@@ -133,6 +136,14 @@ KnowledgeStatus knowledge_form_link(const KnowledgeSnapshot *snapshot, Slot *slo
  */
 KnowledgeStatus knowledge_voicing_read(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size);
 KnowledgeStatus knowledge_voicing_link(const KnowledgeSnapshot *snapshot, Slot *slot, char *message, size_t message_size);
+
+/*
+ * knowledge_pattern.c: reads the fields of a `pattern` entry of this subtype (rhythm or accompaniment) into slot->pattern (the caller
+ * sets its id and name first). A bad or missing field, or a rhythm that does not fill one bar of its meter, is refused with the field
+ * named. The snapshot accessors for the kind are defined there too.
+ */
+KnowledgeStatus knowledge_pattern_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                       size_t message_size);
 
 /*
  * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and

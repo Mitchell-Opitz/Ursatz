@@ -138,7 +138,8 @@ PlanResult plan_node_add_constraint(Plan *plan, NodeId id, const PlanConstraint 
         return PLAN_ERR_GIVEN_LOCKED;
     }
     /* a section's cadences are in its description */
-    if (!constraint_is_valid(plan, constraint) || (constraint->kind == PLAN_CONSTRAINT_CADENCE && node->kind == PLAN_NODE_SECTION)) {
+    if (!constraint_is_valid(plan, constraint) || (constraint->kind == PLAN_CONSTRAINT_CADENCE && node->kind == PLAN_NODE_SECTION) ||
+        constraint_melody_refusal(plan, PLAN_LANE_SPAN_NONE, constraint)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&node->constraints, constraint);
@@ -176,7 +177,7 @@ PlanResult plan_lane_span_add_constraint(Plan *plan, LaneSpanId id, const PlanCo
     if (entry->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint)) {
+    if (!constraint_is_valid(plan, constraint) || constraint_melody_refusal(plan, id, constraint)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&entry->constraints, constraint);

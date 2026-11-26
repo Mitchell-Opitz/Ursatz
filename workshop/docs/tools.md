@@ -27,6 +27,7 @@ An unknown name is `URSATZ_ERR_REQUEST`, path `/name`, `unknown tool '<name>'`.
 
 | Tool | Params | Reply |
 |---|---|---|
+| `blueprint-parse` | `text` | `{request}` |
 | `commands` | `format`, `name` | `{format, text}` |
 | `composer` | `entry`, `request`, `kind` | `{json, plan_json, musicxml}`; MIDI as the bytes |
 | `corpus-passages` | `dir`, `like` or `numerals`, `limit` | `{passages: [...]}` |
@@ -76,6 +77,10 @@ Analyzes every piece of the folder `dir` into `out` (default `<dir>/.ursatz-corp
 ### style-profile
 
 The style model of a corpus output folder: `dir` (required), `name` (required, not empty) and `out` (default `<dir>/style-model.json`). The reply: `path`, `name`, `pieces` (how many pieces it counted) and `stale` (the analyzed pieces whose document another version wrote).
+
+### blueprint-parse
+
+A blueprint written as Ursatz Text (`ursatz-text 1 blueprint`, R-747) as the theme request JSON `ursatz listen --blueprint` sends: `text` is required, the reply `{"request": <the theme request>}`. Only the grammar is read: whether the request is a theme is the Composer's to say. A mistake is `URSATZ_ERR_REQUEST`, path `/params/text`, `line <n>: <why>` ([the text form](../../composer/docs/blueprints.md#the-text-form)). The tool `text` reads the same text, and a theme request JSON with a `blueprint` member, as kind `blueprint`: `view` `json` answers the request, `full` its text, any other view is refused at `/params/view`.
 
 ### text
 

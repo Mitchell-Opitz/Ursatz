@@ -63,8 +63,11 @@ static void motive_path(char *out, size_t size, size_t index) {
 }
 
 /* The slots: each names a motive of the request (a motive may be in several slots), "basic" required. */
-static UrsatzStatus read_slots(ThemeRequest *theme, const cJSON *request, UrsatzError *error) {
+static UrsatzStatus read_slots(ThemeRequest *theme, const cJSON *request, bool blueprint, UrsatzError *error) {
     const cJSON *slots = cJSON_GetObjectItemCaseSensitive(request, "slots");
+    if (blueprint && (!slots || cJSON_IsNull(slots))) {
+        return URSATZ_OK; /* a blueprint draws its basic motive when it has no slot (R-743) */
+    }
     if (!cJSON_IsObject(slots)) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/slots", "the request needs \"slots\": {\"basic\": <motive id>, ...}");
     }
@@ -82,8 +85,11 @@ static UrsatzStatus read_slots(ThemeRequest *theme, const cJSON *request, Ursatz
         const cJSON *named = cJSON_GetObjectItemCaseSensitive(slots, grow_slot_name((GrowSlot)s));
         char path[64];
         snprintf(path, sizeof path, "/slots/%s", grow_slot_name((GrowSlot)s));
+        if (blueprint && s != GROW_SLOT_BASIC && named && !cJSON_IsNull(named)) {
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "a blueprint gives its idea motives per bar: only slots.basic is read beside it");
+        }
         if (!named || cJSON_IsNull(named)) {
-            if (s == GROW_SLOT_BASIC) {
+            if (s == GROW_SLOT_BASIC && !blueprint) {
                 return api_fail(error, URSATZ_ERR_REQUEST, "/slots/basic", "the request needs a basic slot");
             }
             continue;
@@ -165,8 +171,14 @@ static UrsatzStatus read_ideas(ThemeRequest *theme, const cJSON *request, Ursatz
 }
 
 /* Reads the motives, the slots and the ideas, and refuses saved forms and motive files, before anything is grown. */
-static UrsatzStatus read_motives(ThemeRequest *theme, const cJSON *request, UrsatzError *error) {
+static UrsatzStatus read_motives(ThemeRequest *theme, const cJSON *request, bool blueprint, UrsatzError *error) {
     const cJSON *motives = cJSON_GetObjectItemCaseSensitive(request, "motives");
+    if (blueprint && (!motives || cJSON_IsNull(motives))) {
+        /* A blueprint needs no motive (R-743); slots name motives, so they need some. */
+        const cJSON *slots = cJSON_GetObjectItemCaseSensitive(request, "slots");
+        return slots && !cJSON_IsNull(slots) ? api_fail(error, URSATZ_ERR_REQUEST, "/slots", "slots name motives: give \"motives\" too")
+                                             : URSATZ_OK;
+    }
     if (!cJSON_IsArray(motives) || cJSON_GetArraySize(motives) < 1 || cJSON_GetArraySize(motives) > THEME_MOTIVES) {
         return api_fail(error, URSATZ_ERR_REQUEST, "/motives", "the request needs \"motives\": 1 to %d motives",
                         THEME_MOTIVES);
@@ -202,7 +214,7 @@ static UrsatzStatus read_motives(ThemeRequest *theme, const cJSON *request, Ursa
         theme->motive_count++;
         index++;
     }
-    UrsatzStatus status = read_slots(theme, request, error);
+    UrsatzStatus status = read_slots(theme, request, blueprint, error);
     if (status == URSATZ_OK) {
         status = read_ideas(theme, request, error);
     }
@@ -259,6 +271,37 @@ static UrsatzStatus refuse_idea_beside_part(const GrowMaterial *material, const 
             snprintf(path, sizeof path, "/ideas/%.80s", grow_idea_name((GrowIdea)idea));
             return api_fail(error, URSATZ_ERR_REQUEST, path,
                             "the basic motif fills the whole %s; leave the contrasting idea out", part);
+        }
+    }
+    return URSATZ_OK;
+}
+
+/*
+ * The chords of a blueprint's bars (R-744), each bar's text read as an entry of the request's "chords" is, into the material's
+ * chords; a refusal names the bar's "chords".
+ */
+static UrsatzStatus read_blueprint_chords(const ComposerChords *chords, const GrowSetup *setup, GrowMaterial *material,
+                                          UrsatzError *error) {
+    for (size_t bar = 0; bar < setup->blueprint->bar_count; bar++) {
+        const char *text = setup->blueprint->bars[bar].chords;
+        if (!text[0]) {
+            continue;
+        }
+        cJSON *list = cJSON_CreateArray();
+        cJSON *entry = cJSON_CreateObject();
+        if (!list || !entry || !cJSON_AddNumberToObject(entry, "bar", (double)bar) || !cJSON_AddStringToObject(entry, "text", text) ||
+            !cJSON_AddItemToArray(list, entry)) {
+            cJSON_Delete(list);
+            cJSON_Delete(entry);
+            return api_fail_alloc(error);
+        }
+        UrsatzStatus status = request_read_chords(chords, list, "/blueprint/bars", "the theme", 0, &setup->meter, &setup->key,
+                                                  (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS,
+                                                  &material->chord_count, error);
+        cJSON_Delete(list);
+        if (status != URSATZ_OK) {
+            snprintf(error->path, sizeof error->path, "/blueprint/bars/%zu/chords", bar);
+            return status;
         }
     }
     return URSATZ_OK;
@@ -322,8 +365,11 @@ static UrsatzStatus load_material(GrowMaterial *material, const ThemeRequest *th
     }
     ComposerChords tones;
     const ComposerChords *chords = composer_chords_init(&tones, setup->knowledge, NULL, 0) ? &tones : NULL;
+    if (setup->blueprint) {
+        return read_blueprint_chords(chords, setup, material, error);
+    }
     return request_read_chords(chords, cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
-                               (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS, &material->chord_count,
+                               (long)setup->bars, material->chords, material->chord_numerals, GROW_REQUEST_CHORDS, &material->chord_count,
                                error);
 }
 
@@ -392,31 +438,41 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
         snprintf(brief->bars_text, sizeof(brief->bars_text), "%g", bars->valuedouble);
         text->bars = brief->bars_text;
     }
-    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(request, "accompaniment");
+    /* A blueprint gives the accompaniment in its own member (R-743), read as the request's is, without a motive. */
+    const cJSON *blueprint = cJSON_GetObjectItemCaseSensitive(request, "blueprint");
+    bool in_blueprint = cJSON_IsObject(blueprint);
+    const char *base = in_blueprint ? "/blueprint/accompaniment" : "/accompaniment";
+    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(in_blueprint ? blueprint : request, "accompaniment");
     if (accompaniment && !cJSON_IsNull(accompaniment)) {
         const char *pattern;
+        char path[64];
         if (!cJSON_IsObject(accompaniment)) {
-            return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment", "\"accompaniment\" must be null or {\"pattern\": ...}");
+            return api_fail(error, URSATZ_ERR_REQUEST, base, "\"accompaniment\" must be null or {\"pattern\": ...}");
         }
-        if (!api_request_string(accompaniment, "/accompaniment", "pattern", true, &pattern, error)) {
+        if (!api_request_string(accompaniment, base, "pattern", true, &pattern, error)) {
             return URSATZ_ERR_REQUEST;
         }
         if (strcmp(pattern, "motive") == 0) {
+            snprintf(path, sizeof path, "%s/motive", base);
+            if (in_blueprint) {
+                return api_fail(error, URSATZ_ERR_REQUEST, path,
+                                "a blueprint's accompaniment is a pattern (block, arpeggiated, alberti, oom-pah or a K11 id), not a motive");
+            }
             theme->accompaniment_motive = cJSON_GetObjectItemCaseSensitive(accompaniment, "motive");
             if (!cJSON_IsObject(theme->accompaniment_motive)) {
-                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/motive",
-                                "an accompaniment of pattern \"motive\" needs a \"motive\" member");
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "an accompaniment of pattern \"motive\" needs a \"motive\" member");
             }
             text->accompaniment_motive = true;
         }
         text->accompaniment = pattern;
         const cJSON *voicing_item = cJSON_GetObjectItemCaseSensitive(accompaniment, "voicing");
         if (voicing_item && !cJSON_IsNull(voicing_item)) {
+            snprintf(path, sizeof path, "%s/voicing", base);
             if (!cJSON_IsString(voicing_item)) {
-                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "\"voicing\" must be the id of a voicing");
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "\"voicing\" must be the id of a voicing");
             }
             if (strcmp(pattern, "block") != 0) {
-                return api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "a voicing needs the accompaniment pattern \"block\", not '%s'",
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "a voicing needs the accompaniment pattern \"block\", not '%s'",
                                 pattern);
             }
             brief->voicing_id = voicing_item->valuestring;
@@ -553,7 +609,55 @@ typedef struct {
     ComposerStyle *style;
     GrowRun run;
     bool ran;
+    GrowBlueprint *blueprint; /* the request's blueprint, NULL for none */
 } ThemeState;
+
+/* A blueprint gives its chords, its accompaniment and its idea motives per bar: the request's own members are refused beside it. */
+static UrsatzStatus refuse_beside_blueprint(const cJSON *request, UrsatzError *error) {
+    static const struct {
+        const char *member;
+        const char *what;
+    } BESIDE[] = {{"chords", "chords"}, {"accompaniment", "accompaniment"}, {"ideas", "idea motives"}};
+    for (size_t i = 0; i < sizeof(BESIDE) / sizeof(BESIDE[0]); i++) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, BESIDE[i].member);
+        if (item && !cJSON_IsNull(item)) {
+            char path[32];
+            snprintf(path, sizeof path, "/%s", BESIDE[i].member);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "a blueprint gives its %s per bar: leave \"%s\" out", BESIDE[i].what,
+                            BESIDE[i].member);
+        }
+    }
+    return URSATZ_OK;
+}
+
+/* Reads the blueprint once the meter, the bars and the pairing are known, and checks it against the ideas of the form. */
+static UrsatzStatus read_blueprint(ThemeState *state, const cJSON *blueprint, UrsatzError *error) {
+    GrowSetup *setup = &state->setup;
+    state->blueprint = calloc(1, sizeof(*state->blueprint));
+    if (!state->blueprint) {
+        return api_fail_alloc(error);
+    }
+    UrsatzStatus status = grow_blueprint_read(blueprint, setup->knowledge, &setup->meter, setup->bars, state->blueprint, error);
+    if (status != URSATZ_OK) {
+        return status;
+    }
+    SectionConstruction chosen;
+    const SectionConstruction *construction = setup->has_construction ? &setup->construction : NULL;
+    if (!construction && setup->bars != 4 && setup->bars != 8) {
+        /* The construction the length makes (R-469): the basic motif is not known before the plan is built. */
+        if (!grow_construction_choose(NULL, &setup->meter, setup->bars, &setup->pairing, setup->cadence, &chosen)) {
+            return api_fail(error, URSATZ_ERR_REQUEST, "/bars", "no construction makes a %zu-bar theme of this pairing", setup->bars);
+        }
+        setup->has_construction = true;
+        setup->construction = chosen;
+        construction = &setup->construction;
+    }
+    setup->blueprint = state->blueprint;
+    const cJSON *slots = cJSON_GetObjectItemCaseSensitive(state->request, "slots");
+    const cJSON *basic = cJSON_IsObject(slots) ? cJSON_GetObjectItemCaseSensitive(slots, "basic") : NULL;
+    return grow_blueprint_check_ideas(state->blueprint, &setup->pairing, &setup->meter, setup->bars, construction,
+                                      basic && !cJSON_IsNull(basic), error);
+}
 
 static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOutputOptions *outputs, UrsatzError *error) {
     const cJSON *request = state->request;
@@ -569,15 +673,20 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         return api_fail(error, URSATZ_ERR_REQUEST, "/schema_version",
                         "the request must have \"schema_version\": 2 (see docs/theme-request.md)");
     }
-    UrsatzStatus status = read_motives(&state->theme, request, error);
+    const cJSON *blueprint = cJSON_GetObjectItemCaseSensitive(request, "blueprint");
+    blueprint = blueprint && !cJSON_IsNull(blueprint) ? blueprint : NULL;
+    UrsatzStatus status = blueprint ? refuse_beside_blueprint(request, error) : URSATZ_OK;
+    if (status == URSATZ_OK) {
+        status = read_motives(&state->theme, request, blueprint != NULL, error);
+    }
     if (status == URSATZ_OK) {
         status = read_brief(&state->theme, request, &state->brief, error);
     }
     if (status == URSATZ_OK && state->brief.voicing_id != NULL) {
         state->setup.block_voicing = knowledge_snapshot_voicing(state->setup.knowledge, state->brief.voicing_id);
         if (state->setup.block_voicing == NULL) {
-            status = api_fail(error, URSATZ_ERR_REQUEST, "/accompaniment/voicing", "'%s' is not a voicing; see the vocabulary's voicings",
-                              state->brief.voicing_id);
+            status = api_fail(error, URSATZ_ERR_REQUEST, blueprint ? "/blueprint/accompaniment/voicing" : "/accompaniment/voicing",
+                              "'%s' is not a voicing; see the vocabulary's voicings", state->brief.voicing_id);
         }
     }
     if (status == URSATZ_OK) {
@@ -628,8 +737,17 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
+    if (status != URSATZ_OK && blueprint && strncmp(error->path, "/accompaniment", 14) == 0) {
+        /* The accompaniment was the blueprint's. */
+        char path[sizeof error->path];
+        snprintf(path, sizeof path, "/blueprint%.100s", error->path);
+        snprintf(error->path, sizeof error->path, "%s", path);
+    }
     if (status == URSATZ_OK) {
         status = api_grow_read_construction(request, setup, error);
+    }
+    if (status == URSATZ_OK && blueprint) {
+        status = read_blueprint(state, blueprint, error);
     }
     if (status != URSATZ_OK) {
         return status;
@@ -737,6 +855,7 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
         api_grow_run_destroy(&state.run);
     }
     free(state.material);
+    free(state.blueprint);
     composer_style_destroy(state.style);
     cJSON_Delete(state.request);
     if (status != URSATZ_OK) {
@@ -773,6 +892,7 @@ UrsatzStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const Common
         }
     }
     free(state.material);
+    free(state.blueprint);
     composer_style_destroy(state.style);
     cJSON_Delete(state.request);
     return status;

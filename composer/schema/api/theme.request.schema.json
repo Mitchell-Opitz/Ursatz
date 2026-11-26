@@ -2,16 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/theme.request.schema.json",
   "title": "composer_api_theme request",
-  "description": "The theme request v2 of docs/theme-request.md with its motives inline, and the options of the theme command as members.",
+  "description": "The theme request v2 of docs/theme-request.md with its motives inline, and the options of the theme command as members. With a blueprint (blueprints.md) the motives and the slots are optional, and chords, accompaniment and ideas are refused.",
   "type": "object",
   "required": [
     "schema",
     "schema_version",
     "into",
     "key",
-    "meter",
-    "motives",
-    "slots"
+    "meter"
   ],
   "properties": {
     "api_version": {
@@ -241,13 +239,23 @@
       ],
       "properties": {
         "pattern": {
-          "enum": [
-            "any",
-            "block",
-            "arpeggiated",
-            "alberti",
-            "oom-pah",
-            "motive"
+          "anyOf": [
+            {
+              "enum": [
+                "any",
+                "block",
+                "arpeggiated",
+                "alberti",
+                "oom-pah",
+                "motive"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9.-]*$",
+              "maxLength": 63,
+              "description": "The id of a K11 accompaniment entry, for example michelle.pattern.arpeggio-wave."
+            }
           ]
         },
         "motive": {
@@ -351,6 +359,90 @@
     "preferences": {
       "$ref": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/preferences.schema.json",
       "description": "The settings; the melody group and the development group apply, the motif group shapes the rhythms and new material a theme draws, not its motives (they come from the request)."
+    },
+    "blueprint": {
+      "type": "object",
+      "description": "The theme as a blueprint (R-743, blueprints.md): a bar object for each bar of the theme, the climax and the accompaniment; what a bar leaves out is composed.",
+      "required": [
+        "bars"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bars": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "description": "Exactly the theme's bars, the first bar first.",
+          "items": {
+            "$ref": "#/$defs/blueprintBar"
+          }
+        },
+        "climax": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "bar",
+            "at",
+            "pitch"
+          ],
+          "additionalProperties": false,
+          "description": "The theme's one highest note: its bar (from 0), its onset in beats of the beat unit and its pitch.",
+          "properties": {
+            "bar": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 15
+            },
+            "at": {
+              "$ref": "#/$defs/blueprintAt"
+            },
+            "pitch": {
+              "type": "string"
+            }
+          }
+        },
+        "accompaniment": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "pattern"
+          ],
+          "additionalProperties": false,
+          "description": "The accompaniment, as the request's accompaniment member reads it (no motive pattern).",
+          "properties": {
+            "pattern": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "any",
+                    "block",
+                    "arpeggiated",
+                    "alberti",
+                    "oom-pah"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9.-]*$",
+                  "maxLength": 63,
+                  "description": "The id of a K11 accompaniment entry."
+                }
+              ]
+            },
+            "voicing": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "The id of a K3 voicing, with the pattern block."
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -433,6 +525,97 @@
         }
       },
       "description": "A motive carries its content: a member \"path\" or \"file\" is refused (path /motives/<n>/path)."
+    },
+    "blueprintAt": {
+      "type": [
+        "string",
+        "integer"
+      ],
+      "pattern": "^[0-9]+(/[1-9][0-9]*)?$",
+      "minimum": 0,
+      "description": "An onset from the bar start in beats of the beat unit, as a chord onset writes it: \"0\", \"2\", \"3/2\"."
+    },
+    "blueprintBar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chords": {
+          "type": "string",
+          "description": "The chord text of the bar (R-744): \"I\", \"II6 V7@2\"."
+        },
+        "melody": {
+          "type": "string",
+          "description": "A note list of one bar (note-list syntax: \"D5:q. C5:e r:e\"), rests allowed, ending on a rest if it likes. Given melody; refused with rhythm, job, anchors and events."
+        },
+        "rhythm": {
+          "type": "string",
+          "description": "A rhythm text of one bar (\"x:q. x:e x:h\", rests r, ties ~); refused with melody and job."
+        },
+        "job": {
+          "type": "string",
+          "description": "A K11 rhythm job (motif, variant, contrast, running, long, syncopated, liquidation, cadence) or the id of a K11 rhythm entry; refused with melody and rhythm."
+        },
+        "anchors": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "pitch"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/blueprintAt"
+              },
+              "pitch": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "$ref": "#/$defs/blueprintAt"
+              },
+              "type": {
+                "enum": [
+                  "appoggiatura",
+                  "suspension",
+                  "passing",
+                  "neighbor",
+                  "escape",
+                  "anticipation",
+                  "retardation"
+                ]
+              }
+            }
+          }
+        },
+        "bass": {
+          "type": "string",
+          "description": "A note list of one bar (note-list syntax: \"D5:q. C5:e r:e\"), rests allowed, ending on a rest if it likes. Given in every bar or none; a rest only where the melody is given."
+        },
+        "inner": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string"
+          },
+          "description": "The inner voices, one note list each (voice 1 first), as many in every bar."
+        }
+      }
     }
   },
   "anyOf": [
@@ -451,6 +634,19 @@
     "required": [
       "material",
       "mode"
+    ]
+  },
+  "if": {
+    "not": {
+      "required": [
+        "blueprint"
+      ]
+    }
+  },
+  "then": {
+    "required": [
+      "motives",
+      "slots"
     ]
   }
 }

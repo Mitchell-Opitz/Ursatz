@@ -6,6 +6,7 @@
 #include <cJSON.h>
 #include "plan/plan_constraint.h"
 #include "plan/plan.h"
+#include "plan/plan_lanes.h"
 
 #include "plan/plan_json_internal.h"
 
@@ -27,4 +28,12 @@ typedef struct {
 const ConstraintKindRow *constraint_kind_row(PlanConstraintKind kind);
 /* The row of the kind a plan file names, or NULL. */
 const ConstraintKindRow *constraint_kind_named(const char *name);
+
+/*
+ * Why a melody constraint (anchor, event, climax: R-746) may not go on a node (span_id PLAN_LANE_SPAN_NONE) or on the lane
+ * span span_id, as text for an error message ("anchor: on a melody span only"), or NULL when it may, and for every other
+ * kind. The checks that need the plan: a melody lane span, an offset below the span's length, one anchor and one event to an
+ * offset on a span, one climax in the plan.
+ */
+const char *constraint_melody_refusal(const Plan *plan, LaneSpanId span_id, const PlanConstraint *constraint);
 #endif

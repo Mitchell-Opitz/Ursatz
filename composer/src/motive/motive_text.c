@@ -264,6 +264,66 @@ bool motive_color_type(const KnowledgeSnapshot *knowledge, const char *suffix, c
     return standard_tonality_numeral_color_type(knowledge, &numeral, type);
 }
 
+typedef enum { NUMERAL_READ_OK = 0, NUMERAL_READ_NOT_NUMERAL, NUMERAL_READ_NOT_FIGURE } NumeralRead;
+
+/* Today's forms (R-744): an upper-case numeral with b or # before it, then a figure or a color suffix. The chord's degree, alteration,
+   inversion, seventh and color are set; *bad_figure is the text after the numeral when it is no figure and no color. */
+static NumeralRead read_upper(const KnowledgeSnapshot *knowledge, const char *token, MotiveSketchChord *chord, const char **bad_figure) {
+    const char *symbol = token;
+    if (*symbol == 'b' || *symbol == '#') {
+        chord->alteration = *symbol == 'b' ? -1 : 1;
+        symbol++;
+    }
+    bool numeral = false;
+    /* The longest numeral first: VII before VI before V. */
+    for (int degree = 7; degree >= 1 && !numeral; degree--) {
+        const char *name = standard_tonality_roman_numeral_degree(degree, true);
+        size_t size = strlen(name);
+        if (strncmp(symbol, name, size) == 0) {
+            chord->degree = degree;
+            symbol += size;
+            numeral = true;
+        }
+    }
+    if (!numeral) {
+        return NUMERAL_READ_NOT_NUMERAL;
+    }
+    if (!read_figure(symbol, &chord->inversion, &chord->seventh) && !motive_color_type(knowledge, symbol, &chord->color)) {
+        *bad_figure = symbol;
+        return NUMERAL_READ_NOT_FIGURE;
+    }
+    return NUMERAL_READ_OK;
+}
+
+/* A numeral today's matcher does not read, read with the library grammar (R-744): a lower-case numeral, a mark (o, +, the o-slash, M, maj7)
+   or an applied chord (V7/V). Fills the chord from scratch; false (chord untouched) for text the grammar does not read, a color suffix the
+   snapshot has no type for, or a color on an applied chord. */
+static bool read_numeral(const KnowledgeSnapshot *knowledge, const char *token, MotiveSketchChord *chord) {
+    StandardTonalityNumeralText numeral;
+    MotiveSketchChord read;
+    if (!standard_tonality_numeral_parse(token, &numeral)) {
+        return false;
+    }
+    memset(&read, 0, sizeof(read));
+    read.onset = chord->onset;
+    read.degree = numeral.degree;
+    read.alteration = numeral.alteration;
+    read.inversion = numeral.inversion;
+    read.seventh = standard_tonality_numeral_quality_is_seventh(numeral.quality);
+    /* An upper-case triad or dominant seventh takes the key's quality; every other quality was named by the text. */
+    read.quality_given = numeral.quality != STANDARD_TONALITY_NUMERAL_MAJOR && numeral.quality != STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH;
+    read.quality = numeral.quality;
+    read.has_target = numeral.has_target;
+    read.target_degree = numeral.has_target ? numeral.target_degree : 0;
+    read.target_alteration = numeral.has_target ? numeral.target_alteration : 0;
+    read.target_minor = numeral.has_target && numeral.target_minor;
+    if (numeral.color != NULL && (numeral.has_target || !standard_tonality_numeral_color_type(knowledge, &numeral, &read.color))) {
+        return false;
+    }
+    *chord = read;
+    return true;
+}
+
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveSketchChord *out, size_t *count,
                                   MotiveError *error) {
     return motive_harmony_parse_in(NULL, text, meter, out, count, error);
@@ -318,37 +378,24 @@ MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const c
             motive_set_error(error, location, "'%s' needs an onset in beats after @, as %s@2", token, token);
             return MOTIVE_ERR_SYNTAX;
         }
-        const char *symbol = token;
-        if (*symbol == 'b' || *symbol == '#') {
-            chord.alteration = *symbol == 'b' ? -1 : 1;
-            symbol++;
+        const char *bad_figure = NULL;
+        NumeralRead read = read_upper(knowledge, token, &chord, &bad_figure);
+        if (read != NUMERAL_READ_OK && read_numeral(knowledge, token, &chord)) {
+            read = NUMERAL_READ_OK;
         }
-        bool numeral = false;
-        /* The longest numeral first: VII before VI before V. */
-        for (int degree = 7; degree >= 1 && !numeral; degree--) {
-            const char *name = standard_tonality_roman_numeral_degree(degree, true);
-            size_t size = strlen(name);
-            if (strncmp(symbol, name, size) == 0) {
-                chord.degree = degree;
-                symbol += size;
-                numeral = true;
-            }
-        }
-        if (!numeral) {
+        if (read == NUMERAL_READ_NOT_NUMERAL) {
             motive_set_error(error, location,
                              "'%s' is not a chord; start with an upper case numeral I to VII (b or # before it for "
                              "an altered one)",
                              token);
             return MOTIVE_ERR_SYNTAX;
         }
-        if (!read_figure(symbol, &chord.inversion, &chord.seventh)) {
-            if (!motive_color_type(knowledge, symbol, &chord.color)) {
-                motive_set_error(error, location,
-                                 "'%s' is not a figure; use 6, 64, 7, 65, 43 or 42 after the numeral (or add9, add6, 69, 9, maj9, q3 or q4 for a "
-                                 "color chord)",
-                                 symbol);
-                return MOTIVE_ERR_SYNTAX;
-            }
+        if (read == NUMERAL_READ_NOT_FIGURE) {
+            motive_set_error(error, location,
+                             "'%s' is not a figure; use 6, 64, 7, 65, 43 or 42 after the numeral (or add9, add6, 69, 9, maj9, sus2, sus4, q3 or q4 for a "
+                             "color chord)",
+                             bad_figure);
+            return MOTIVE_ERR_SYNTAX;
         }
         if (found > 0 && rational_cmp(chord.onset, out[found - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
@@ -369,6 +416,15 @@ bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size
     numeral.alteration = chord->alteration;
     numeral.degree = chord->degree;
     numeral.quality = chord->seventh ? STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH : STANDARD_TONALITY_NUMERAL_MAJOR;
+    if (chord->quality_given) {
+        numeral.quality = chord->quality;
+    }
+    if (chord->has_target) {
+        numeral.has_target = true;
+        numeral.target_degree = chord->target_degree;
+        numeral.target_alteration = chord->target_alteration;
+        numeral.target_minor = chord->target_minor;
+    }
     numeral.inversion = chord->inversion;
     if (chord->color != NULL) {
         numeral.color = standard_tonality_color_suffix(chord->color);

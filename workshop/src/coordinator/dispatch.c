@@ -449,6 +449,7 @@ typedef struct {
 
 static const ToolEntry WORKSHOP_TOOLS[] = {
     {"analyze", workshop_t_analyze},
+    {"blueprint-parse", workshop_t_blueprint_parse},
     {"commands", workshop_t_commands},
     {"commands-parse", workshop_t_commands_parse},
     {"composer", workshop_t_composer},

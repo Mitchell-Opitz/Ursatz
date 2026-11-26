@@ -36,7 +36,10 @@ typedef enum {
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
     PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
     PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
-    PLAN_CONSTRAINT_CONTRAST        /* on an idea node: what it must contrast against another idea in, and by how much (R-710) */
+    PLAN_CONSTRAINT_CONTRAST,       /* on an idea node: what it must contrast against another idea in, and by how much (R-710) */
+    PLAN_CONSTRAINT_ANCHOR,         /* on a melody span: the note starting at the offset takes this pitch (R-746) */
+    PLAN_CONSTRAINT_EVENT,          /* on a melody span: the note starting at the offset is this non-chord tone (R-746) */
+    PLAN_CONSTRAINT_CLIMAX          /* on a melody span: an anchor no other melody note reaches, at most one in a plan (R-746) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -121,7 +124,9 @@ typedef struct {
  * vocabulary; ANY leaves it to the operator, which a texture target narrows. texture is a StandardTexture value
  * (standard-texture's texture_rules.h) the written parts are to be heard as, or -1 for none. low and high are the
  * MIDI pitches the accompaniment keeps to, 0 for the defaults 48 and 67. The pattern MOTIVE restates the motive named
- * by motive_node (the pattern needs the name, and no other pattern takes one).
+ * by motive_node (the pattern needs the name, and no other pattern takes one). The pattern ENTRY is a K11 accompaniment
+ * entry that is not one of the four (R-745), named by pattern_id; it is written as the pattern "entry", and no other pattern
+ * takes an id. ANY never picks it.
  */
 typedef enum {
     PLAN_ACCOMPANIMENT_ANY,
@@ -129,12 +134,14 @@ typedef enum {
     PLAN_ACCOMPANIMENT_ARPEGGIATED,
     PLAN_ACCOMPANIMENT_ALBERTI,
     PLAN_ACCOMPANIMENT_OOM_PAH,
-    PLAN_ACCOMPANIMENT_MOTIVE /* a saved accompaniment motive, restated on each chord; ANY never picks it */
+    PLAN_ACCOMPANIMENT_MOTIVE, /* a saved accompaniment motive, restated on each chord; ANY never picks it */
+    PLAN_ACCOMPANIMENT_ENTRY   /* a K11 accompaniment entry named by pattern_id; ANY never picks it */
 } PlanAccompanimentPattern;
 
 #define PLAN_ACCOMPANIMENT_DEFAULT_LOW 48
 #define PLAN_ACCOMPANIMENT_DEFAULT_HIGH 67
 #define PLAN_ACCOMPANIMENT_NODE_MAX 32
+#define PLAN_PATTERN_ID_MAX 64
 
 typedef struct {
     PlanAccompanimentPattern pattern;
@@ -143,6 +150,8 @@ typedef struct {
     int high;
     /* The name of the material node holding the accompaniment motive (a Given melody span), "" for none. */
     char motive_node[PLAN_ACCOMPANIMENT_NODE_MAX];
+    /* The id of the K11 accompaniment entry of the pattern ENTRY, "" for none (written only when set). */
+    char pattern_id[PLAN_PATTERN_ID_MAX];
 } PlanAccompaniment;
 
 /*
@@ -234,7 +243,8 @@ typedef struct {
  * A chord is a Roman numeral as a motive's own harmony writes it ("I", "V65", "bVII7") with its onset from the start of
  * the motive and its length, both in whole notes. A label is "chord", "unclassified" or the name of a non-chord tone
  * ("passing", "neighbor", "appoggiatura", "suspension", "retardation", "escape", "anticipation", "double-neighbor",
- * "changing-tone", "pedal"); the plan holds the text, the melody operator reads it. The label count is the note count of
+ * "changing-tone", "pedal"), or "rhythm" on every note of a rhythm-only motive, whose pitches the melody operator chooses and whose
+ * harmony is then not read (R-746); the plan holds the text, the melody operator reads it. The label count is the note count of
  * the node's melody span, which the plan reader checks.
  */
 #define PLAN_TONES_MAX_CHORDS 8
@@ -273,6 +283,39 @@ typedef struct {
     PlanContrastAspect aspects[PLAN_CONTRAST_ASPECTS_MAX];
 } PlanContrast;
 
+/*
+ * The melody constraints (R-746), each on a melody lane span; offset is from the span's start, in whole notes, from 0 and
+ * below the span's length. A span holds at most one anchor and one event at an offset, and a plan at most one climax.
+ * midi is from 0 to 127.
+ */
+typedef enum {
+    PLAN_EVENT_APPOGGIATURA,
+    PLAN_EVENT_SUSPENSION,
+    PLAN_EVENT_PASSING,
+    PLAN_EVENT_NEIGHBOR,
+    PLAN_EVENT_ESCAPE,
+    PLAN_EVENT_ANTICIPATION,
+    PLAN_EVENT_RETARDATION
+} PlanEventType;
+
+typedef struct {
+    Rational offset;
+    int midi;
+} PlanAnchor;
+
+typedef struct {
+    Rational offset;
+    PlanEventType type;
+} PlanEvent;
+
+typedef struct {
+    Rational offset;
+    int midi;
+} PlanClimax;
+
+/* The event type a word names as the plan file writes it ("appoggiatura", "passing", ...); false, *out untouched, for any other word. */
+bool plan_event_type_named(const char *word, PlanEventType *out);
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -291,6 +334,9 @@ typedef struct {
         Rational pickup; /* the anacrusis: on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), shorter than two wholes */
         PlanMotiveTones motive_tones;
         PlanContrast contrast;
+        PlanAnchor anchor;
+        PlanEvent event;
+        PlanClimax climax;
     } params;
 } PlanConstraint;
 

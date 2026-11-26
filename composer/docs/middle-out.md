@@ -9,6 +9,8 @@ GivenResult plan_give_melody(Plan *, NodeId section, size_t bar, const PlanNote 
 GivenResult plan_give_progression(Plan *, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
 GivenResult plan_give_bass(Plan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_bass_with_rests(Plan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_inner_voice(Plan *, NodeId section, size_t bar, int voice, const PlanNote *notes, size_t count);
 GivenResult plan_give_section(Plan *, NodeId section, const Plan *source, NodeId source_section);
 ```
 
@@ -22,6 +24,8 @@ The material is Given lane spans owned by the section, from `bar` (counted from 
 
 - a melody or a bass line is one span, its notes' offsets from the start of its first bar. A melody may open and end
   with a rest. A bass line has no rest, because the bass lane is read as one unbroken line: its notes tile its bars;
+  `plan_give_bass_with_rests` takes one that rests, which a theme blueprint gives only under a Given melody, and
+  `plan_give_inner_voice` an inner voice (1 to 8), rests allowed ([blueprints.md](blueprints.md));
 - a progression is one harmony span for each chord, `cells_per_chord` cells long (a cell is a beat or half a bar,
   see [harmony_phrase.h](../src/include/ursatz_composer/harmony_phrase.h): a bar of 2/4 or 3/4 has one, a bar of 4/4 or
   6/8 has two). Each numeral is read in the mode of the key under it (a numeral the harmony operators write, or an

@@ -73,7 +73,7 @@ static void test_files(void) {
 
 /* Every kind round-trips through its name; an unknown or missing name is no kind and leaves the output alone. */
 static void test_kinds(void) {
-    for (int k = TEXT_KIND_JSON; k <= TEXT_KIND_VIEW; k++) {
+    for (int k = TEXT_KIND_JSON; k <= TEXT_KIND_BLUEPRINT; k++) {
         TextKind found = TEXT_KIND_JSON;
         CHECKF(text_kind_find(text_kind_name((TextKind)k), &found) && found == (TextKind)k, "kind %d round-trips through its name", k);
     }

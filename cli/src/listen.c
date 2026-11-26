@@ -44,6 +44,7 @@ typedef struct {
     const char *bars_text;
     const char *motif_path;
     const char *theme_request_path;
+    const char *blueprint_path; /* --blueprint: a theme request with a blueprint, as JSON or as Ursatz Text (R-747) */
     const char *blend_path;
     const char *blend_weight_text;
     const char *blend_weights_text;
@@ -87,6 +88,7 @@ static const CliOptionRow ROWS[] = {
     {"--bars", offsetof(Options, bars_text), false},
     {"--motif", offsetof(Options, motif_path), false},
     {"--theme-request", offsetof(Options, theme_request_path), false},
+    {"--blueprint", offsetof(Options, blueprint_path), false},
     {"--blend", offsetof(Options, blend_path), false},
     {"--blend-weight", offsetof(Options, blend_weight_text), false},
     {"--blend-weights", offsetof(Options, blend_weights_text), false},
@@ -114,12 +116,15 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--session needs --round <n> and --batch <name>\n%s", cli_usage_of("listen"));
     }
     if (!options->themes && (options->into_text || options->development_text || options->bars_text || options->motif_path ||
-                             options->theme_request_path || options->blend_path || options->blend_weight_text ||
+                             options->theme_request_path || options->blueprint_path || options->blend_path || options->blend_weight_text ||
                              options->blend_weights_text || options->check || options->plans)) {
-        return cli_fail(CLI_EXIT_USAGE, "--into, --development, --bars, --check, --plans, --motif, --theme-request and the --blend options need --what themes");
+        return cli_fail(CLI_EXIT_USAGE, "--into, --development, --bars, --check, --plans, --motif, --theme-request, --blueprint and the --blend options need --what themes");
     }
     if (options->motif_path && options->theme_request_path) {
         return cli_fail(CLI_EXIT_USAGE, "--motif and --theme-request cannot be given together");
+    }
+    if (options->blueprint_path && (options->motif_path || options->theme_request_path)) {
+        return cli_fail(CLI_EXIT_USAGE, "--blueprint cannot be given together with --motif or --theme-request");
     }
     if ((options->blend_weight_text || options->blend_weights_text) && !options->blend_path) {
         return cli_fail(CLI_EXIT_USAGE, "--blend-weight and --blend-weights need --blend");
@@ -192,6 +197,55 @@ static int read_json_file(const char *path, const char *what, cJSON **out) {
     return 0;
 }
 
+/* The theme request of a blueprint file (*out): the JSON of a theme request with a blueprint member as it is, or Ursatz Text (R-747) read by the
+   workshop's tool blueprint-parse. The usage status after printing why not. */
+static int read_blueprint_file(const char *path, cJSON **out) {
+    char *text = NULL;
+    if (!cli_read_file(path, &text, NULL)) {
+        return cli_fail(CLI_EXIT_USAGE, "cannot read blueprint '%s'", path);
+    }
+    const char *first = text;
+    while (*first == ' ' || *first == '\t' || *first == '\r' || *first == '\n') {
+        first++;
+    }
+    if (*first == '{') {
+        *out = cJSON_Parse(text);
+        free(text);
+        if (!*out) {
+            return cli_fail(CLI_EXIT_USAGE, "blueprint '%s' is not valid JSON", path);
+        }
+    } else {
+        Workshop *workshop = cli_tools();
+        cJSON *params = cJSON_CreateObject();
+        if (!workshop || !params || !cJSON_AddStringToObject(params, "text", text)) {
+            free(text);
+            cJSON_Delete(params);
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, workshop ? "out of memory" : "a knowledge snapshot is required");
+        }
+        free(text);
+        WorkshopReply reply;
+        UrsatzError error;
+        memset(&error, 0, sizeof error);
+        UrsatzStatus status = workshop_tool(workshop, "blueprint-parse", params, NULL, &reply, &error);
+        cJSON_Delete(params);
+        if (status != URSATZ_OK) {
+            workshop_reply_destroy(&reply);
+            return cli_fail(CLI_EXIT_USAGE, "blueprint '%s': %s", path, error.message);
+        }
+        *out = cJSON_DetachItemFromObjectCaseSensitive(reply.json, "request");
+        workshop_reply_destroy(&reply);
+        if (!*out) {
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "the blueprint text did not parse into a request");
+        }
+    }
+    if (!cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(*out, "blueprint"))) {
+        cJSON_Delete(*out);
+        *out = NULL;
+        return cli_fail(CLI_EXIT_USAGE, "blueprint '%s' is not a theme request with a blueprint member", path);
+    }
+    return 0;
+}
+
 static int check_readable(const char *path, const char *what) {
     char *text = NULL;
     if (!cli_read_file(path, &text, NULL)) {
@@ -253,6 +307,11 @@ typedef struct {
     const cJSON *preferences; /* the document sent, or NULL */
 } Manifest;
 
+/* The file the themes are made from, a theme request or a blueprint (the manifest records either as theme_request); NULL for neither. */
+static const char *request_path(const Options *options) {
+    return options->theme_request_path ? options->theme_request_path : options->blueprint_path;
+}
+
 /* One line of listen.jsonl for the sample. */
 static int manifest_add(const Manifest *manifest, unsigned long index, unsigned long seed, const Sample *sample) {
     cJSON *line = cJSON_CreateObject();
@@ -263,8 +322,8 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
     }
     ok = ok && cJSON_AddNumberToObject(line, "index", (double)index) && cJSON_AddNumberToObject(line, "seed", (double)seed) &&
          cJSON_AddStringToObject(line, "what", manifest->options->what_text) && cJSON_AddStringToObject(line, "motif", manifest->options->motif_path ? manifest->options->motif_path : "generated") &&
-         (manifest->options->theme_request_path ? cJSON_AddStringToObject(line, "theme_request", manifest->options->theme_request_path) != NULL
-                                                : cJSON_AddNullToObject(line, "theme_request") != NULL);
+         (request_path(manifest->options) ? cJSON_AddStringToObject(line, "theme_request", request_path(manifest->options)) != NULL
+                                          : cJSON_AddNullToObject(line, "theme_request") != NULL);
     ok = ok && (manifest->options->style_path ? cJSON_AddStringToObject(line, "style", manifest->options->style_path)
                                               : cJSON_AddNullToObject(line, "style"));
     ok = ok && (manifest->options->blend_path ? cJSON_AddStringToObject(line, "blend", manifest->options->blend_path) != NULL
@@ -692,7 +751,8 @@ static cJSON *resolve_params(const Options *options, const DataMode *data, const
 /* Opens the session, reads the listening session's taste and the batch's explore share and distance. 0 or the exit status. */
 static int data_mode_open(Options *options, DataMode *data, const cJSON *settings) {
     bool ok = absolutize(&options->out_dir, data) && absolutize(&options->settings_path, data) && absolutize(&options->style_path, data) &&
-              absolutize(&options->blend_path, data) && absolutize(&options->theme_request_path, data) && absolutize(&options->motif_path, data);
+              absolutize(&options->blend_path, data) && absolutize(&options->theme_request_path, data) && absolutize(&options->blueprint_path, data) &&
+              absolutize(&options->motif_path, data);
     if (!ok) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
@@ -868,6 +928,9 @@ int run_listen(const CliArgs *args) {
         if (status == 0 && !cJSON_IsObject(theme_request)) {
             status = cli_fail(CLI_EXIT_USAGE, "theme request '%s' is not a JSON object", options.theme_request_path);
         }
+    }
+    if (status == 0 && options.blueprint_path) {
+        status = read_blueprint_file(options.blueprint_path, &theme_request);
     }
     /* What is sent: the settings file, else the preferences the theme request carries. */
     const cJSON *sent = preferences ? preferences : cJSON_GetObjectItemCaseSensitive(theme_request, "preferences");

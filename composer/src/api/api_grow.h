@@ -27,8 +27,9 @@
  * result document. Private to the library and the command line.
  */
 
-/* At most two chords a bar in a theme of eight bars. */
-#define GROW_EXT_CHORDS 16
+/* At most two chords a bar in a theme of eight bars (the request's chords), of sixteen bars (a blueprint's, R-743). */
+#define GROW_REQUEST_CHORDS 16
+#define GROW_EXT_CHORDS 32
 
 /* The motives of a theme run (the `theme` request's), besides the basic one. */
 typedef struct {
@@ -97,6 +98,7 @@ typedef struct {
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */
+    const struct GrowBlueprint *blueprint;   /* the theme request's blueprint (R-743), NULL for none; not owned */
     ComposerStyle *style;                    /* NULL for none; not owned */
     Rational tempo;                     /* a denominator of 0 for none */
     const char *tempo_from;                  /* "option", "style" or "none" */

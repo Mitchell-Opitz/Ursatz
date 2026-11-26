@@ -1,0 +1,36 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "michelle",
+ "entries": [
+  {
+   "id": "michelle.pattern.run-groups",
+   "kind": "pattern",
+   "subtype": "rhythm",
+   "name": "run groups",
+   "content": {
+    "meter": "4/4",
+    "rhythm": "x:q x:q x:q x:q x:q",
+    "jobs": [
+     "running"
+    ]
+   },
+   "citations": [
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "hand-B m5",
+     "note": "a bar rhythm of a reference theme she rated 4 to 5"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "rhythm": "x:e x:e x:q x:e x:e x:q"
+    }
+   ],
+   "version": 1
+  }
+ ]
+}

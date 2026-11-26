@@ -8,6 +8,7 @@
 
 #include <theory/counterpoint/melodic_rules.h>
 #include <theory/tonality/tonal_key.h>
+#include <ursatz_composer/motive_blueprint.h>
 
 #define MAX_OPTIONS 128
 /* The widest a note after the motive moves from the one before it, in semitones. */
@@ -125,7 +126,9 @@ static bool layout_residue(const MelodyContext *context, Rational start, MelodyC
 
 /*
  * The notes of the phrase: the motive's, then notes that fill the rest. A motive as long as the phrase (an idea it fills
- * whole) is all there is: its notes are placed as written and nothing is filled after it. A liquidated residue is
+ * whole) is all there is: its notes are placed as written and nothing is filled after it. A rhythm-only motive's notes are
+ * notes of the phrase (motive_index -1): the stage gives them pitches as it does the notes it fills (R-746), and fills nothing after
+ * them, so a rest that ends it stays a rest (R-743). A liquidated residue is
  * followed by its own rhythm (layout_residue). With a density the rest is notes of an even length, that many to a cell;
  * without one it is the motive's rhythm over again, each note as long as the time from one onset of the motive to the
  * next, the last as long as it is.
@@ -140,10 +143,18 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
         if (!note) {
             return false;
         }
-        note->motive_index = (int)k;
+        note->motive_index = context->motive_rhythm_only ? -1 : (int)k;
     }
     if (context->liquidated) {
         return layout_residue(context, start, out);
+    }
+    /* A rhythm-only motive is the idea's whole rhythm (a blueprint's, R-743): a rest after its last note stays a rest. */
+    if (context->motive_rhythm_only) {
+        for (size_t i = 0; i < out->count; i++) {
+            out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
+            out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
+        }
+        return true;
     }
 
     /* A note that ends the phrase starts with the last chord, so the cadence arrives with it. */
@@ -187,12 +198,51 @@ bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *para
                       size_t i) {
     const MelodyNote *note = &melody->notes[i];
     /* A motive's note is realized before the others are placed (melody_realize): a fixed anchor. */
-    if (note->motive_index >= 0) {
+    if (note->motive_index >= 0 || melody_fixed_pitch(context, note->onset) >= 0) {
+        return true;
+    }
+    /* An event is placed after the notes around it, which are placed first (R-746); one on the first or the last note is
+       placed as an anchor first, so the notes after it follow a pitch, and then moved to the event's (place_events). */
+    if (i == 0 || i + 1 == melody->count) {
+        return true;
+    }
+    if (note->event) {
+        return false;
+    }
+    if ((i > 0 && melody->notes[i - 1].event) || (i + 1 < melody->count && melody->notes[i + 1].event)) {
         return true;
     }
     return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
            rational_cmp(note->duration, context->cell) >= 0 ||
            rational_cmp(position_add(note->onset, note->duration), context->chord_start[note->chord + 1]) > 0;
+}
+
+/*
+ * The events (R-746), once every other note has its pitch: each without an anchor's pitch takes composer_event_pitch from the
+ * note before it (or the melody before the target) and the next note that is not such an event (or the melody after). False
+ * when one has no neighbour at all.
+ */
+static bool place_events(const MelodyContext *context, MelodyCandidate *out) {
+    for (size_t i = 0; i < out->count; i++) {
+        const PlanEvent *event = out->notes[i].event ? melody_event_at(context, out->notes[i].onset) : NULL;
+        if (!event || melody_fixed_pitch(context, out->notes[i].onset) >= 0) {
+            continue;
+        }
+        int previous = i > 0 ? out->notes[i - 1].pitch : (context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : -1);
+        int next = context->has_lead_out ? context->lead_out : -1;
+        for (size_t k = i + 1; k < out->count; k++) {
+            if (!out->notes[k].event || melody_fixed_pitch(context, out->notes[k].onset) >= 0) {
+                next = out->notes[k].pitch;
+                break;
+            }
+        }
+        int pitch = composer_event_pitch(context->composer_chords, &context->key, event->type, previous, next);
+        if (pitch < 0) {
+            return false;
+        }
+        out->notes[i].pitch = pitch;
+    }
+    return true;
 }
 
 /*
@@ -234,6 +284,10 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         climax = !contour.in_motive && i == contour.climax;
         top = climax ? high : (contour.cap < high ? contour.cap : high);
         ideal = melody_contour_ideal(context, &contour, out, i, before);
+        /* A first note with nothing placed before it (a rhythm-only motive's, R-746) starts from the melody before, else the middle. */
+        if (i == 0) {
+            ideal = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : (low + high) / 2;
+        }
         /* A leap of a fourth or more is answered by a step back, unless this is the climax or the end. */
         if (adjacent && (before > 0 || context->lead_in_count > 0) && i + 1 < out->count) {
             int leap = out->notes[before].pitch -
@@ -242,85 +296,93 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                 ideal = out->notes[before].pitch + (leap > 0 ? -2 : 2);
             }
         }
-        size_t count = options_for(mask, low, top, ideal, options);
-        size_t kept = 0;
-        size_t strong_before = SIZE_MAX; /* the last note before this one that starts on a strong beat, when it has a pitch */
-        for (size_t q = i; q > 0 && strong_before == SIZE_MAX; q--) {
-            if (out->notes[q - 1].strong && (out->notes[q - 1].motive_index >= 0 || q - 1 <= before)) {
-                strong_before = q - 1;
+        int fixed = melody_fixed_pitch(context, note->onset);
+        if (fixed >= 0) {
+            /* An anchor's or the climax's note has its pitch (R-746). */
+            note->pitch = fixed;
+        } else {
+            size_t count = options_for(mask, low, top, ideal, options);
+            size_t kept = 0;
+            size_t strong_before = SIZE_MAX; /* the last note before this one that starts on a strong beat, when it has a pitch */
+            for (size_t q = i; q > 0 && strong_before == SIZE_MAX; q--) {
+                if (out->notes[q - 1].strong && (out->notes[q - 1].motive_index >= 0 || q - 1 <= before)) {
+                    strong_before = q - 1;
+                }
             }
-        }
-        for (size_t j = 0; j < count; j++) {
-            int move = options[j].pitch - out->notes[before].pitch;
-            bool repeat = adjacent && move == 0;
-            if ((adjacent && !leap_allowed(move)) || repeat) {
-                continue;
-            }
-            /* Not in parallel octaves or fifths with the bass against the note before. */
-            if (adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
-                                                     melody_bass_at(context, out->notes[before].onset),
-                                                     melody_bass_at(context, note->onset))) {
-                continue;
-            }
-            /* Nor against the last strong beat before it, which is where the Analyzer reads parallels between the notes. */
-            if (strong_before != SIZE_MAX && strong_before != before &&
-                melody_parallel_perfects(out->notes[strong_before].pitch, options[j].pitch,
-                                         melody_bass_at(context, out->notes[strong_before].onset),
-                                         melody_bass_at(context, note->onset))) {
-                continue;
-            }
-            /* A chord tone that is dissonant against the bass is not written (the checker rejects it). */
-            if (melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
-                continue;
-            }
-            /* The last note of a target that comes before written melody leads to its first note by a leap allowed. */
-            if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
-                continue;
-            }
-            options[kept++] = options[j];
-        }
-        /* Relaxed (R-338): a climax that cannot be reached by an allowed leap, or an anchor with no option, takes the chord
-           tones of the whole range that are an allowed leap from the note before and to the lead-out, not a repeat. */
-        bool fall_back = out->relaxed && ((climax && adjacent && !leap_allowed(contour.climax_pitch - out->notes[before].pitch)) ||
-                                          (!climax && kept == 0));
-        if (fall_back) {
-            count = options_for(mask, out->params.range_low, out->params.range_high, ideal, options);
-            kept = 0;
             for (size_t j = 0; j < count; j++) {
                 int move = options[j].pitch - out->notes[before].pitch;
-                if (adjacent && (!leap_allowed(move) || move == 0)) {
+                bool repeat = adjacent && move == 0;
+                if ((adjacent && !leap_allowed(move)) || repeat) {
                     continue;
                 }
+                /* Not in parallel octaves or fifths with the bass against the note before. */
+                if (adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
+                                                         melody_bass_at(context, out->notes[before].onset),
+                                                         melody_bass_at(context, note->onset))) {
+                    continue;
+                }
+                /* Nor against the last strong beat before it, which is where the Analyzer reads parallels between the notes. */
+                if (strong_before != SIZE_MAX && strong_before != before &&
+                    melody_parallel_perfects(out->notes[strong_before].pitch, options[j].pitch,
+                                             melody_bass_at(context, out->notes[strong_before].onset),
+                                             melody_bass_at(context, note->onset))) {
+                    continue;
+                }
+                /* A chord tone that is dissonant against the bass is not written (the checker rejects it). */
+                if (melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
+                    continue;
+                }
+                /* The last note of a target that comes before written melody leads to its first note by a leap allowed. */
                 if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
                     continue;
                 }
                 options[kept++] = options[j];
             }
-            /* Of those, the ones that are not in parallel with the bass and not dissonant over it, when there are any. */
-            size_t clean = 0;
-            for (size_t j = 0; j < kept; j++) {
-                bool parallel = adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
-                                                                     melody_bass_at(context, out->notes[before].onset),
-                                                                     melody_bass_at(context, note->onset));
-                if (!parallel &&
-                    !melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
-                    options[clean++] = options[j];
+            /* Relaxed (R-338): a climax that cannot be reached by an allowed leap, or an anchor with no option, takes the chord
+               tones of the whole range that are an allowed leap from the note before and to the lead-out, not a repeat. */
+            bool fall_back = out->relaxed && ((climax && adjacent && !leap_allowed(contour.climax_pitch - out->notes[before].pitch)) ||
+                                              (!climax && kept == 0));
+            if (fall_back) {
+                count = options_for(mask, out->params.range_low, out->params.range_high, ideal, options);
+                kept = 0;
+                for (size_t j = 0; j < count; j++) {
+                    int move = options[j].pitch - out->notes[before].pitch;
+                    if (adjacent && (!leap_allowed(move) || move == 0)) {
+                        continue;
+                    }
+                    if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
+                        continue;
+                    }
+                    options[kept++] = options[j];
                 }
-            }
-            kept = clean > 0 ? clean : kept;
-            if (!pick(options, kept, 127, params, rng, &note->pitch)) {
+                /* Of those, the ones that are not in parallel with the bass and not dissonant over it, when there are any. */
+                size_t clean = 0;
+                for (size_t j = 0; j < kept; j++) {
+                    bool parallel = adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
+                                                                         melody_bass_at(context, out->notes[before].onset),
+                                                                         melody_bass_at(context, note->onset));
+                    if (!parallel &&
+                        !melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
+                        options[clean++] = options[j];
+                    }
+                }
+                kept = clean > 0 ? clean : kept;
+                if (!pick(options, kept, 127, params, rng, &note->pitch)) {
+                    return false;
+                }
+            } else if (climax) {
+                note->pitch = contour.climax_pitch;
+                if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
+                    return false;
+                }
+            } else if (!take_color(context, params, out, i, options, kept, rng, &note->pitch) &&
+                       !pick(options, kept, MAX_MOVE, params, rng, &note->pitch)) {
                 return false;
             }
-        } else if (climax) {
-            note->pitch = contour.climax_pitch;
-            if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
-                return false;
-            }
-        } else if (!take_color(context, params, out, i, options, kept, rng, &note->pitch) &&
-                   !pick(options, kept, MAX_MOVE, params, rng, &note->pitch)) {
-            return false;
         }
-        if (i > 0 && before + 1 < i) {
+        /* Between two anchors there are events only, or none (an event's neighbours are anchors): events are placed last. */
+        bool events_between = i > 0 && before + 1 < i && out->notes[before + 1].event;
+        if (i > 0 && before + 1 < i && !events_between) {
             int between[MELODY_MAX_NOTES];
             /* Notes between the motive's last anchor and the first note after it may rise to the motive's top. */
             int cap = high;
@@ -338,7 +400,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         }
         before = i;
     }
-    return true;
+    return place_events(context, out);
 }
 
 /*
@@ -352,6 +414,10 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
         adjusted.range_high = params->range_high - 3;
     } else if (role == MELODY_ROLE_AFTER && context->phrase_has_top && context->phrase_top - 1 < adjusted.range_high) {
         adjusted.range_high = context->phrase_top - 1;
+    }
+    /* The plan's climax in another target (R-746): no note here reaches it. */
+    if (context->has_climax && !context->climax_here && context->climax.midi - 1 < adjusted.range_high) {
+        adjusted.range_high = context->climax.midi - 1;
     }
     return adjusted;
 }
@@ -692,11 +758,18 @@ static void trim_motive_for_cadence(MelodyContext *context) {
     context->motive_length = end;
 }
 
+/* Marks the notes an event starts with (R-746), once the rhythm is settled. */
+static void mark_events(const MelodyContext *context, MelodyCandidate *out) {
+    for (size_t i = 0; i < out->count; i++) {
+        out->notes[i].event = context->event_count > 0 && melody_event_at(context, out->notes[i].onset) != NULL;
+    }
+}
+
 bool melody_build(const MelodyContext *original, const MelodyFillParams *params, int shift, bool keep_figures,
                   bool relaxed, FillRng *rng, MelodyCandidate *out) {
     MelodyContext held_context;
     const MelodyContext *context = original;
-    if (params->cadence_long && original->has_cadence) {
+    if (params->cadence_long && original->has_cadence && !original->motive_rhythm_only) {
         held_context = *original;
         trim_motive_for_cadence(&held_context);
         context = &held_context;
@@ -710,17 +783,22 @@ bool melody_build(const MelodyContext *original, const MelodyFillParams *params,
     out->params = *params;
     /* A melody with two notes as high as its highest has no one climax. */
     bool laid = layout(context, &arch, out);
+    /* A rhythm-only motive's rhythm is given (R-746): none of the three below changes it. Its events are marked after them. */
+    bool rhythm_free = laid && !context->motive_rhythm_only;
     /* Closure: half the layouts of a target that ends a cadence settle into a long last note; no draw at weight 0. */
-    if (laid && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
+    if (rhythm_free && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
         settle_ending(context, out);
     }
     /* The cadence held to one last note from the last downbeat, when it is on (R-712); it draws no random number. */
-    if (laid && params->cadence_long && context->has_cadence) {
+    if (rhythm_free && params->cadence_long && context->has_cadence) {
         hold_cadence(context, out);
     }
     /* The rhythm repetition cap, when it is on (R-479); it draws no random number. */
-    if (laid && params->rhythm_repeat_bars > 0) {
+    if (rhythm_free && params->rhythm_repeat_bars > 0) {
         limit_rhythm_repeats(context, params, out);
+    }
+    if (laid) {
+        mark_events(context, out);
     }
     bool assigned = laid && melody_realize(context, params, shift, keep_figures, out) &&
                     assign(context, &arch, rng, out) && place_pickup(context, &arch, rng, out);

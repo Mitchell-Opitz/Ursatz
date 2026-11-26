@@ -139,7 +139,7 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
         const MelodyNote *note = &melody->notes[i];
         if (note->pitch < melody->params.range_low || note->pitch > melody->params.range_high) {
             verdict->hard = "outside the melody range";
-        } else if (!melody_rule_waived(melody, MELODY_RULE_STRONG_BEAT_CHORD_TONE) && melody_on_cell(context, note->onset) &&
+        } else if (!note->event && !melody_rule_waived(melody, MELODY_RULE_STRONG_BEAT_CHORD_TONE) && melody_on_cell(context, note->onset) &&
                    !(context->chord_mask[note->chord] & (1u << util_pitch_class(note->pitch))) &&
                    !(melody->params.nct_types & strong_figures)) {
             verdict->hard = "strong beat without a chord tone";
@@ -219,6 +219,8 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
             size_t note = bass ? melody->count : (size_t)strtoul(member->note_id + 1, NULL, 10);
             if (bass) {
                 verdict->hard = loose ? verdict->hard : "bass note outside its chord";
+            } else if (!loose && note < melody->count && melody->notes[note].event) {
+                /* An event is the blueprint's own non-chord tone (R-746): neither its figure nor its type is asked of it. */
             } else if (!labels[k].classified) {
                 if (loose && note < melody->count) {
                     loose[note] = true;
@@ -257,7 +259,8 @@ unsigned melody_motive_waived(const MelodyContext *context) {
     PitchSpelling *spellings[MOTIVE_MAX_NOTES];
     unsigned hard = 0;
     unsigned soft = 0;
-    bool spelled = context->motive_count > 0 && context->motive_count <= MOTIVE_MAX_NOTES;
+    /* A rhythm-only motive's pitches are not its own (R-746): it waives nothing. */
+    bool spelled = !context->motive_rhythm_only && context->motive_count > 0 && context->motive_count <= MOTIVE_MAX_NOTES;
     memset(spellings, 0, sizeof(spellings));
     for (size_t k = 0; spelled && k < context->motive_count; k++) {
         spellings[k] = spell_melody(&context->key, context->motive_pitch[k]);
@@ -942,6 +945,34 @@ bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unc
     return check_tones(melody, &verdict, types, unclassified);
 }
 
+/*
+ * The blueprint's promises (R-746): every anchor and the climax of the target have a note starting there with their pitch, and
+ * no other note reaches the plan's climax, in this target or elsewhere.
+ */
+static void check_blueprint(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    const MelodyContext *context = &melody->context;
+    size_t fixed = context->anchor_count + (context->climax_here ? 1 : 0);
+    for (size_t k = 0; !verdict->hard && k < fixed; k++) {
+        Rational at = k < context->anchor_count ? context->anchors[k].offset : context->climax.offset;
+        size_t i = 0;
+        while (i < melody->count && rational_cmp(melody->notes[i].onset, at) != 0) {
+            i++;
+        }
+        if (i == melody->count) {
+            verdict->hard = k < context->anchor_count ? "anchor without a note" : "climax without a note";
+        } else if (melody->notes[i].pitch != melody_fixed_pitch(context, at)) {
+            verdict->hard = k < context->anchor_count ? "anchor off its pitch" : "climax off its pitch";
+        }
+    }
+    for (size_t i = 0; !verdict->hard && context->has_climax && i < melody->pickup_count + melody->count; i++) {
+        const MelodyNote *note = i < melody->pickup_count ? &melody->pickup_notes[i] : &melody->notes[i - melody->pickup_count];
+        bool climax = context->climax_here && i >= melody->pickup_count && rational_cmp(note->onset, context->climax.offset) == 0;
+        if (!climax && note->pitch >= context->climax.midi) {
+            verdict->hard = "a note at or above the climax";
+        }
+    }
+}
+
 bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     bool ok = true;
     SoftTally tally;
@@ -952,6 +983,9 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         return true;
     }
     check_basics(melody, verdict);
+    if (!verdict->hard) {
+        check_blueprint(melody, verdict);
+    }
     if (!verdict->hard) {
         ok = check_tones(melody, verdict, NULL, NULL);
     }

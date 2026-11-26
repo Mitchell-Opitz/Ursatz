@@ -13,6 +13,7 @@
 #include <text/text_tree.h>
 
 #include "base/knowledge.h"
+#include "items/blueprint_text.h"
 #include "items/layers.h"
 #include "items/store.h"
 
@@ -69,7 +70,8 @@ static bool member_is(const cJSON *document, const char *name, const char *value
     return cJSON_IsString(m) && m->valuestring && strcmp(m->valuestring, value) == 0;
 }
 
-/* The kind a JSON object is, from its "format" or "schema" (B1's checks); json for any other object. */
+/* The kind a JSON object is, from its "format" or "schema" (B1's checks), a theme request with a blueprint member (R-747) included; json for any
+   other object. */
 static TextKind json_kind(const cJSON *document) {
     if (member_is(document, "format", "ursatz-plan") || member_is(document, "format", "ursatz-composer-plan")) {
         return TEXT_KIND_PLAN;
@@ -79,6 +81,9 @@ static TextKind json_kind(const cJSON *document) {
     }
     if (member_is(document, "format", "ursatz-realization")) {
         return TEXT_KIND_REALIZATION;
+    }
+    if (member_is(document, "schema", "ursatz-theme-request") && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(document, "blueprint"))) {
+        return TEXT_KIND_BLUEPRINT;
     }
     return member_is(document, "schema", "ursatz-knowledge") ? TEXT_KIND_KNOWLEDGE : TEXT_KIND_JSON;
 }
@@ -146,6 +151,17 @@ UrsatzStatus workshop_view_input(const char *path, const char *text, const char 
             json = cJSON_PrintUnformatted(document);
             cJSON_Delete(document);
         }
+    } else if (blueprint_text_is(text)) {
+        /* a blueprint's lines are read by the workshop (R-747), not by the library's tree */
+        char message[400];
+        cJSON *request = NULL;
+        kind = TEXT_KIND_BLUEPRINT;
+        if (!blueprint_text_read(text, &request, message, sizeof message)) {
+            status = ursatz_error_set(error, URSATZ_ERR_REQUEST, where, "%s", message);
+        } else {
+            json = cJSON_PrintUnformatted(request);
+            cJSON_Delete(request);
+        }
     } else {
         TextError failure = {0, ""};
         json = text_to_json(workshop_knowledge_snapshot(), text ? text : "", &kind, &failure);
@@ -183,12 +199,23 @@ UrsatzStatus workshop_view_input(const char *path, const char *text, const char 
         }
     } else if (status == URSATZ_OK && strcmp(view, "full") == 0) {
         TextError failure = {0, ""};
-        printed = text_from_json(json, kind, &failure);
+        if (kind == TEXT_KIND_BLUEPRINT) {
+            cJSON *request = cJSON_Parse(json);
+            bool written = request && blueprint_text_write(request, &printed, failure.message, sizeof failure.message);
+            cJSON_Delete(request);
+            if (!written && !request) {
+                snprintf(failure.message, sizeof failure.message, "the JSON does not parse");
+            }
+        } else {
+            printed = text_from_json(json, kind, &failure);
+        }
         if (!printed) {
             status = ursatz_error_set(error, URSATZ_ERR_REQUEST, where, "%s", failure.message);
         } else if (!add_pair(answer, text_kind_name(kind), "text", printed)) {
             status = ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
         }
+    } else if (status == URSATZ_OK && kind == TEXT_KIND_BLUEPRINT) {
+        status = ursatz_error_set(error, URSATZ_ERR_REQUEST, "/params/view", "a blueprint shows the views json (the theme request) and full (its text), not %s", view);
     } else if (status == URSATZ_OK) {
         Layer layer = {NULL, NULL, NULL};
         status = layer_read(kind, json, where, &layer, error);

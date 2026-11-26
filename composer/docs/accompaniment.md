@@ -23,7 +23,8 @@ A returning section may be given its accompaniment by a setting (R-518): a retur
 
 | Member | Meaning |
 | --- | --- |
-| `pattern` | `block`, `arpeggiated`, `alberti`, `oom-pah`, `motive` or `any`. |
+| `pattern` | `block`, `arpeggiated`, `alberti`, `oom-pah`, `motive`, `entry` or `any`. |
+| `pattern_id` | With `entry` only, and required for it: the id of a K11 accompaniment entry that is not one of the four (`michelle.pattern.arpeggio-wave`). Written to the plan only when set. |
 | `motive_node` | With `motive` only, and required for it: the name of the material node holding the accompaniment motive. |
 | `texture` | A `standard-texture` name the written parts are to be heard as (`homophony`, `homorhythm`, `melody and accompaniment`), or none. |
 | `low`, `high` | The MIDI pitches the accompaniment keeps to; 48 and 67 when absent. |
@@ -34,7 +35,8 @@ Times inside the operator are `Rational` positions in whole notes from the start
 ## The patterns
 
 All sit on the meter's beat: a quarter in 2/4, 3/4 and 4/4, the dotted quarter in 6/8 (a compound meter), and the
-eighth for the figures. A chord is written on every beat from the harmony lane's numeral in the key.
+eighth for the figures. A chord is written on every beat from the harmony lane's numeral in the key. The figure of the
+first four is read from a K11 pattern entry (below); the table says what each writes.
 
 | Pattern | Voices | What is written |
 | --- | --- | --- |
@@ -46,6 +48,42 @@ eighth for the figures. A chord is written on every beat from the harmony lane's
 
 The figures run on the eighths of the bar, not of the chord, so a bar of 3/4 ends in the middle of a figure
 (`low high middle high low high`).
+
+### Patterns as knowledge
+
+The figure of a pattern is data, a K11 `pattern` entry of the subtype `accompaniment` (R-745, [knowledge](../../knowledge/README.md)), looked up in the
+snapshot the stage holds. The four above are `schoenberg.pattern.block`, `.arpeggiated`, `.alberti` and `.oom-pah`; the request names
+(`block`, ...) map to them, and the notes written are byte-identical to what the code wrote before the entries (45 themes pinned by
+`test_accompaniment_patterns`). Any other accompaniment entry is the pattern `entry`, named by `pattern_id`. `any` never picks one.
+
+An entry has a `grid` (`beat`: a step is a beat; `eighth`: a step is an eighth), `steps`, a `by_meter` row for a meter that has its own steps
+(keys `2/4`, `3/4`, `4/4`, `6/8`; a meter with none takes `steps`), and `compound` (false: the pattern is not written in a compound meter, as
+the Alberti bass is not). The steps are read in turn, by the unit's index modulo their count:
+
+| Step | Writes |
+| --- | --- |
+| `rest` | Nothing for the unit, and no draw from the run's rng: a beat whose units are all rests is not voiced. |
+| `chord` | Every voiced note, held for the unit (voice 1 the top). |
+| `{"member": k}` | The k-th note of the beat's voicing, low to high, in voice 1. A voicing of two notes alternates low and high by the unit's index, one of a single note repeats it; a member past the top is the top. |
+| `{"bass_octave": 1}` | The bass note sounding then, plus 12, in voice 1. The checker refuses it only for range or against the melody. |
+
+The unit's index counts from the bar line; on an `eighth` grid a chord that starts off the meter's cells counts from its own start. The
+voicing search, its slack for the first beat and the order of the rng draws are code and do not change with the entry. A plan in a meter
+the entry has no row for takes its default steps (the odd-meter rule of the old oom-pah is gone: no request makes one).
+
+The five reference patterns are in `knowledge/pattern/michelle.json`, from the themes Michelle rated 4 or more:
+
+| Id | Writes |
+| --- | --- |
+| `michelle.pattern.arpeggio-eight` | A rest, then low, middle, high, middle, low, middle, low over the eight eighths of 4/4; in 3/4 its first six steps. Simple meters. |
+| `michelle.pattern.arpeggio-wave` | A rest, then low, middle, high, middle, low, middle, high in 4/4; in 3/4 its first six steps. Simple meters. |
+| `michelle.pattern.compound-oom-pah` | In 6/8, the chord on the third and sixth eighth only. |
+| `michelle.pattern.octave-pulse` | The bass an octave up on every off-beat eighth. It needs room between that note and the melody, which not every bar leaves. |
+| `michelle.pattern.ostinato` | Low, rest, low, low, middle, rest, low, rest in 4/4; in 3/4 its first six steps. Simple meters. |
+
+A theme request names an entry by its id in `accompaniment.pattern` ([theme-request.md](theme-request.md)); an id the snapshot lacks, a rhythm
+cell, or an entry that is not written in the theme's meter is refused. The vocabulary's `accompaniment_patterns` lists the ids. An entry
+that the snapshot does not hold, or that is a rhythm cell, in a plan leaves its target open (the operator does not apply).
 
 ### Chords of any length in beats
 
