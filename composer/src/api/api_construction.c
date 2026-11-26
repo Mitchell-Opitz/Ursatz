@@ -344,13 +344,16 @@ UrsatzStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Ursa
         return api_fail(error, URSATZ_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC, not '%s'", text->cadence);
     }
     out->development = GROW_DEVELOP_BALANCED;
+    out->generate_blueprint = false;
     if (text->development) {
         if (strcmp(text->development, "melody") == 0) {
             out->development = GROW_DEVELOP_MELODY;
         } else if (strcmp(text->development, "theme") == 0) {
             out->development = GROW_DEVELOP_THEME;
+        } else if (strcmp(text->development, "blueprint") == 0) {
+            out->generate_blueprint = true;
         } else if (strcmp(text->development, "balanced") != 0) {
-            return api_fail(error, URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced or theme, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced, theme or blueprint, not '%s'",
                             text->development);
         }
     }

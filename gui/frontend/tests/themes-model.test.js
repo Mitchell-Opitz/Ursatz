@@ -67,7 +67,7 @@ const odd = JSON.parse(JSON.stringify(developed));
 odd.request.development = "wild";
 check(T.formFromBody(odd, "thm-1").development === "balanced", "an unknown stored development reads as balanced");
 check(T.themeOfBody(T.bodyFromForm({ ...filled(), development: "wild" })).form.development === "balanced", "an unknown development is written as balanced");
-check(same(T.developmentChoices().map((entry) => entry.value), ["melody", "balanced", "theme"]) && T.developmentChoices().every((entry) => entry.label && entry.help), "the development choices come from the vocabulary");
+check(same(T.developmentChoices().map((entry) => entry.value), ["melody", "balanced", "theme", "blueprint"]) && T.developmentChoices().every((entry) => entry.label && entry.help), "the development choices come from the vocabulary");
 check(T.chordBars() === 16 && T.maxExtensions() === 3, "the chord row and the extensions follow the vocabulary");
 check(T.fieldForPath("/development") === "development", "/development marks the development");
 check(T.tabOfField("development") === "structure", "the development is on the structure tab");

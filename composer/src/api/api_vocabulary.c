@@ -719,6 +719,7 @@ static bool add_theme_developments(cJSON *root) {
         {"melody", "Melody", "The theme repeats the motif and stays close to it (Schoenberg ch. XI)."},
         {"balanced", "Balanced", "The theme repeats and develops by turns; what a request without the member reads as."},
         {"theme", "Theme", "The theme develops the motif, with the construction a theme of that kind has (Schoenberg ch. XI)."},
+        {"blueprint", "Blueprint", "The Composer writes the theme's blueprint from the motif (the K8 slot expectations and the blueprint preferences) and realizes it: an 8-bar sentence or period."},
     };
     cJSON *list = add_list(root, "theme_developments");
     for (size_t i = 0; list && i < sizeof(DEVELOPMENTS) / sizeof(DEVELOPMENTS[0]); i++) {

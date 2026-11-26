@@ -223,6 +223,10 @@ cJSON *api_brief_json(const GrowBrief *brief) {
     return object;
 }
 
+const char *api_setup_development_name(const GrowSetup *setup) {
+    return setup->generate_blueprint ? "blueprint" : api_development_name(setup->development);
+}
+
 const char *api_development_name(GrowDevelopment development) {
     return development == GROW_DEVELOP_MELODY ? "melody" : development == GROW_DEVELOP_THEME ? "theme" : "balanced";
 }

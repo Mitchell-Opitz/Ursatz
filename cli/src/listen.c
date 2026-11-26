@@ -136,8 +136,9 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--into must be sentence or period, not '%s'", options->into_text);
     }
     if (options->development_text && strcmp(options->development_text, "melody") != 0 &&
-        strcmp(options->development_text, "balanced") != 0 && strcmp(options->development_text, "theme") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--development must be melody, balanced or theme, not '%s'", options->development_text);
+        strcmp(options->development_text, "balanced") != 0 && strcmp(options->development_text, "theme") != 0 &&
+        strcmp(options->development_text, "blueprint") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--development must be melody, balanced, theme or blueprint, not '%s'", options->development_text);
     }
     if (options->bars_text && strcmp(options->bars_text, "4") != 0 && strcmp(options->bars_text, "8") != 0) {
         return cli_fail(CLI_EXIT_USAGE, "--bars must be 4 or 8, not '%s'", options->bars_text);

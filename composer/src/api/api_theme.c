@@ -491,7 +491,7 @@ static UrsatzStatus read_brief(ThemeRequest *theme, const cJSON *request, ThemeB
 /* --- the outputs --------------------------------------------------------------------------------------- */
 
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
+static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, const char *setup_development,
                                         const ApiOutputOptions *outputs, UrsatzError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
@@ -516,7 +516,7 @@ static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON 
             char *text = NULL;
             if (built == EXPLAIN_OK) {
                 snprintf(explanation.sections[0].development, sizeof(explanation.sections[0].development), "%s",
-                         api_development_name(setup_development));
+                         setup_development);
                 text = outputs->explain == 2 ? explain_to_json(&explanation) : explain_to_text(&explanation);
                 explain_destroy(&explanation);
             }
@@ -581,6 +581,59 @@ typedef struct {
     bool ran;
     GrowBlueprint *blueprint; /* the request's blueprint, NULL for none */
 } ThemeState;
+
+/*
+ * Whether the request fits the generated blueprint (R-752): an 8-bar sentence or period in 4/4, 3/4 or 6/8, in a major or natural minor key,
+ * from a full basic motif of at most 2 bars, with nothing beside it that gives chords, ideas, a style or a voicing. NULL when it fits, else
+ * the reason.
+ */
+static const char *generate_refusal(const ThemeState *state) {
+    const GrowSetup *setup = &state->setup;
+    static const char *const GIVEN[] = {"construction", "blueprint", "chords", "ideas"};
+    static const char *const WHAT[] = {"the request gives a construction", "the request gives a blueprint", "the request gives chords",
+                                       "the request gives idea motives"};
+    static char reason[96];
+    Rational bar;
+    if (setup->bars != 8) {
+        snprintf(reason, sizeof reason, "the theme has %zu bars", setup->bars);
+        return reason;
+    }
+    if (setup->into == GROW_INTO_HYBRID) {
+        return "the theme is a hybrid";
+    }
+    for (size_t i = 0; i < sizeof(GIVEN) / sizeof(GIVEN[0]); i++) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(state->request, GIVEN[i]);
+        if (item && !cJSON_IsNull(item)) {
+            return WHAT[i];
+        }
+    }
+    if (state->brief.style != NULL) {
+        return "the request gives a style";
+    }
+    if (state->brief.voicing_id != NULL || setup->has_voicing) {
+        return "the request gives a voicing";
+    }
+    for (int slot = 0; slot < GROW_SLOT_COUNT; slot++) {
+        if (slot != GROW_SLOT_BASIC && state->theme.slot_motive[slot]) {
+            return "the request gives a slot besides basic";
+        }
+    }
+    if (!state->theme.slot_motive[GROW_SLOT_BASIC] || setup->motive == NULL || setup->motive->form != MOTIVE_SKETCH_FORM_FULL) {
+        return "the basic motif is not a full motive";
+    }
+    if (plan_meter_bar_length(&setup->meter, &bar) != PLAN_OK ||
+        rational_cmp(setup->motive->length, (Rational){bar.num * 2, bar.den}) > 0) {
+        return "the basic motif is longer than 2 bars";
+    }
+    const char *material = setup->key.material ? setup->key.material->id : "";
+    if (strcmp(material, "omt.material.major") != 0 && strcmp(material, "omt.material.natural-minor") != 0) {
+        return "the key is not major or natural minor";
+    }
+    bool meter = setup->meter.beats_per_bar == 4 && setup->meter.beat_unit == 4;
+    meter = meter || (setup->meter.beats_per_bar == 3 && setup->meter.beat_unit == 4);
+    meter = meter || (setup->meter.beats_per_bar == 6 && setup->meter.beat_unit == 8);
+    return meter ? NULL : "the meter is not 4/4, 3/4 or 6/8";
+}
 
 /* A blueprint gives its chords, its accompaniment and its idea motives per bar: the request's own members are refused beside it. */
 static UrsatzStatus refuse_beside_blueprint(const cJSON *request, UrsatzError *error) {
@@ -704,6 +757,7 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
         setup->mixture = &state->preferences.harmony.mixture;
         setup->color = &state->preferences.harmony.color;
         setup->motif = &state->preferences.motif;
+        setup->blueprint_preferences = &state->preferences.blueprint;
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
@@ -771,6 +825,12 @@ static UrsatzStatus theme_prepare(ThemeState *state, const UrsatzJob *job, ApiOu
     setup->motive = &state->material->basic;
     setup->accompaniment_motive = state->material->has_accompaniment_motive ? &state->material->accompaniment_motive : NULL;
     setup->material = state->material;
+    const char *refusal = setup->generate_blueprint ? generate_refusal(state) : NULL;
+    if (refusal) {
+        return api_fail(error, URSATZ_ERR_REQUEST, "/development",
+                        "development blueprint writes an 8-bar sentence or period from a motif of up to 2 bars in a major or minor key in 4/4, 3/4 or 6/8: %s",
+                        refusal);
+    }
     return URSATZ_OK;
 }
 
@@ -807,7 +867,7 @@ UrsatzStatus composer_api_theme(const ComposerContext *context, const char *requ
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(context->knowledge, document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
+        status = document ? add_theme_members(context->knowledge, document, &state.run, api_setup_development_name(&state.setup), &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == URSATZ_OK && state.has_preferences &&
             !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
             status = api_fail_alloc(&out->error);

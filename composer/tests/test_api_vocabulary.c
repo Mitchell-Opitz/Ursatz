@@ -628,7 +628,7 @@ static void test_theme_form_lists(void) {
     assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(limits, "construction_pickup")));
     {
         const cJSON *developments = cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_developments");
-        assert(cJSON_GetArraySize(developments) == 3);
+        assert(cJSON_GetArraySize(developments) == 4);
         const cJSON *first = cJSON_GetArrayItem(developments, 0);
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(first, "value")->valuestring, "melody") == 0);
         assert(cJSON_GetObjectItemCaseSensitive(first, "label") && cJSON_GetObjectItemCaseSensitive(first, "help"));

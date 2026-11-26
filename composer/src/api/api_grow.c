@@ -231,6 +231,7 @@ static void passed_add(GrowRun *run, const ComposeRejection *rejection) {
 }
 
 static void theme_destroy(GrowTheme *theme) {
+    free(theme->generated);
     plan_destroy(theme->plan);
     grow_outcome_destroy(&theme->outcome);
     analyzer_check_destroy(&theme->check);
@@ -291,28 +292,87 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     api_grow_request_for(setup, seed, &request);
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
+    /* With development blueprint the Composer writes the blueprint for the seed first (R-751): chords and rhythms, then, once the rhythms are
+       drawn, the climax and the sounds; any stuck draw lets the run try the next seed. */
+    GrowGenerated *generated = NULL;
+    FillRng generator_rng;
+    if (setup->generate_blueprint) {
+        generated = calloc(1, sizeof(*generated));
+        if (!generated) {
+            return GROW_ERR_ALLOC;
+        }
+        fill_rng_seed(&generator_rng, seed + 11);
+        GrowResult written = grow_blueprint_generate(&request, setup->blueprint_preferences, &generator_rng, &generated->blueprint, &run->refusal);
+        UrsatzError checked;
+        memset(&checked, 0, sizeof checked);
+        if (written == GROW_OK && grow_blueprint_check_ideas(&generated->blueprint, &setup->pairing, &setup->meter, 8, NULL, true, &checked) != URSATZ_OK) {
+            snprintf(run->refusal.message, sizeof run->refusal.message, "%.255s", checked.message);
+            snprintf(run->refusal.path, sizeof run->refusal.path, "%.63s", checked.path);
+            written = GROW_ERR_STUCK;
+        }
+        if (written != GROW_OK) {
+            free(generated);
+            return written == GROW_ERR_ALLOC ? written : GROW_ERR_STUCK;
+        }
+        request.blueprint = &generated->blueprint;
+    }
     /* A blueprint's jobs and basic motive are drawn for the seed (R-743); the run keeps the basic motive the plan's m0 is. */
     GrowBlueprintDraw *drawn = NULL;
-    if (setup->blueprint) {
+    if (request.blueprint) {
         drawn = malloc(sizeof(*drawn));
         GrowResult made = drawn ? grow_blueprint_draw(&request, drawn, &run->refusal) : GROW_ERR_ALLOC;
         if (made != GROW_OK) {
             free(drawn);
-            return made;
+            free(generated);
+            return generated && made != GROW_ERR_ALLOC ? GROW_ERR_STUCK : made;
         }
         request.drawn = drawn;
         request.motive = &drawn->basic;
     }
+    if (generated) {
+        generated->melody = setup->melody ? *setup->melody : melody_fill_params_default();
+        int low = generated->melody.range_low;
+        int high = generated->melody.range_high;
+        GrowResult marked = grow_blueprint_generate_marks(&request, setup->blueprint_preferences, drawn, &generator_rng, &generated->blueprint, &low, &high,
+                                               &run->refusal);
+        ComposerChords tones;
+        UrsatzError error;
+        memset(&error, 0, sizeof error);
+        if (marked == GROW_OK && !composer_chords_init(&tones, setup->knowledge, NULL, 0)) {
+            marked = GROW_ERR_ALLOC;
+        }
+        if (marked == GROW_OK &&
+            api_blueprint_chords(&tones, &generated->blueprint, &setup->meter, &setup->key, 8, generated->chords, generated->numerals, GROW_EXT_CHORDS,
+                                 &generated->chord_count, &error) != URSATZ_OK) {
+            snprintf(run->refusal.message, sizeof run->refusal.message, "%.255s", error.message);
+            snprintf(run->refusal.path, sizeof run->refusal.path, "%.63s", error.path);
+            marked = GROW_ERR_STUCK;
+        }
+        if (marked != GROW_OK) {
+            free(drawn);
+            free(generated);
+            return marked == GROW_ERR_ALLOC ? marked : GROW_ERR_STUCK;
+        }
+        generated->melody.range_low = generated->melody.range_low > low ? generated->melody.range_low : low;
+        generated->melody.range_high = generated->melody.range_high < high ? generated->melody.range_high : high;
+        memcpy(generated->rhythm, drawn->rhythm, sizeof generated->rhythm);
+        memcpy(generated->known, drawn->known, sizeof generated->known);
+        request.chords = generated->chords;
+        request.chord_count = generated->chord_count;
+    }
+    theme->generated = generated;
     GrowResult built = grow_build_plan_checked(&request, &theme->plan, &run->refusal);
     if (built != GROW_OK) {
         free(drawn);
+        free(generated);
+        theme->generated = NULL;
         return built;
     }
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = drawn ? &drawn->basic : setup->motive;
-    config.context.blueprint = setup->blueprint;
+    config.context.blueprint = request.blueprint;
     config.context.development = setup->development;
     if (setup->continuation) {
         config.context.continuation = *setup->continuation;
@@ -326,7 +386,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     }
     config.context.motif = setup->motif;
     config.fidelity = setup->fidelity;
-    config.melody = setup->melody;
+    config.melody = generated ? &generated->melody : setup->melody;
     config.mixture = setup->mixture;
     config.color = setup->color;
     config.block_voicing = setup->block_voicing;
