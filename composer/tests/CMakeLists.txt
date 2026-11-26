@@ -655,6 +655,11 @@ ursatz_test(test_blueprint_generate LIBS ursatz_composer_engine composer_test_su
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
 
+# The presets (P69c B5, R-754): each reads over the defaults, a request's settings layer over a preset's, a theme request names one, an unknown one is refused.
+ursatz_test(test_presets LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+
 # Gate 2 of P69b (R-740): the full blueprint of each reference theme in fixtures/references renders the reference's notes on seed 1.
 ursatz_test(test_reference_blueprints LIBS ursatz_composer_engine composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

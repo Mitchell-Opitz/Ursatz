@@ -267,6 +267,17 @@ foreach(i 01 02)
 endforeach()
 expect_status(1 listen --what motifs --count 1 --strategy wild --out-dir motifs-bad)
 
+# A preset (P69c B5, R-754): a theme made from the u51 motif with --preset ff7 names it in the manifest, and an unknown one is a usage error.
+expect_status(0 listen --what themes --count 1 --seed 1 --development blueprint --preset ff7 --motif "${FIXTURES}/continuation/u51-chords.json" --out-dir themes-preset)
+expect_samples(themes-preset 1)
+file(STRINGS "${WORK}/themes-preset/listen.jsonl" preset_lines)
+list(GET preset_lines 0 preset_line)
+string(JSON preset_named GET "${preset_line}" preset)
+if(NOT preset_named STREQUAL "ff7")
+    message(FATAL_ERROR "the manifest does not name the preset: ${preset_line}")
+endif()
+expect_status(1 listen --what motifs --count 1 --preset nothing --out-dir motifs-bad-preset)
+
 # --- settings ----------------------------------------------------------------------------
 
 file(WRITE "${WORK}/settings.json" "{\"motif\": {\"bars\": {\"one\": 0, \"two\": 1}}}")

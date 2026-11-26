@@ -628,6 +628,18 @@ static void test_theme_form_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(limits, "construction_bars"), "max")->valuedouble == 16);
     assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(limits, "construction_pickup")));
     {
+        /* The presets (API 4.9, R-754): ff7 and hollow-knight, in the order the Composer holds them, each with its label and its source. */
+        const cJSON *presets = cJSON_GetObjectItemCaseSensitive(vocabulary, "presets");
+        assert(cJSON_IsArray(presets) && cJSON_GetArraySize(presets) == 2);
+        const cJSON *ff7 = cJSON_GetArrayItem(presets, 0);
+        const cJSON *hollow = cJSON_GetArrayItem(presets, 1);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(ff7, "name")->valuestring, "ff7") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(ff7, "label")->valuestring, "Final Fantasy VII") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(hollow, "name")->valuestring, "hollow-knight") == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(hollow, "label")->valuestring, "Hollow Knight") == 0);
+        assert(strlen(cJSON_GetObjectItemCaseSensitive(ff7, "source")->valuestring) > 0 && strlen(cJSON_GetObjectItemCaseSensitive(hollow, "source")->valuestring) > 0);
+    }
+    {
         const cJSON *developments = cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_developments");
         assert(cJSON_GetArraySize(developments) == 4);
         const cJSON *first = cJSON_GetArrayItem(developments, 0);
