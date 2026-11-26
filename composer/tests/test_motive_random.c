@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <ursatz_composer/motive_random.h>
 
 #include "motive/motive_internal.h"
@@ -13,7 +14,10 @@
  * Random motives: in C major 4/4, D minor 4/4, A minor 3/4, D major 6/8 and G major 2/4, seeds 1 to 20 give motives of
  * 2 to 12 notes within a twelfth, one or two bars (and a pickup of at most a beat), that keep the hard melodic rules, in
  * the key asked for (C major or A minor without one). The same options and seed give the same motives and another seed
- * does not; a rhythm motive is all on degree 1 and a contour motive in quarters; a style is used and keeps the rules.
+ * does not; a rhythm motive is all on degree 1 and a contour motive in quarters; a style is used and keeps the rules. The blueprint
+ * strategy (P69c, R-753) gives, in 4/4 and 3/4, major and minor, seeds 1 to 20, motives of two bars whose first bar is a K11 cell of the
+ * meter; with the ninth's weight 20 and the appoggiatura's 0 the first note is mostly the ninth over the root of the first chord; the same
+ * seed twice gives the same motive.
  */
 
 typedef struct {
@@ -287,6 +291,78 @@ static void test_refusals(void) {
     assert(motive_random(NULL, motives, &made) == MOTIVE_RANDOM_ERR_NULL);
 }
 
+/* --- the blueprint strategy (P69c, R-753) ----------------------------------------------------------- */
+
+static const Scenario BLUEPRINT_SCENARIOS[] = {
+    {"C major 4/4", HARMONY_MODE_MAJOR, 4, 4, false, 0},
+    {"A minor 4/4", HARMONY_MODE_MINOR, 4, 4, false, 0},
+    {"C major 3/4", HARMONY_MODE_MAJOR, 3, 4, false, 0},
+    {"A minor 3/4", HARMONY_MODE_MINOR, 3, 4, false, 0},
+};
+
+/* Whether the notes of the motive that start in bar 0 are the rhythm of a K11 cell of the meter. */
+static bool first_bar_is_a_cell(const Scenario *scenario, const Motive *motive) {
+    PlanMeter meter = {scenario->beats, scenario->unit, 0};
+    const PatternEntry *cells[128];
+    size_t count = composer_rhythm_cells(test_knowledge(), &meter, 0, cells, 128);
+    Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
+    for (size_t c = 0; c < count; c++) {
+        PlanNote notes[COMPOSER_RHYTHM_NOTES_MAX];
+        size_t note_count = 0;
+        if (!composer_rhythm_cell_notes(cells[c], test_knowledge(), &meter, notes, &note_count)) {
+            continue;
+        }
+        bool same = true;
+        size_t n = 0;
+        for (size_t i = 0; i < motive->note_count && rational_cmp(motive->notes[i].onset, bar) < 0; i++, n++) {
+            same = same && n < note_count && rational_cmp(motive->notes[i].onset, notes[n].offset) == 0 &&
+                   rational_cmp(motive->notes[i].duration, notes[n].duration) == 0;
+        }
+        if (same && n == note_count) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void test_blueprint_strategy(void) {
+    for (size_t which = 0; which < sizeof BLUEPRINT_SCENARIOS / sizeof BLUEPRINT_SCENARIOS[0]; which++) {
+        const Scenario *scenario = &BLUEPRINT_SCENARIOS[which];
+        BlueprintPreferences ninth;
+        blueprint_preferences_default(&ninth);
+        ninth.sounds[BLUEPRINT_SOUND_NINTH_DOWNBEAT] = 20;
+        ninth.sounds[BLUEPRINT_SOUND_APPOGGIATURA] = 0;
+        unsigned ninths = 0;
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            MotiveRandomOptions options = options_of(scenario, seed);
+            options.strategy = MOTIVE_RANDOM_STRATEGY_BLUEPRINT;
+            options.count = 1;
+            Motive motive;
+            Motive again;
+            size_t made = 0;
+            assert(motive_random(&options, &motive, &made) == MOTIVE_RANDOM_OK && made == 1);
+            assert(motive_meter(&motive).beats_per_bar == scenario->beats && motive.key_source == MOTIVE_SKETCH_KEY_GIVEN);
+            assert(motive_sketch_minor(&motive) == (scenario->mode == HARMONY_MODE_MINOR) && motive.form == MOTIVE_SKETCH_FORM_FULL);
+            const char *fault = "unchecked";
+            assert(motive_melodic_fault(&motive, &fault) && fault == NULL);
+            assert(motive.note_count >= 2 && motive.note_count <= MOTIVE_MAX_NOTES && first_bar_is_a_cell(scenario, &motive));
+            Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
+            Rational two;
+            assert(rational_add(bar, bar, &two) == RATIONAL_OK && rational_cmp(motive.length, two) == 0 && motive_pickup(&motive).num == 0);
+            assert(motive_random(&options, &again, &made) == MOTIVE_RANDOM_OK && motive_equal(&motive, &again));
+            options.blueprint = &ninth;
+            assert(motive_random(&options, &motive, &made) == MOTIVE_RANDOM_OK);
+            int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
+            assert(motive.chord_count > 0 && motive_sketch_chord_tones(&motive, &motive.chords[0], pcs) >= 3);
+            ninths += ((motive.notes[0].pitch - pcs[0]) % 12 + 12) % 12 == 2;
+        }
+        if (ninths < 15) {
+            fprintf(stderr, "%s: the first note is the ninth in only %u of %d seeds\n", scenario->name, ninths, SEEDS);
+        }
+        assert(ninths >= 15);
+    }
+}
+
 int main(void) {
     test_rules();
     test_minor_three_four_lengths();
@@ -295,6 +371,7 @@ int main(void) {
     test_forms();
     test_style();
     test_refusals();
+    test_blueprint_strategy();
     puts("ok");
     return 0;
 }

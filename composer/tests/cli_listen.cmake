@@ -256,6 +256,17 @@ foreach(i 01 02 03)
     endforeach()
 endforeach()
 
+# The blueprint strategy (P69c, R-753): two motifs of two bars from the sentence's basic idea, the same seed giving the same files.
+expect_status(0 listen --what motifs --count 2 --seed 5 --strategy blueprint --out-dir motifs-bp)
+expect_samples(motifs-bp 2)
+expect_status(0 listen --what motifs --count 2 --seed 5 --strategy blueprint --out-dir motifs-bp2)
+foreach(i 01 02)
+    foreach(extension mid musicxml json)
+        compare_files(TRUE motifs-bp/${i}.${extension} motifs-bp2/${i}.${extension})
+    endforeach()
+endforeach()
+expect_status(1 listen --what motifs --count 1 --strategy wild --out-dir motifs-bad)
+
 # --- settings ----------------------------------------------------------------------------
 
 file(WRITE "${WORK}/settings.json" "{\"motif\": {\"bars\": {\"one\": 0, \"two\": 1}}}")
