@@ -839,7 +839,10 @@
         "attempts_max",
         "keep_max",
         "pool_min",
-        "pool_max"
+        "pool_max",
+        "blueprint_range_min",
+        "blueprint_range_max",
+        "blueprint_candidates_max"
       ],
       "additionalProperties": false,
       "properties": {
@@ -944,6 +947,18 @@
           "minimum": 1
         },
         "pool_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_range_min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_range_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "blueprint_candidates_max": {
           "type": "integer",
           "minimum": 1
         }

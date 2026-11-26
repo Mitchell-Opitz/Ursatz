@@ -86,4 +86,50 @@ MotiveResult composer_blueprint_motive(const ComposerChords *chords, const Bluep
 PlanResult composer_rhythm_motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                          NodeId *out_node, LaneSpanId *out_span);
 
+/*
+ * The blueprint preferences (R-750, composer/docs/preferences-blueprint.md): what the blueprint generator and the blueprint motif strategy
+ * draw from. The weights are whole numbers 0 to 20 (0 never draws it). sounds: how often a sound is drawn against none (ninth on the
+ * downbeat, suspended fourth before the dominant, appoggiatura, major seventh, leading tone into the tonic) and `long_weak`, the extra
+ * weight of a rhythm cell holding a note of a beat or longer off the downbeat. jobs: per formal function of an idea, the weight of each
+ * rhythm job a unit may take. climax: the weight of the climax in bar 5 (m6) and in bar 6 (m7) of a sentence. range: the semitones
+ * the melody spans below the climax (12 to 24). candidates: the themes drawn for one request to rank (1 to 8).
+ */
+typedef enum {
+    BLUEPRINT_SOUND_NINTH_DOWNBEAT,
+    BLUEPRINT_SOUND_SUS4_DOMINANT,
+    BLUEPRINT_SOUND_APPOGGIATURA,
+    BLUEPRINT_SOUND_MAJOR_SEVENTH,
+    BLUEPRINT_SOUND_LEADING_TONE,
+    BLUEPRINT_SOUND_LONG_WEAK,
+    BLUEPRINT_SOUND_COUNT
+} BlueprintSound;
+
+typedef enum {
+    BLUEPRINT_FUNCTION_BASIC,
+    BLUEPRINT_FUNCTION_FRAGMENT,
+    BLUEPRINT_FUNCTION_CONTRASTING,
+    BLUEPRINT_FUNCTION_CADENTIAL,
+    BLUEPRINT_FUNCTION_COUNT
+} BlueprintFunction;
+
+typedef enum {
+    BLUEPRINT_JOB_RUNNING,
+    BLUEPRINT_JOB_LONG,
+    BLUEPRINT_JOB_SYNCOPATED,
+    BLUEPRINT_JOB_VARIANT,
+    BLUEPRINT_JOB_CONTRAST,
+    BLUEPRINT_JOB_COUNT
+} BlueprintJob;
+
+typedef struct {
+    unsigned sounds[BLUEPRINT_SOUND_COUNT];
+    unsigned jobs[BLUEPRINT_FUNCTION_COUNT][BLUEPRINT_JOB_COUNT];
+    unsigned climax[2]; /* m6 (bar 5), m7 (bar 6) */
+    unsigned range;
+    unsigned candidates;
+} BlueprintPreferences;
+
+/* Writes the defaults of R-750 into *out (composer/src/preferences/preferences_blueprint.c). */
+void blueprint_preferences_default(BlueprintPreferences *out);
+
 #endif

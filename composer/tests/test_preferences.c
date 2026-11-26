@@ -57,6 +57,13 @@ static const char *DEFAULT_HARMONY =
     "\"persichetti.chord-type.add9\",\"persichetti.chord-type.minor-add9\",\"persichetti.chord-type.add6\",\"persichetti.chord-type.minor-add6\","
     "\"persichetti.chord-type.six-nine\",\"persichetti.chord-type.dominant-ninth\",\"persichetti.chord-type.major-ninth\","
     "\"persichetti.chord-type.minor-ninth\",\"persichetti.chord-type.quartal-three\",\"persichetti.chord-type.quartal-four\"]}}";
+static const char *DEFAULT_BLUEPRINT =
+    "{\"sounds\":{\"ninth_downbeat\":3,\"sus4_dominant\":2,\"appoggiatura\":3,\"major_seventh\":1,\"leading_tone\":2,\"long_weak\":2},"
+    "\"jobs\":{\"basic\":{\"running\":2,\"long\":3,\"syncopated\":1,\"variant\":2,\"contrast\":1},"
+    "\"fragment\":{\"running\":3,\"long\":0,\"syncopated\":2,\"variant\":1,\"contrast\":1},"
+    "\"contrasting\":{\"running\":1,\"long\":1,\"syncopated\":1,\"variant\":0,\"contrast\":3},"
+    "\"cadential\":{\"running\":2,\"long\":2,\"syncopated\":1,\"variant\":1,\"contrast\":0}},"
+    "\"climax\":{\"m6\":1,\"m7\":2},\"range\":16,\"candidates\":3}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -167,11 +174,14 @@ static void defaults_round_trip(void) {
     text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "harmony"));
     assert(text && strcmp(text, DEFAULT_HARMONY) == 0);
     cJSON_free(text);
-    /* The whole document is the six groups, in this order. */
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "blueprint"));
+    assert(text && strcmp(text, DEFAULT_BLUEPRINT) == 0);
+    cJSON_free(text);
+    /* The whole document is the seven groups, in this order. */
     text = cJSON_PrintUnformatted(document);
     char whole[8192];
-    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s,\"harmony\":%s}",
-             DEFAULT_MELODY, DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC, DEFAULT_HARMONY);
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s,\"candidates\":%s,\"critic\":%s,\"harmony\":%s,\"blueprint\":%s}",
+             DEFAULT_MELODY, DEFAULT_MOTIF, DEFAULT_DEVELOPMENT, DEFAULT_CANDIDATES, DEFAULT_CRITIC, DEFAULT_HARMONY, DEFAULT_BLUEPRINT);
     assert(text && strcmp(text, whole) == 0);
     cJSON_free(text);
 

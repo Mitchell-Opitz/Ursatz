@@ -53,4 +53,8 @@ cJSON *preferences_write_critic(const ComposerPreferences *preferences);
 bool preferences_read_harmony(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
 cJSON *preferences_write_harmony(const ComposerPreferences *preferences);
 
+/* The blueprint group (P69c, R-750): reads the object into preferences (refusing with the path under "blueprint"), and writes the group. */
+bool preferences_read_blueprint(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal);
+cJSON *preferences_write_blueprint(const ComposerPreferences *preferences);
+
 #endif

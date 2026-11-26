@@ -73,6 +73,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     critic_settings_default(&out->critic);
     composer_mixture_default(&out->harmony.mixture);
     composer_color_default(&out->harmony.color);
+    blueprint_preferences_default(&out->blueprint);
 }
 
 /* Refuses with the path under the document, "melody/keep" for /melody/keep; "" is the document itself. */
@@ -845,6 +846,10 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
             if (!preferences_read_harmony(item, out, &refusal)) {
                 return false;
             }
+        } else if (strcmp(item->string, "blueprint") == 0) {
+            if (!preferences_read_blueprint(item, out, &refusal)) {
+                return false;
+            }
         } else {
             return preferences_refuse(&refusal, item->string, "unknown member");
         }
@@ -1056,6 +1061,12 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
+    cJSON *blueprint = preferences_write_blueprint(preferences);
+    if (!blueprint || !cJSON_AddItemToObject(document, "blueprint", blueprint)) {
+        cJSON_Delete(blueprint);
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -1227,7 +1238,37 @@ static const ComposerPreferenceKey KEYS[] = {
     {"harmony.mixture.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
     {"harmony.mixture.from", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_MIXTURE_FROM},
     {"harmony.color.share", COMPOSER_KEY_RATIO, 0, 16, false, NULL},
-    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES}};
+    {"harmony.color.types", COMPOSER_KEY_WORDS, 0, 0, false, WORDS_COLOR_TYPES},
+    {"blueprint.sounds.ninth_downbeat", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.sus4_dominant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.appoggiatura", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.major_seventh", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.leading_tone", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.sounds.long_weak", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.basic.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.fragment.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.contrasting.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.running", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.long", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.syncopated", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.variant", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.jobs.cadential.contrast", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.climax.m6", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.climax.m7", COMPOSER_KEY_INTEGER, 0, WEIGHT_MAX, false, NULL},
+    {"blueprint.range", COMPOSER_KEY_INTEGER, COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MIN, COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MAX, false, NULL},
+    {"blueprint.candidates", COMPOSER_KEY_INTEGER, 1, COMPOSER_PREFERENCES_BLUEPRINT_CANDIDATES_MAX, false, NULL}};
 
 const ComposerPreferenceKey *composer_preferences_keys(size_t *count) {
     if (count) {

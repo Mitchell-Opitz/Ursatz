@@ -9,6 +9,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_chords.h>
 #include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive_blueprint.h>
 #include <ursatz_composer/motive_random.h>
 
 /*
@@ -57,6 +58,7 @@ typedef struct {
     CandidatePreferences candidates; /* the candidates group (R-673, variety 0 and pool 4 by default) */
     CriticSettings critic;           /* the critic group (R-722): weights 1, nothing reversed, rank off */
     HarmonyPreferences harmony;      /* the harmony group (P69): mixture off */
+    BlueprintPreferences blueprint;  /* the blueprint group (P69c, R-750): the weights of the blueprint generator */
 } ComposerPreferences;
 
 /*
@@ -96,6 +98,9 @@ typedef struct {
 #define COMPOSER_PREFERENCES_POOL_MIN 2
 #define COMPOSER_PREFERENCES_POOL_MAX 8
 #define COMPOSER_PREFERENCES_KEEP_REJECTED_MAX 16
+#define COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MIN 12
+#define COMPOSER_PREFERENCES_BLUEPRINT_RANGE_MAX 24
+#define COMPOSER_PREFERENCES_BLUEPRINT_CANDIDATES_MAX 8
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 256
