@@ -428,7 +428,8 @@ static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout,
             unsigned bits = expect->jobs[unit];
             GrowBlueprintBar *this = &out->bars[bar];
             const BarInfo *before = bar > 0 ? &info[bar - 1] : NULL;
-            bool before_half = before && before->known && before->ends_half;
+            /* A cell that begins with a half note follows no bar that may end with one: also a bar not known before the draw (a variant, a contrast, the second bar of a one-bar motif). */
+            bool before_half = before && (!before->known || before->ends_half);
             PlanNote cell_notes[COMPOSER_RHYTHM_NOTES_MAX];
             size_t cell_count = 0;
             char path[48];
@@ -457,6 +458,22 @@ static GrowResult draw_rhythms(const GrowRequest *request, const Layout *layout,
                     }
                     jobs[candidates] = bit;
                     weights[candidates++] = weight;
+                }
+                /* A variant or a contrast may begin with a half note (a join of the motif's first two notes, a cell): after a bar that may end with one, a cell job is
+                   preferred; the two are kept only when no cell job has weight. */
+                size_t cell_jobs = 0;
+                for (size_t k = 0; before_half && k < candidates; k++) {
+                    cell_jobs += jobs[k] != THEME_JOB_VARIANT && jobs[k] != THEME_JOB_CONTRAST;
+                }
+                if (before_half && cell_jobs > 0 && cell_jobs < candidates) {
+                    size_t kept = 0;
+                    for (size_t k = 0; k < candidates; k++) {
+                        if (jobs[k] != THEME_JOB_VARIANT && jobs[k] != THEME_JOB_CONTRAST) {
+                            jobs[kept] = jobs[k];
+                            weights[kept++] = weights[k];
+                        }
+                    }
+                    candidates = kept;
                 }
                 size_t pick = composer_draw_weighted(rng, weights, candidates);
                 if (pick < candidates) {
@@ -595,6 +612,13 @@ static void add_event(GrowBlueprintBar *bar, Rational offset, PlanEventType type
     bar->events[bar->event_count++].type = type;
 }
 
+/* Whether the offset of the bar is the climax's own note, which no other mark may take (the climax's pitch wins over an anchor there). */
+static bool is_climax(const Marks *marks, size_t bar, Rational offset) {
+    /* The climax's note, and every note before it in its bar: the melody climbs to the climax from the chord tones, with no anchor in the way (an anchor
+       a few notes before the climax leaves the melody stage no line to it). */
+    return marks->out->has_climax && marks->out->climax_bar == bar && rational_cmp(offset, marks->out->climax_at) <= 0;
+}
+
 /* The index of the note of the bar's drawn rhythm that starts at the offset; -1 for none. */
 static long note_at_offset(const Marks *marks, size_t bar, Rational offset) {
     const GrowBlueprintLine *line = &marks->drawn->rhythm[bar];
@@ -659,12 +683,27 @@ static int step_above(const Marks *marks, int pc) {
     return 2;
 }
 
+/* Where the line is about to be in a bar (R-751): the motif's mean pitch near the start, rising toward the climax and falling back after it, so an anchor does not
+   ask the melody for a leap to or from the climax. */
+static int target_of(const Marks *marks, size_t bar) {
+    int top = marks->high + 1;
+    size_t climax = marks->out->climax_bar;
+    if (bar < climax) {
+        return marks->mean + (top - marks->mean) * (int)(bar > 1 ? bar - 1 : 0) / (int)(climax > 1 ? climax : 1) * 7 / 10;
+    }
+    if (bar == climax) {
+        return top - 3;
+    }
+    size_t last = marks->out->bar_count - 1;
+    return marks->mean + (top - marks->mean) * (int)(last - bar) / (int)(last - climax + 1) * 7 / 10;
+}
+
 /* The pitch of the chord tone nearest the mean pitch (placed by the octave rule, with `above` semitones of room under the top), the chord's pcs given. */
-static int nearest_tone(const Marks *marks, const int pcs[], size_t count, int above, int *pc_out) {
+static int nearest_tone(const Marks *marks, int mean, const int pcs[], size_t count, int above, int *pc_out) {
     int best = -1;
     for (size_t i = 0; i < count; i++) {
-        int pitch = place_pc(pcs[i], marks->mean, marks->low, marks->high - above);
-        if (pitch >= 0 && (best < 0 || abs(pitch - marks->mean) < abs(best - marks->mean))) {
+        int pitch = place_pc(pcs[i], mean, marks->low, marks->high - above);
+        if (pitch >= 0 && (best < 0 || abs(pitch - mean) < abs(best - mean))) {
             best = pitch;
             *pc_out = pcs[i];
         }
@@ -683,9 +722,12 @@ static bool sound_appoggiatura(Marks *marks, size_t bar) {
         sounding(chords, count, line->notes[1].offset) != sounding(chords, count, line->notes[0].offset)) {
         return false;
     }
+    if (is_climax(marks, bar, line->notes[0].offset) || is_climax(marks, bar, line->notes[1].offset)) {
+        return false;
+    }
     size_t members = tones_of(marks, &chords[sounding(chords, count, line->notes[0].offset)], pcs);
     int pc = 0;
-    int tone = nearest_tone(marks, pcs, members, 3, &pc);
+    int tone = nearest_tone(marks, target_of(marks, bar), pcs, members, 3, &pc);
     int step = step_above(marks, pc);
     if (tone < 0 || tone + step > marks->high) {
         return false;
@@ -706,12 +748,15 @@ static bool sound_ninth(Marks *marks, size_t bar) {
         rational_cmp(line->notes[0].duration, marks->beat) < 0 || sounding(chords, count, line->notes[1].offset) != 0) {
         return false; /* the ninth resolves to the root on the second note of the chord's span: a bar of one note has none */
     }
+    if (is_climax(marks, bar, line->notes[0].offset) || is_climax(marks, bar, line->notes[1].offset)) {
+        return false;
+    }
     int third = triad_third(marks, &chords[0]);
     int pcs[MOTIVE_SKETCH_CHORD_TONES_MAX];
     if (third == 0 || tones_of(marks, &chords[0], pcs) < 1) {
         return false;
     }
-    int root = place_pc(pcs[0], marks->mean, marks->low, marks->high - 2);
+    int root = place_pc(pcs[0], target_of(marks, bar), marks->low, marks->high - 2);
     if (root < 0) {
         return false;
     }
@@ -729,7 +774,7 @@ static bool sound_major_seventh(Marks *marks, size_t bar) {
     size_t count = read_chords(&(Reading){&marks->keyed, marks->request}, this->chords, chords);
     bool minor = pitch_material_third(marks->request->key.material) == 3;
     long note = longest_note(marks, bar, (Rational){0, 1});
-    if (count == 0 || note < 0 || !room(this, 1, 0)) {
+    if (count == 0 || note < 0 || !room(this, 1, 0) || is_climax(marks, bar, marks->drawn->rhythm[bar].notes[note].offset)) {
         return false;
     }
     int degree = chords[0].degree;
@@ -739,7 +784,7 @@ static bool sound_major_seventh(Marks *marks, size_t bar) {
     if (!fits || third != 4 || tones_of(marks, &chords[0], pcs) < 1) {
         return false;
     }
-    int seventh = place_pc((pcs[0] + 11) % 12, marks->mean, marks->low, marks->high);
+    int seventh = place_pc((pcs[0] + 11) % 12, target_of(marks, bar), marks->low, marks->high);
     if (seventh < 0) {
         return false;
     }
@@ -765,9 +810,9 @@ static bool sound_sus4(Marks *marks, size_t bar) {
             next = (long)i;
         }
     }
-    int tonic = place_pc(tonic_pc(marks->request), marks->mean, marks->low, marks->high);
-    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, marks->mean, marks->low, marks->high);
-    if (next < 0 || tonic < 0 || leading < 0) {
+    int tonic = place_pc(tonic_pc(marks->request), target_of(marks, bar), marks->low, marks->high);
+    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, target_of(marks, bar), marks->low, marks->high);
+    if (next < 0 || tonic < 0 || leading < 0 || is_climax(marks, bar, (Rational){0, 1}) || is_climax(marks, bar, line->notes[next].offset)) {
         return false;
     }
     char at[24];
@@ -794,8 +839,9 @@ static bool sound_leading_tone(Marks *marks, size_t bar) {
     }
     const PlanNote *last = &line->notes[line->count - 1];
     const MotiveSketchChord *chord = &chords[sounding(chords, count, last->offset)];
-    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, marks->mean, marks->low, marks->high - 1);
-    if (chord->degree != 5 || chord->alteration != 0 || leading < 0) {
+    int leading = place_pc((tonic_pc(marks->request) + 11) % 12, target_of(marks, bar), marks->low, marks->high - 1);
+    if (chord->degree != 5 || chord->alteration != 0 || leading < 0 || is_climax(marks, bar, last->offset) ||
+        is_climax(marks, bar + 1, marks->drawn->rhythm[bar + 1].notes[0].offset)) {
         return false;
     }
     add_anchor(this, last->offset, leading);
