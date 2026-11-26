@@ -182,11 +182,22 @@ static void test_sus(void) {
     plan_destroy(result.plan);
 }
 
+/* A color on the tonic in root position ends a perfect cadence (ref-2-ff7 and ref-4-hollowknight end on iadd9); a figure still inverts it. */
+static void test_color_cadence(void) {
+    Composed result = compose("D", "minor", NULL, 7, "iadd9");
+    expect_ok(&result);
+    assert(strcmp(numeral_at(result.plan, 7, 0), "iadd9") == 0);
+    plan_destroy(result.plan);
+    result = compose("D", "minor", NULL, 7, "i64");
+    assert(result.status != URSATZ_OK && strstr(result.message, "i64 cannot end a PAC"));
+}
+
 int main(void) {
     test_applied();
     test_minor_triads();
     test_major_seventh();
     test_sus();
+    test_color_cadence();
     printf("test_blueprint_chords: ok\n");
     return 0;
 }

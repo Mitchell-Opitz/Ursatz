@@ -507,11 +507,12 @@ static int numeral_degree(const char *numeral, bool *inverted) {
     const char *letters = at;
     at += standard_tonality_roman_numeral_letters(at);
     int degree = standard_tonality_roman_numeral_degree_of(letters, (size_t)(at - letters));
-    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
+    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7, 9, a color (add9, sus4, maj7) and none
+     * are root position. */
     while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {
         at++;
     }
-    *inverted = *at && *at != '7' && *at != '9' && *at != '@';
+    *inverted = *at == '6' || *at == '4' || *at == '2';
     return numeral[0] == 'b' || numeral[0] == '#' ? 0 : degree;
 }
 
