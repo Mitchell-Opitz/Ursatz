@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P69c)
+
+API 4.9 (R-749 to R-752, P69c B2 and B3): the preferences' `blueprint` group ([preferences-blueprint.md](preferences-blueprint.md); the vocabulary's preference limits gain `blueprint_range_min`, `blueprint_range_max` and `blueprint_candidates_max`), and the theme `development` `blueprint`: the Composer writes the theme's blueprint from the motif and realizes it ([blueprint-generator.md](blueprint-generator.md)). Each theme of its response has `blueprint`, the blueprint it wrote, in the form a request's blueprint reads. The vocabulary's `theme_developments` has the fourth row, and `ursatz listen --development blueprint` asks for it. A request that is not an 8-bar sentence or period from a motif of up to 2 bars in a major or natural minor key in 4/4, 3/4 or 6/8 is refused at `/development`.
+
 ## Unreleased (phase P69b)
 
 API 4.8 (R-743, R-744, P69b B2 and B6): a theme request's `blueprint` ([blueprints.md](blueprints.md)) gives the theme bar by bar (chords, melody, rhythm or job, anchors, events, bass, inner voices, climax, accompaniment), and then `motives` and `slots` are optional. The chord text of a theme's `chords`, a motive's `harmony` and a section's chords reads lower-case numerals (`iv`, `v` in a minor key), `o`, `+`, `M`/`maj7`, applied chords (`V7/V`) and the suffixes `sus2` and `sus4`; every text that read before reads the same. `MotiveSketchChord` gains `quality_given`, `quality`, `has_target`, `target_degree`, `target_alteration` and `target_minor`.

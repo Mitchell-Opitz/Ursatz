@@ -26,7 +26,7 @@ ursatz listen --print-settings
 | `--tempo <bpm>` | The tempo of the MIDI and MusicXML files, 20 to 400. |
 | `--strategy segments\|drawn` | How a generated motif is made (default `segments`). |
 | `--into sentence\|period` | Themes: the pairing (default `sentence`). |
-| `--development melody\|balanced\|theme` | Themes: how far the theme strays from the motif (default `balanced`). |
+| `--development melody\|balanced\|theme\|blueprint` | Themes: how far the theme strays from the motif (default `balanced`); `blueprint` has the Composer write the theme's blueprint from the motif ([blueprint-generator.md](../../composer/docs/blueprint-generator.md)). |
 | `--bars 4\|8` | Themes: the length (default 8). |
 | `--check` | Themes: pass over a seed whose analysis contradicts the plan. |
 | `--motif <file>` | Themes: the motif of every sample, anything the [`motive`](cli-motive.md) command reads (a note list, MusicXML, MIDI, a motive document). It is read in key C and the mode. Absent: a generated motif for each sample, made with the sample's seed, the mode, meter, strategy, style and settings. |
