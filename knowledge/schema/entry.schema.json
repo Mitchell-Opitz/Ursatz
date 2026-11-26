@@ -189,7 +189,8 @@
               "relation",
               "function",
               "instrument",
-              "rule"
+              "rule",
+              "pattern"
             ]
           }
         }
