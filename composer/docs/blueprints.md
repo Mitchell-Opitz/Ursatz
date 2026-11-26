@@ -1,6 +1,6 @@
 # Blueprints
 
-A theme written as a blueprint (R-736): harmony, rhythm per bar, pitch anchors, chosen non-chord tones, a climax, each fixed or left open, that the Composer realizes. This page holds the theme request's `blueprint` member (R-743): what it gives, what it refuses and how it becomes the theme's plan; then what the melody stage does with a blueprint's melody (R-746): the plan constraints `anchor`, `event` and `climax`, rhythm-only idea motives, and the blueprint motive. Back to the [docs index](README.md).
+A theme written as a blueprint (R-736): harmony, rhythm per bar, pitch anchors, chosen non-chord tones, a climax, each fixed or left open, that the Composer realizes. This page holds the theme request's `blueprint` member (R-743): what it gives, what it refuses and how it becomes the theme's plan; then what the melody stage does with a blueprint's melody (R-746): the plan constraints `anchor`, `event` and `climax`, rhythm-only idea motives, and the blueprint motive; last, the reference blueprints and their tests (R-740). Back to the [docs index](README.md).
 
 ## The blueprint member
 
@@ -160,3 +160,16 @@ A motive with a rhythm and no pitches (R-120's rhythm form) is attached with `co
 Every note carries a tone label (`motive_tones`): the event's type, else `chord` for a chord tone. Refusals (`MOTIVE_ERR_VALUE`, the reason in the error): no notes or more than 64, overlapping notes, no chords ("a blueprint motive drawn from its rhythm needs its chords"), an anchor or event where no note starts ("anchor at 1/4: no note starts there"), a note with no chord tone in range ("note 0 at 0: no chord tone of I in 61 to 63"), an event that falls outside the range.
 
 The theme request draws it for a basic idea whose bars give a rhythm or a job ([the plan](#how-it-becomes-the-plan)).
+
+## The reference blueprints
+
+`tests/fixtures/references` holds the nine hand-written reference themes Michelle rated (MIDI and MusicXML, copied from Ursatz-Music-Storage) and 13 blueprints: a `.full.json` for `hand-A`, `hand-B` and `ref-1-megaman` to `ref-5-shostakovich`, and a `.skeleton.json` for the first six. `ref-6-holst` and `ref-7-debussy` have none: planed chords move to P70 and Debussy is outside gate (a) (R-742). Its README names the sources, the ratings and each change from the blueprints as first written.
+
+Gate 2 of P69b (R-740) is two tests:
+
+| Test | What it holds |
+| --- | --- |
+| `test_reference_blueprints` | Each full blueprint through the theme API at seed 1 renders a MIDI file whose notes equal the reference's: onset, duration and pitch in quarter notes, as `compare_notes.py` reads them (channels, velocities and tempo are ignored); 93, 89, 107, 90, 96, 69 and 105 notes. |
+| `test_reference_skeletons` (slow), `test_reference_skeletons_smoke` | Each skeleton on seeds 1 to 10 (the smoke: seed 1 of `hand-A` and `ref-4-hollowknight`). At least 9 of 10 compose (each skeleton's count is pinned and may only rise; today 10 of 10 each), and in each theme every fixed item holds, read from the plan: each bar's chords at their beats; a given rhythm's onsets and durations (a tie is one note); an anchor's pitch; an event that is no tone of its chord (a sus chord's fourth is one, an added ninth or sixth is not) and moves by step to the next note (a suspension or retardation keeps the note before, an anticipation is a tone of the chord after it); the climax pitch with no other note as high; the accompaniment pattern. |
+
+Gate 3 is the `Listen Ursatz` round after the PR merges, not a test: three seeds of each skeleton, heard blind, average 4 or more. Its known risk: rhythm-only and job bars often repeat one pitch (`71 71 71 71` in the hand-A cadence bar).

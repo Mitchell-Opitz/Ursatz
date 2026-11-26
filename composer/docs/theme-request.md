@@ -152,7 +152,7 @@ before it seeds; Compose gives the same message and path. One refusal is given, 
 | `/ideas/<name>` | the same for the motif of an idea |
 | `/slots/contrasting`, `/ideas/<name>` | given beside a part-length basic motif |
 | `/accompaniment`, `/voicing` | the accompaniment is not valid, or a voicing is given with one |
-| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant |
+| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant (a color such as `iadd9` is root position; a figure 6 or 64 inverts) |
 
 What fails only while seeding (a theme no seed can write) is not found by validation.
 
