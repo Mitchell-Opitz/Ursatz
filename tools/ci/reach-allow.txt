@@ -32,6 +32,9 @@ analyzer/src/links/motive_links.c add_scope_document  # a helper of motive_link_
 composer/src/critic/critic_evaluate.c critic_evaluator_function  # the function names of the evaluators: test_critic_rules pins the table to the entries' `function` both ways, no application reads it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_at  # no app lists the chord types until P69 B9 (voicings read the types they fit); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_count  # no app lists the chord types until P69 B9 (voicings read the types they fit); its tests call it
+library/theory/knowledge/knowledge_schema.c knowledge_snapshot_schema  # no app reads the schema entries until P70 B9 (the progression request reads them); its tests call it
+library/theory/knowledge/knowledge_schema.c knowledge_snapshot_schema_at  # no app reads the schema entries until P70 B9 (the progression request reads them); its tests call it
+library/theory/knowledge/knowledge_schema.c knowledge_snapshot_schema_count  # no app reads the schema entries until P70 B9 (the progression request reads them); its tests call it
 library/theory/tonality/chord_vocabulary.c common_practice_triad_intervals  # the no-snapshot fallback of common_practice_triad_intervals_with (R-728); its tests call it
 library/theory/tonality/chord_vocabulary_seventh.c common_practice_seventh_intervals  # the no-snapshot fallback of common_practice_seventh_intervals_with (R-728); its tests call it
 composer/src/harmony/harmony_context.c harmony_read_chord  # the mode form of harmony_read_chord_for (P69 B3): every application reads a key through its kind; its tests call it

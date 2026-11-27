@@ -49,11 +49,11 @@ static bool lower_hex16(const char *text) {
 
 static void test_embedded_modes(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    assert(knowledge_snapshot_entry_count(snapshot) == 175);
+    assert(knowledge_snapshot_entry_count(snapshot) == 201);
     /* in id order */
     assert(strcmp(knowledge_snapshot_entry_at(snapshot, 0)->id, "fux.rule.dissonance-against-bass") == 0);
-    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 174)->id, "schoenberg.pattern.oom-pah") == 0);
-    assert(knowledge_snapshot_entry_at(snapshot, 175) == NULL);
+    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 200)->id, "schoenberg.pattern.oom-pah") == 0);
+    assert(knowledge_snapshot_entry_at(snapshot, 201) == NULL);
 
     for (int mode = 0; mode < 4; mode++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry(snapshot, MODE_IDS[mode]);
@@ -93,11 +93,11 @@ static const int DIATONIC_STEPS[7][7] = {{0, 1, 3, 5, 6, 8, 10}, {0, 1, 3, 5, 7,
 
 static void test_embedded_counts(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, ensembles = 0, vocabulary = 0, functions = 0, theme_types = 0, rules = 0, voicings = 0, patterns = 0, others = 0;
+    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, ensembles = 0, vocabulary = 0, functions = 0, theme_types = 0, rules = 0, voicings = 0, patterns = 0, schemas = 0, others = 0;
     for (size_t i = 0; i < knowledge_snapshot_entry_count(snapshot); i++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry_at(snapshot, i);
         assert(entry != NULL && (entry->status == KNOWLEDGE_STATUS_ACTIVE || strcmp(entry->kind, "vocabulary") == 0 ||
-                           strcmp(entry->kind, "function") == 0 ||
+                           strcmp(entry->kind, "function") == 0 || strcmp(entry->kind, "schema") == 0 ||
                            strncmp(entry->id, "persichetti.material.", strlen("persichetti.material.")) == 0));
         if (strcmp(entry->kind, "material") == 0) {
             materials++;
@@ -121,12 +121,14 @@ static void test_embedded_counts(void) {
             voicings++;
         } else if (strcmp(entry->kind, "pattern") == 0) {
             patterns++;
+        } else if (strcmp(entry->kind, "schema") == 0) {
+            schemas++;
         } else {
             others++;
         }
     }
     assert(materials == 21 && relations == 18 && chord_types == 21 && instruments == 1 && ensembles == 1 && vocabulary == 37 &&
-           functions == 10 && theme_types == 9 && rules == 21 && voicings == 4 && patterns == 32 && others == 0);
+           functions == 10 && theme_types == 9 && rules == 21 && voicings == 4 && patterns == 32 && schemas == 26 && others == 0);
     /* the seven diatonic modes, darkest to brightest: each a rotation of the major scale with its own steps */
     for (int mode = 0; mode < 7; mode++) {
         const PitchMaterial *material = knowledge_snapshot_material(snapshot, DIATONIC_IDS[mode]);
@@ -538,7 +540,7 @@ static void test_hash(void) {
     /* two snapshots in one process are independent: their entries are not shared */
     assert(knowledge_snapshot_entry(first, "omt.material.major") != knowledge_snapshot_entry(second, "omt.material.major"));
     knowledge_snapshot_destroy(first);
-    assert(knowledge_snapshot_entry_count(second) == 175);
+    assert(knowledge_snapshot_entry_count(second) == 201);
     knowledge_snapshot_destroy(second);
 }
 
@@ -546,7 +548,7 @@ static void test_user_file(void) {
     KnowledgeSnapshot *plain = build(NULL, 0);
     KnowledgeUserFile file = {"mine.json", USER_FILE};
     KnowledgeSnapshot *with_user = build(&file, 1);
-    assert(knowledge_snapshot_entry_count(with_user) == 177);
+    assert(knowledge_snapshot_entry_count(with_user) == 203);
     assert(strcmp(knowledge_snapshot_hash(plain), knowledge_snapshot_hash(with_user)) != 0);
     const PitchMaterial *test = knowledge_snapshot_material(with_user, "user.material.test");
     assert(test != NULL && test->step_count == 3 && test->steps[2] == 7 && test->descending_step_count == 0);
