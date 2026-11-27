@@ -1119,7 +1119,8 @@ static void test_harmony_numerals(void) {
     assert(chords[2].degree == 7 && chords[2].inversion == 1 && chords[2].has_target && chords[2].target_degree == 6 && chords[2].quality_given);
     /* Written back, the text reads as the same chords. */
     Motive motive = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
-    const char *texts[] = {"I iv@2", "i #vii@1 V7/V@2 viio65/vi@3", "ii7@1 IVM7@2", "Vsus4 V@2", "iisus2"};
+    const char *texts[] = {"I iv@2", "i #vii@1 V7/V@2 viio65/vi@3", "ii7@1 IVM7@2", "Vsus4 V@2", "iisus2",
+                           "IV:dorian", "II:lydian", "V7:mixolydian", "I IV:dorian@2", "V65:phrygian@1"};
     for (size_t t = 0; t < sizeof(texts) / sizeof(texts[0]); t++) {
         assert(motive_harmony_parse_in(test_knowledge(), texts[t], &FOUR_FOUR, motive.chords, &motive.chord_count, &error) == MOTIVE_OK);
         char *written = motive_harmony_to_text(&motive);
@@ -1131,6 +1132,43 @@ static void test_harmony_numerals(void) {
            strcmp(chords[0].color->id, "omt.chord-type.sus4") == 0);
     assert(motive_harmony_parse("Vsus4", &FOUR_FOUR, chords, &count, &error) == MOTIVE_ERR_SYNTAX);
     assert(strstr(error.message, "sus2, sus4") != NULL);
+    /* A mode after a colon (R-762) names the snapshot's material; the chord keeps its numeral's figure. */
+    assert(motive_harmony_parse_in(test_knowledge(), "IV:dorian V65:mixolydian@2", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && count == 2);
+    assert(chords[0].mode != NULL && strcmp(chords[0].mode->key_word, "dorian") == 0 && chords[0].degree == 4 && chords[0].alteration == 0);
+    assert(chords[1].mode != NULL && strcmp(chords[1].mode->key_word, "mixolydian") == 0 && chords[1].seventh && chords[1].inversion == 1);
+    assert(motive_harmony_parse_in(test_knowledge(), "I", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK && chords[0].mode == NULL);
+    /* The aliases of a material name it: ionian is the major mode, written back with the material's own word. */
+    assert(motive_harmony_parse_in(test_knowledge(), "IV:ionian", &FOUR_FOUR, chords, &count, &error) == MOTIVE_OK &&
+           chords[0].mode != NULL && strcmp(chords[0].mode->key_word, "major") == 0);
+}
+
+/* R-762: what a mode suffix refuses, with the token's location. */
+static void test_harmony_mode_errors(void) {
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
+    size_t count = 0;
+    MotiveError error;
+    const struct {
+        const char *text;
+        MotiveResult result;
+        const char *message;
+    } cases[] = {
+        {"bIV:dorian", MOTIVE_ERR_SYNTAX, "upper-case numeral with no b, # or color, as IV:dorian"},
+        {"IVadd9:dorian", MOTIVE_ERR_SYNTAX, "upper-case numeral with no b, # or color, as IV:dorian"},
+        {"iv:dorian", MOTIVE_ERR_SYNTAX, "upper-case numeral with no b, # or color, as IV:dorian"},
+        {"IV:blues", MOTIVE_ERR_VALUE, "'blues' is not a mode the Composer writes; write major, minor, dorian, phrygian, lydian, mixolydian or "
+                                       "locrian after the colon"},
+        {"IV:", MOTIVE_ERR_VALUE, "'' is not a mode the Composer writes"},
+    };
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+        MotiveResult result = motive_harmony_parse_in(test_knowledge(), cases[c].text, &FOUR_FOUR, chords, &count, &error);
+        if (result != cases[c].result || strstr(error.message, cases[c].message) == NULL || strcmp(error.location, "token 1 (column 1)") != 0) {
+            fprintf(stderr, "'%s': %s at '%s': %s\n", cases[c].text, motive_result_name(result), error.location, error.message);
+        }
+        assert(result == cases[c].result && strstr(error.message, cases[c].message) != NULL && strcmp(error.location, "token 1 (column 1)") == 0);
+    }
+    /* Without a snapshot there is no material to name. */
+    assert(motive_harmony_parse("IV:dorian", &FOUR_FOUR, chords, &count, &error) == MOTIVE_ERR_VALUE);
+    assert(strstr(error.message, "a chord with a mode needs the knowledge snapshot") != NULL);
 }
 
 static void test_harmony_errors(void) {
@@ -1590,6 +1628,7 @@ int main(void) {
     test_harmony_text();
     test_harmony_numerals();
     test_harmony_errors();
+    test_harmony_mode_errors();
     test_feature_and_role_text();
     test_extras_in_json();
     test_extras_errors();

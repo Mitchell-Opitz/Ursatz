@@ -426,7 +426,7 @@ ursatz_test(test_plan_cli LIBS ursatz_composer_engine composer_test_support
 add_dependencies(test_plan_cli ursatz)
 
 # Chords given at exact onsets (given.h plan_give_chords).
-ursatz_test(test_given_chords LIBS ursatz_composer_engine)
+ursatz_test(test_given_chords LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Given chords on beats and half beats, up to four a bar (R-761): the measured requests as processes of the theme command (about
 # 10 s with the processes run at once), and the reading grid of a span.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/beat_chords)
