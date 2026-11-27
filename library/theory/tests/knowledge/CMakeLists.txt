@@ -5,3 +5,4 @@ ursatz_test(form_entries SOURCES test_form_entries.c LIBS ursatz_theory VALGRIND
 ursatz_test(rule_entries SOURCES test_rule_entries.c LIBS ursatz_theory VALGRIND)
 ursatz_test(mode_entries SOURCES test_mode_entries.c LIBS ursatz_theory VALGRIND)
 ursatz_test(pattern_entries SOURCES test_pattern_entries.c LIBS ursatz_theory VALGRIND)
+ursatz_test(schema_entries SOURCES test_schema_entries.c LIBS ursatz_theory VALGRIND)
