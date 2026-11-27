@@ -6,6 +6,7 @@
 
 #include <theory/harmony/harmony_applied.h>
 #include <theory/harmony/harmony_chord.h>
+#include <theory/tonality/modal_chords.h>
 #include <theory/tonality/roman_numeral_grammar.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
@@ -93,6 +94,46 @@ static UrsatzStatus resolve_borrowed(const ComposerChords *tones, const SpelledK
                     bar);
     }
     return URSATZ_OK;
+}
+
+/* A chord named with a mode (R-762, IV:dorian): the triad on the degree of that mode, or with a seventh figure the mode's own seventh. It
+   is refused when it is diminished or augmented, a seventh the numeral grammar has no quality for, or the mode is the key's own. Else it is
+   read as the chord of its quality, which resolve_borrowed takes from the nearest mode that holds it, as for every borrowed chord. */
+static UrsatzStatus resolve_mode(const ComposerChords *tones, const SpelledKey *key, const MotiveSketchChord *chord, long bar, const char *path,
+                                 char numeral_out[PLAN_ROMAN_NUMERAL_MAX], UrsatzError *error) {
+    HarmonyKind kind = harmony_kind(tones, key);
+    const PitchMaterial *own = tones == NULL ? NULL : composer_chords_key_material(kind.chords, kind.mode, kind.modal);
+    const char *roman = standard_tonality_roman_numeral_degree(chord->degree, true);
+    if (own == NULL) {
+        return fail(error, path, "chords bar %ld: a chord with a mode needs the knowledge snapshot", bar);
+    }
+    if (strcmp(own->id, chord->mode->id) == 0) {
+        return fail(error, path, "chords bar %ld: %s is the key's own mode; write the numeral without it", bar, chord->mode->key_word);
+    }
+    int root;
+    StandardTonalityTriadQuality triad;
+    if (!pitch_material_triad_on(chord->mode, chord->degree, &root, NULL, &triad) ||
+        (triad != STANDARD_TONALITY_TRIAD_MAJOR && triad != STANDARD_TONALITY_TRIAD_MINOR)) {
+        return fail(error, path, "chords bar %ld: the triad on %s in %s is not a major or minor chord", bar, roman, chord->mode->key_word);
+    }
+    MotiveSketchChord named = *chord;
+    named.mode = NULL;
+    named.quality_given = true;
+    named.quality = triad == STANDARD_TONALITY_TRIAD_MAJOR ? STANDARD_TONALITY_NUMERAL_MAJOR : STANDARD_TONALITY_NUMERAL_MINOR;
+    if (chord->seventh) {
+        int seventh = pitch_material_step(chord->mode, (chord->degree + 5) % 7 + 1);
+        int above = seventh < 0 || root < 0 ? -1 : (seventh - root + 12) % 12;
+        if (triad == STANDARD_TONALITY_TRIAD_MAJOR && above == 10) {
+            named.quality = STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH;
+        } else if (triad == STANDARD_TONALITY_TRIAD_MAJOR && above == 11) {
+            named.quality = STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH;
+        } else if (triad == STANDARD_TONALITY_TRIAD_MINOR && above == 10) {
+            named.quality = STANDARD_TONALITY_NUMERAL_MINOR_SEVENTH;
+        } else {
+            return fail(error, path, "chords bar %ld: the seventh chord on %s in %s is not one the Composer writes", bar, roman, chord->mode->key_word);
+        }
+    }
+    return resolve_borrowed(tones, key, &named, bar, path, numeral_out, error);
 }
 
 /* Whether the key's material holds a major seventh chord on the degree: a major third, a perfect fifth and a major seventh above its root. */
@@ -207,7 +248,8 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
                 return fail(error, path, "chords bar %ld: a chord starts inside the bar", bar);
             }
             size_t at = *chord_count;
-            UrsatzStatus resolved = chord->has_target ? resolve_applied(tones, key, chord, bar, path, numerals[at], error)
+            UrsatzStatus resolved = chord->mode != NULL ? resolve_mode(tones, key, chord, bar, path, numerals[at], error)
+                                    : chord->has_target ? resolve_applied(tones, key, chord, bar, path, numerals[at], error)
                                     : chord->alteration != 0 || (chord->quality_given && chord->quality != STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH)
                                         ? resolve_borrowed(tones, key, chord, bar, path, numerals[at], error)
                                         : resolve_plain(tones, key, chord, bar, path, numerals[at], error);
