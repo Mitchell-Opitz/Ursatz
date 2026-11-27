@@ -10,8 +10,8 @@
    call context: the knowledge snapshot of the embedded entries. */
 
 int main(void) {
-    if (strcmp(composer_api_version(), "4.9") != 0) {
-        fprintf(stderr, "consumer: API version %s, expected 4.9\n", composer_api_version());
+    if (strcmp(composer_api_version(), "4.10") != 0) {
+        fprintf(stderr, "consumer: API version %s, expected 4.10\n", composer_api_version());
         return 1;
     }
     KnowledgeSnapshot *knowledge = NULL;

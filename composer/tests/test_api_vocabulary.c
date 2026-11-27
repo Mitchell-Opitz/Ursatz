@@ -246,6 +246,8 @@ static void test_lists(void) {
         const char *value = value_of(meter);
         assert(cJSON_IsNumber(beats) && beats->valueint == (value[0] == '6' ? 6 : value[0] - '0'));
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(meter, "chord_onset_step")->valuestring, "1/2") == 0);
+        assert(cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(meter, "chords_max")) &&
+               cJSON_GetObjectItemCaseSensitive(meter, "chords_max")->valueint == 4);
         const cJSON *unit = cJSON_GetObjectItemCaseSensitive(meter, "beat_unit");
         assert(cJSON_IsNumber(unit) && unit->valueint == atoi(strchr(value, '/') + 1));
         if (strcmp(value, "4/4") == 0) {
@@ -869,7 +871,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "4.9") == 0);
+    assert(strcmp(composer_api_version(), "4.10") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

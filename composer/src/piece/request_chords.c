@@ -184,8 +184,8 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
             return fail(error, path, "chords bar %ld: '%s' at %s: %s", bar, text,
                             motive_error.location, motive_error.message);
         }
-        if (count == 0 || count > 2) {
-            return fail(error, path, "chords bar %ld: write 1 or 2 chords, not %zu", bar, count);
+        if (count == 0 || count > 4) {
+            return fail(error, path, "chords bar %ld: write 1 to 4 chords, not %zu", bar, count);
         }
         if (*chord_count + count > capacity) {
             return fail(error, base, "chords: too many chords");
@@ -202,21 +202,6 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
             if (rational_div(chord->onset, division, &divisions) != RATIONAL_OK || divisions.den != 1) {
                 return fail(error, path, "chords bar %ld: a chord starts on a beat or a half beat",
                                 bar);
-            }
-            Rational cell;
-            Rational in_cells;
-            if (!given_cell_length(meter, &cell) ||
-                rational_make(chord->onset.num * (long)cell.den, chord->onset.den * (long long)cell.num, &in_cells) !=
-                    RATIONAL_OK ||
-                in_cells.den != 1) {
-                /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
-                long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
-                return rational_cmp(cell, bar_length) == 0
-                           ? fail(error, path, "chords bar %ld: a bar of %d/%d takes one chord", bar,
-                                      meter->beats_per_bar, meter->beat_unit)
-                           : fail(error, path,
-                                      "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)", bar,
-                                      meter->beats_per_bar, meter->beat_unit, beats, beats);
             }
             if (rational_cmp(chord->onset, bar_length) >= 0) {
                 return fail(error, path, "chords bar %ld: a chord starts inside the bar", bar);

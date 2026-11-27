@@ -53,10 +53,11 @@
  * 4.8 adds the theme request's blueprint (R-743): the theme given bar by bar, its chords (R-744), melody, rhythms or rhythm jobs, anchors,
  * events, bass and inner voices, its climax and accompaniment.
  * 4.9 adds blueprints from a motif (R-751, R-752): the preferences' blueprint group.
+ * 4.10 adds the harmony lab (R-761 to R-766): given chords on beats and half beats, up to four a bar.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 9
+#define COMPOSER_API_VERSION_MINOR 10
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
