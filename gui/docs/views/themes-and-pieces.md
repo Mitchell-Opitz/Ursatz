@@ -50,10 +50,8 @@ the theme body the backend composes (see [Theme bodies and version files](../../
   in the body's `ideas`; those the form does not have are dropped on save. The
   result table says "From its own motif" for them.
 - Chords: under the slots, one text field per bar of the theme (`Bar 1` to `Bar 16`),
-  placeholder `Composer`. Roman numerals in C, at most 2 a bar, `@` the beat a
-  chord starts on from 0. The Composer writes chords on the cells of the meter
-  only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
-  hint under the row follows the meter). The Composer checks the chords, like the
+  placeholder `Composer`. Roman numerals in C, at most 4 a bar (the meter's `chords_max`), `@` the beat or
+  half beat a chord starts on from 0 (the hint under the row says so). The Composer checks the chords, like the
   other values of the theme (meter, bars, hybrid, tempo, seed), while the form is edited
   (`POST /api/materials/items/validate`, 400 ms after the last change): its message shows in the
   Save row and the status line, as given, and the field its request path names is marked: a form field, the row of a

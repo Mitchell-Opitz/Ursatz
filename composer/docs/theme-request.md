@@ -102,7 +102,7 @@ The motive of an idea must fit it as a slot motive does (exit 2 when it does not
 `chords` gives chords of the theme (R-208): a list of `{"bar", "text"}`, at most one entry for a bar. `bar` counts from 0 inside
 the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](../../cli/docs/cli-motive.md)) relative to the bar: Roman
 numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
-the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
+the beat unit (`I V@2`). 1 to 4 chords (R-761); the first is at 0 unless it is written with an onset, the onsets rise, each is a
 multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. A numeral
 with `b` or `#` is a borrowed chord (R-729).
 
@@ -114,13 +114,11 @@ an `#` or `b` are refused (`chords bar <n>: that chord is not the key's own and 
 chords are not given in a modal key`) and for a target the library does not tonicize (`'<text>' is not an applied chord the Composer
 writes`). `maj7` (`IVmaj7`, `IVM7`) is the seventh chord `7` of the key where the key's chord on the degree is a major seventh, else
 refused (`IVmaj7 is not this key's seventh chord; write it as IV7 or with its own quality`). The suffixes `sus2` and `sus4` go on a
-triad of the key like the color suffixes and sound the root, the second or fourth, and the fifth, with no third. Four chords a bar
-and off-cell onsets are not given yet.
+triad of the key like the color suffixes and sound the root, the second or fourth, and the fifth, with no third.
 
 The chords are Given: the harmony stage fills only what they leave open, the bass and the melody are written over them, and
-none of them is changed. The harmony and bass operators write chords on the cells of the meter (one for a bar of 2/4 or 3/4,
-two for 4/4 or 6/8), so an onset must fall on one: in 4/4 a second chord starts at `@2`, in 6/8 at `@3`, and a bar of 2/4 or
-3/4 takes one chord. Any other onset, such as the "and" of beat 2 (`@3/2`), is an error (exit 1), not shifted to a cell.
+none of them is changed. Any beat or half beat may start a chord, up to four a bar; the span is read on the finest grid its Given
+chords need ([harmony-lab.md](harmony-lab.md#the-reading-grid)). An onset off a half beat (`@1/3`) is an error (exit 1).
 
 A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). A chord in a bar the cadence fixes
 that cannot arrive it (a last bar `V` under a perfect cadence) exits 2 before any seed is tried, see
