@@ -1,0 +1,82 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "omt",
+ "entries": [
+  {
+   "id": "omt.schema.prinner",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Prinner",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": true,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 8,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "7-6",
+      "numeral": "vii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the Prinner's four stages"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  }
+ ]
+}

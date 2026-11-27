@@ -7,7 +7,7 @@ source and folder's kind, relations point at existing ids, citations name a sour
 spell its steps, an instrument's range holds its examples, an ensemble's slots name instruments, a vocabulary entry's code is its
 subtype's own, a rule's code is unique in its subtype with its message placeholders and parameters in the allowed form, a texture's category is a texture's code, a progression type's example chords follow its type, a formal function's
 harmony ids are progression types and its contrast target a formal function, and a theme type's ideas, units and examples agree with
-its functions, and a pattern's rhythm fills one bar of its meter and its accompaniment steps name real meters and members. One line per problem,
+its functions, a pattern's rhythm fills one bar of its meter and its accompaniment steps name real meters and members, and a schema's function is one of the five and its numerals are Roman numerals. One line per problem,
 "knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
 """
 import json
@@ -584,6 +584,27 @@ def check_pattern(path, entry):
                     problem(path, entry["id"], "content.steps: member %s is not 0 to 7" % step["member"])
 
 
+GALANT_FUNCTIONS = ("opening-gambit", "continuation", "pre-cadential", "cadence", "post-cadential")
+ROMAN = "(VII|VI|V|IV|III|II|I|vii|vi|v|iv|iii|ii|i)"
+GALANT_NUMERAL = re.compile("^(Cad\\.|b?{0}o?(/{0})?)$".format(ROMAN))
+
+
+def check_schema(path, entry):
+    """A galant schema's function is one of the five, and every numeral of its stages is a Roman numeral (or the cadential six-four, Cad.)."""
+    content = entry.get("content", {})
+    if entry.get("subtype") != "galant":
+        return
+    if content.get("function") not in GALANT_FUNCTIONS:
+        problem(path, entry["id"], "content.function: '%s' is not one of %s" % (content.get("function"), ", ".join(GALANT_FUNCTIONS)))
+    stages = content.get("stages")
+    for number, stage in enumerate(stages if isinstance(stages, list) else [], 1):
+        if not isinstance(stage, dict):
+            continue
+        for field in ("numeral", "numeral_dominant"):
+            if field in stage and (not isinstance(stage[field], str) or GALANT_NUMERAL.match(stage[field]) is None):
+                problem(path, entry["id"], "content.stages[%d].%s: '%s' is not a Roman numeral" % (number, field, stage[field]))
+
+
 def check_voicing(path, entry, chord_type_ids):
     """Members ascend from the root at 0, an example's pitches are the members on its root, and every fit is a chord-type entry."""
     content = entry.get("content", {})
@@ -642,7 +663,7 @@ def main(argv):
     vocabulary_entries = []
     rule_entries = []
     function_entries, theme_type_entries = {}, {}
-    chord_type_ids, voicing_entries, pattern_entries = set(), [], []
+    chord_type_ids, voicing_entries, pattern_entries, schema_entries = set(), [], [], []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "json-schema":
@@ -722,6 +743,8 @@ def main(argv):
                     voicing_entries.append((rel, entry))
                 if kind == "pattern" and isinstance(entry.get("content"), dict):
                     pattern_entries.append((rel, entry))
+                if kind == "schema" and isinstance(entry.get("content"), dict):
+                    schema_entries.append((rel, entry))
                 if kind == "relation":
                     relation_entries.append((rel, entry))
                 if kind == "instrument" and subtype == "instrument":
@@ -751,6 +774,8 @@ def main(argv):
         check_voicing(rel, entry, chord_type_ids)
     for rel, entry in pattern_entries:
         check_pattern(rel, entry)
+    for rel, entry in schema_entries:
+        check_schema(rel, entry)
     check_rule(rule_entries)
     progression_ids = {entry["id"] for _, entry in vocabulary_entries if entry.get("subtype") == "progression-type"}
     for rel, entry in function_entries.values():
