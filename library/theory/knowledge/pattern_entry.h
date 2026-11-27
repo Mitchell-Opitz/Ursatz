@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
     bool beat_grid; /* a step is a beat; else an eighth */
     bool compound;  /* false: the pattern is not written in a compound meter */
+    bool planing;   /* true: each later chord keeps the first chord's voicing shape (R-763); absent is false */
     size_t step_count;
     PatternStep steps[PATTERN_STEP_MAX];
     size_t meter_count;
