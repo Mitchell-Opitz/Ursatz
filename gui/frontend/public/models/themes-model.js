@@ -41,7 +41,7 @@ const motiveCategories = () =>
   Vocab.list("theme_motive_categories").map((entry) => ({ category: entry.value, label: entry.label }));
 /* The beats in a bar, and the beat of the one cell a second chord may start on (absent when the bar takes one). */
 const meterBeats = (meter) => (Vocab.entry("meters", meter) || {}).beats;
-const secondChordBeat = (meter) => (Vocab.entry("meters", meter) || {}).second_chord_beat;
+const chordsMax = (meter) => (Vocab.entry("meters", meter) || {}).chords_max || 1;
 /* The ideas of a half of a form (a beginning or an ending), each {idea, slot}, in order. */
 const halfIdeas = (list, half) =>
   ((Vocab.entry(list, half) || {}).ideas || []).map((idea) => ({ idea, slot: (Vocab.entry("theme_ideas", idea) || {}).slot }));
@@ -310,13 +310,9 @@ function dropChords(state) {
   return dropped;
 }
 
-/* The hint under the chord row, for the meter (the beat of the second chord is the Composer's). */
+/* The hint under the chord row, for the meter (how many chords a bar takes is the Composer's, R-761). */
 function chordHint(meter) {
-  const beat = secondChordBeat(meter);
-  const second = beat
-    ? `a second chord only at @${beat}: I V@${beat}`
-    : "one chord a bar in " + meter;
-  return `Roman numerals in C, at most 2 per bar; @ sets the beat a chord starts on, from 0 (${second}).`;
+  return `Roman numerals in C, at most ${chordsMax(meter)} per bar; @ sets the beat a chord starts on, from 0, on a beat or a half beat: I IV@1 V@2 I@3.`;
 }
 
 /* --- the construction (P47, R-468) -------------------------------------- */
