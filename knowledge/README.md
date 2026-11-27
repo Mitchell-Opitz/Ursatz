@@ -28,7 +28,8 @@ The folder name, the `kind` field and the middle part of an id are the same keyw
 | `chord-type` | K2 chord type | yes; `omt.json` holds the triads and seventh chords, `persichetti.json` ten color chords (added notes, ninths, quartal), each with its `construction` (tertian, quartal, secundal, added-note, polychord, compound, cluster, power) |
 | `voicing` | K3 voicing | yes, no subtype (`members`, roles and semitones rising from the root at 0 up to 35, and `fits`, the chord types it can sound); `omt.json` holds four shells (dominant, major, minor, dominant ninth) |
 | `pattern` | K11 pattern | `rhythm`, `accompaniment` |
-| `schema`, `form`, `operation`, `preset`, `term` | K5 and K9 to K15 | none yet |
+| `schema` | K5 schema | `galant` (26 prototypes, pinned to the C table); `progression` follows in B3 |
+| `form`, `operation`, `preset`, `term` | K9 to K15 | none yet |
 | `vocabulary` | K4 vocabulary | `cadence-kind`, `embellishment`, `texture`, `progression-type`, `function` (a harmonic function); `omt.json` holds 32 entries, each with the `code` the C table uses for the same thing; a cadence kind may also name a `material`, an `approach` (1 to 3 numerals) and an `arrival`, as the five modal kinds of `persichetti.json` do (the dorian cadence is IV then i) |
 | `function` | K7 formal function | `formal-function` (core, level, the progression types its harmony may take, harmonic rhythm, rhythmic activity, motive harmony, cadence, contrast target); `omt.json` holds ten (basic idea, contrasting idea, fragment, cadential idea, presentation, continuation, cadential, antecedent, consequent, compound basic idea) |
 | `theme-type` | K8 theme type | yes, no subtype (a beginning, an ending and the ideas between them with their functions, slots and units); `omt.json` holds the sentence, the period and seven hybrids |

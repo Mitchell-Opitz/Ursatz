@@ -38,6 +38,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: style models and the framework names.
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
+- [docs/modules/schemas.md](modules/schemas.md): L7 knowledge: the K5 schema kind, the galant subtype and its pin to the prototype table.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.
 - [docs/modules/reading.md](modules/reading.md): Reading: what one reader says about one realization, as claims; the builder and the JSON codec.
 - [text/README.md](../text/README.md): Text: Ursatz Text, the lossless text form of plans, readings, realizations and knowledge (grammar 1, codecs, API).

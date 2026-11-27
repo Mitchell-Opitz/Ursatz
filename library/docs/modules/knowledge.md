@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`), `PatternEntry` (K11, `pattern_entry.h`) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`), `PatternEntry` (K11, `pattern_entry.h`), `SchemaEntry` (K5, `schema_entry.h`; see [schemas.md](schemas.md)) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
