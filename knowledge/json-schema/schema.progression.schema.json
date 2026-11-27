@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K5 schema, progression: a chord progression's stages, whether it loops, its rotations, role and the material it is heard in",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "stages",
+        "loop",
+        "role",
+        "realizes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "required": [
+              "chord"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "chord": {
+                "type": "string",
+                "minLength": 1
+              },
+              "units": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              }
+            }
+          }
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "rotations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 15
+          }
+        },
+        "role": {
+          "enum": [
+            "loop",
+            "opening",
+            "continuation",
+            "cadence"
+          ]
+        },
+        "materials": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        },
+        "realizes": {
+          "type": "string",
+          "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+        }
+      }
+    }
+  }
+}

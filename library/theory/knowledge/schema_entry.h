@@ -5,10 +5,13 @@
 #include <stddef.h>
 
 /*
- * K5 schema (target architecture 5.2, R-759): a galant schema, the stages of a melody and a bass with the harmony each stage
- * carries. The `galant` subtype holds the same data as a galant prototype (theory/galant/galant_prototypes.h), which stays the
- * identity every reader uses; the entry is pinned to it by test. The loader keeps its own degree type, because theory-knowledge does
- * not use theory-galant. A snapshot owns it; the strings live as long as the snapshot.
+ * K5 schema (target architecture 5.2, R-759, R-760): a galant schema, the stages of a melody and a bass with the harmony each
+ * stage carries, or a progression schema, the chords of a loop, an opening or a cadence. The `galant` subtype holds the same data as a
+ * galant prototype (theory/galant/galant_prototypes.h), which stays the identity every reader uses; the entry is pinned to it by test.
+ * The loader keeps its own degree type, because theory-knowledge does not use theory-galant. A progression stage keeps its chord as
+ * text: theory-knowledge does not include the numeral grammar, so the reader of the entry parses it. `realizes` and `materials` are
+ * ids that the snapshot checks (a progression-type vocabulary entry, K1 materials). A snapshot owns it; the strings live as long as
+ * the snapshot.
  */
 
 #define SCHEMA_STAGES_MAX 16
@@ -34,6 +37,14 @@ typedef struct {
 } SchemaGalantStage;
 
 typedef struct {
+    const char *chord; /* the stage's chord against the center's major scale: "I", "bVII", "vi" */
+    unsigned units;    /* 1 to 8, the stage's share of the loop (1 when not given) */
+} SchemaProgressionStage;
+
+#define SCHEMA_ROTATIONS_MAX 16
+#define SCHEMA_MATERIALS_MAX 8
+
+typedef struct {
     const char *id;
     const char *name;
     SchemaSubtype subtype;
@@ -42,6 +53,14 @@ typedef struct {
     bool melody_in_tenths;
     size_t stage_count;
     SchemaGalantStage galant[SCHEMA_GALANT_STAGES_MAX];
+    SchemaProgressionStage stages[SCHEMA_STAGES_MAX]; /* progression: stage_count of them (the galant stages keep their own array) */
+    bool loop;
+    size_t rotation_count;
+    unsigned rotations[SCHEMA_ROTATIONS_MAX]; /* the stages a loop may start on */
+    const char *role;                         /* loop, opening, continuation or cadence */
+    size_t material_count;
+    const char *materials[SCHEMA_MATERIALS_MAX]; /* K1 material ids the progression is heard in */
+    const char *realizes;                        /* the id of the progression-type vocabulary entry it realizes */
 } SchemaEntry;
 
 #endif

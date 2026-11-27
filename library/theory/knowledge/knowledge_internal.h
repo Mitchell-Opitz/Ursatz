@@ -149,12 +149,15 @@ KnowledgeStatus knowledge_pattern_read(Slot *slot, const cJSON *entry, const cha
                                        size_t message_size);
 
 /*
- * knowledge_schema.c: reads the fields of a `schema` entry of this subtype (galant) into slot->schema (the caller sets its id and name
+ * knowledge_schema.c: reads the fields of a `schema` entry of this subtype (galant or progression) into slot->schema (the caller sets its id and name
  * first). A missing or unknown subtype, a stage count outside 1 to 8, a degree outside 1 to 7 or an unknown strength, function or
  * alteration is refused with the field named. The snapshot accessors for the kind are defined there too.
  */
 KnowledgeStatus knowledge_schema_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
                                       size_t message_size);
+/* Once every entry is read and sorted: a progression's `realizes` must be a progression-type vocabulary entry and each of its materials
+   a pitch material, or the build is refused naming the field and the entry. Does nothing for a slot of another kind or subtype. */
+KnowledgeStatus knowledge_schema_link(const KnowledgeSnapshot *snapshot, Slot *slot, char *message, size_t message_size);
 
 /*
  * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and

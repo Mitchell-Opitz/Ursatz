@@ -1177,6 +1177,9 @@ static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message,
         if (linked == KNOWLEDGE_OK) {
             linked = knowledge_form_link(snapshot, slot, message, message_size);
         }
+        if (linked == KNOWLEDGE_OK) {
+            linked = knowledge_schema_link(snapshot, slot, message, message_size);
+        }
         if (linked != KNOWLEDGE_OK) {
             return linked;
         }
