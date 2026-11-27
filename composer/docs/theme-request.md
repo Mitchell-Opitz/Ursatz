@@ -104,7 +104,7 @@ the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](
 numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
 the beat unit (`I V@2`). 1 to 4 chords (R-761); the first is at 0 unless it is written with an onset, the onsets rise, each is a
 multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. A numeral
-with `b` or `#` is a borrowed chord (R-729).
+with `b` or `#` is a borrowed chord (R-729); a chord may name its mode, `IV:dorian` (R-762).
 
 Chord text (R-744). A lower-case numeral names a minor triad (`ii`, `iv`, `v`), `o` a diminished one, `+` an augmented one. Where the
 key's own chord on that degree has that quality it is the plain chord; where it differs (`iv` in C major, `v` in C minor, `#vii` in C
