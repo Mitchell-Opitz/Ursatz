@@ -16,6 +16,7 @@ add_library(ursatz_theory
     knowledge/knowledge_form.c
     knowledge/knowledge_pattern.c
     knowledge/knowledge_rule.c
+    knowledge/knowledge_schema.c
     knowledge/knowledge_snapshot.c
     knowledge/knowledge_vocabulary.c
     knowledge/knowledge_voicing.c
@@ -187,6 +188,7 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/pattern_entry.h
         theory/knowledge/relation.h
         theory/knowledge/rule_entry.h
+        theory/knowledge/schema_entry.h
         theory/knowledge/vocabulary_entry.h
         theory/knowledge/voicing_entry.h
         theory/tonality/brightness.h

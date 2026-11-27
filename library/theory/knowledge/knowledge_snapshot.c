@@ -920,6 +920,9 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
     } else if (strcmp(kind, "pattern") == 0) {
         status = knowledge_pattern_read(slot, entry, subtype, path, message, message_size);
         slot->has_pattern = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "schema") == 0) {
+        status = knowledge_schema_read(slot, entry, subtype, path, message, message_size);
+        slot->has_schema = status == KNOWLEDGE_OK;
     } else if (strcmp(kind, "relation") == 0) {
         slot->relation.id = slot->entry.id;
         slot->relation.name = slot->entry.name;

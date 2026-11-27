@@ -9,6 +9,7 @@
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/knowledge/pattern_entry.h"
+#include "theory/knowledge/schema_entry.h"
 #include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/voicing_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
@@ -45,6 +46,8 @@ typedef struct {
     bool has_voicing;
     PatternEntry pattern;
     bool has_pattern;
+    SchemaEntry schema;
+    bool has_schema;
     const char *fit_targets[CHORD_TYPE_MEMBER_MAX]; /* the ids a voicing fits, resolved once every entry is read */
     const char *cadence_material_target;            /* the id a modal cadence kind names, resolved likewise */
     ThemeType theme_type;
@@ -144,6 +147,14 @@ KnowledgeStatus knowledge_voicing_link(const KnowledgeSnapshot *snapshot, Slot *
  */
 KnowledgeStatus knowledge_pattern_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
                                        size_t message_size);
+
+/*
+ * knowledge_schema.c: reads the fields of a `schema` entry of this subtype (galant) into slot->schema (the caller sets its id and name
+ * first). A missing or unknown subtype, a stage count outside 1 to 8, a degree outside 1 to 7 or an unknown strength, function or
+ * alteration is refused with the field named. The snapshot accessors for the kind are defined there too.
+ */
+KnowledgeStatus knowledge_schema_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                      size_t message_size);
 
 /*
  * knowledge_vocabulary.c: reads the fields of a `vocabulary` entry of this subtype into slot->vocabulary (the caller sets its id and

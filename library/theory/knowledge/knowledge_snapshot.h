@@ -8,6 +8,7 @@
 #include "theory/knowledge/form_entry.h"
 #include "theory/knowledge/instrument.h"
 #include "theory/knowledge/pattern_entry.h"
+#include "theory/knowledge/schema_entry.h"
 #include "theory/knowledge/relation.h"
 #include "theory/knowledge/rule_entry.h"
 #include "theory/knowledge/vocabulary_entry.h"
@@ -111,6 +112,13 @@ const PatternEntry *knowledge_snapshot_pattern(const KnowledgeSnapshot *snapshot
 /* The patterns in id order: how many, and the one at `index` (NULL out of range). */
 size_t knowledge_snapshot_pattern_count(const KnowledgeSnapshot *snapshot);
 const PatternEntry *knowledge_snapshot_pattern_at(const KnowledgeSnapshot *snapshot, size_t index);
+
+/* The schema (kind schema: a galant schema) with this id, or NULL when there is none or the entry is another kind. */
+const SchemaEntry *knowledge_snapshot_schema(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The schemas in id order: how many, and the one at `index` (NULL out of range). */
+size_t knowledge_snapshot_schema_count(const KnowledgeSnapshot *snapshot);
+const SchemaEntry *knowledge_snapshot_schema_at(const KnowledgeSnapshot *snapshot, size_t index);
 
 /*
  * The first chord type, in id order and not retired, whose members above the root make `mask_above_root`: bit n is a member n
