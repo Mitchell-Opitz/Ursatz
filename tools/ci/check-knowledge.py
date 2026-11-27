@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Knowledge check: tools/ci/check-knowledge.py <knowledge dir> [<schema dir>]
+"""Knowledge check: tools/ci/check-knowledge.py <knowledge dir> [<json-schema dir>]
 
 Validates every entry under the kind folders of the knowledge dir (target architecture 5): the files parse, the envelope and the
 entry anatomy follow entry.schema.json, the content and examples follow the kind's schema, ids are unique and carry their file's
@@ -611,10 +611,10 @@ def check_voicing(path, entry, chord_type_ids):
 
 def main(argv):
     if len(argv) not in (2, 3):
-        print("usage: check-knowledge.py <knowledge dir> [<schema dir>]")
+        print("usage: check-knowledge.py <knowledge dir> [<json-schema dir>]")
         return 2
     root = argv[1]
-    schema_dir = argv[2] if len(argv) == 3 else os.path.join(root, "schema")
+    schema_dir = argv[2] if len(argv) == 3 else os.path.join(root, "json-schema")
     try:
         import jsonschema
     except ImportError:
@@ -645,7 +645,7 @@ def main(argv):
     chord_type_ids, voicing_entries, pattern_entries = set(), [], []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
-        if not os.path.isdir(folder_path) or folder == "schema":
+        if not os.path.isdir(folder_path) or folder == "json-schema":
             continue
         files = []
         for directory, _, names in os.walk(folder_path):
