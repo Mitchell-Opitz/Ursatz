@@ -58,6 +58,15 @@ typedef struct {
     Rational offset;
 } PhraseMetre;
 
+/*
+ * The cells a span is read on (R-761). The accent cells (R-590) stay unless a Given harmony span starts or ends strictly inside `span`
+ * off a whole number of the current cell from `meter_span.start`: then the beats, then the divisions (the half beats of an x/4 meter,
+ * the eighths of 6/8), the first level that holds every such edge. Called with the cells already read; `*cells_per_bar` and
+ * `*cell_length` change only for a span with such an edge, so nothing read without one differs. Other meters keep their cells.
+ */
+void harmony_metre_grid(const Plan *plan, PlanSpan meter_span, PlanSpan span, const PlanMeter *meter, Rational bar_length,
+                        size_t *cells_per_bar, Rational *cell_length);
+
 /* What a harmony span asks for, read from the plan. */
 typedef struct {
     LaneSpanId target;
