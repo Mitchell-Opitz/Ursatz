@@ -2107,6 +2107,726 @@
    ],
    "status": "reference",
    "version": 1
+  },
+  {
+   "id": "omt.schema.twelve-bar-blues",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Twelve-bar blues",
+   "aliases": [
+    "12-bar blues"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "I",
+      "units": 4
+     },
+     {
+      "chord": "IV",
+      "units": 2
+     },
+     {
+      "chord": "I",
+      "units": 2
+     },
+     {
+      "chord": "V"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I",
+      "units": 2
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major",
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "the twelve bars as six chords, I for four bars, IV for two, I for two, then V, IV and I"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.double-plagal",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Double plagal",
+   "content": {
+    "stages": [
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0,
+     2
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "bVII, IV, I: two plagal motions in a row to the tonic"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.extended-plagal",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Extended plagal",
+   "content": {
+    "stages": [
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bIII"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "bVI, bIII, bVII, IV, I: a chain of plagal motions to the tonic"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.doo-wop",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Doo-wop",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     2
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "I, vi, IV, V as a loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.singer-songwriter",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Singer-songwriter",
+   "content": {
+    "stages": [
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major",
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "vi, IV, I, V as a loop; any of its four chords may begin it"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.hopscotch",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Hopscotch",
+   "content": {
+    "stages": [
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "V"
+     },
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "IV, V, vi, I as a loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.lament",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lament",
+   "aliases": [
+    "lament bass"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor",
+     "omt.material.harmonic-minor"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "i, bVII, bVI, V as a loop, a falling bass line to the dominant"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.circle-of-fifths",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Circle of fifths",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "iv"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bIII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.sequential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 9,
+     "note": "i, iv, bVII, bIII as a loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.puff",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Puff",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "iii"
+     },
+     {
+      "chord": "IV"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "opening",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 10,
+     "note": "I, iii, IV as an opening"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.subtonic-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Subtonic shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "bVII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "I and bVII in turn; either chord may begin the loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.aeolian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Aeolian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bVII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "i, bVII, bVI, bVII as a loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.aeolian-cadence",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Aeolian cadence",
+   "aliases": [
+    "Mario cadence"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "i"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "bVI, bVII, i: a cadence with no dominant"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.dorian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Dorian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "IV"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.dorian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "i and IV in turn, the major IV marking the raised sixth degree; either chord may begin the loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.lydian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lydian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "II"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.lydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "I and II in turn, the major II marking the raised fourth degree; either chord may begin the loop"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.lydian-cadence",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lydian cadence",
+   "content": {
+    "stages": [
+     {
+      "chord": "II"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.lydian"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "II, IV, I as a cadence"
+    }
+   ],
+   "status": "reference",
+   "version": 1
   }
  ]
 }
