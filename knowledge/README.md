@@ -8,7 +8,7 @@ The music-theory knowledge Ursatz works from, as data. Each entry is one fact ab
 knowledge/
   README.md
   sources.json          the books an entry may cite
-  schema/               one JSON Schema per kind and subtype, and entry.schema.json
+  json-schema/        one JSON Schema per kind and subtype, and entry.schema.json
   material/omt.json     one folder per kind, one file per source
 ```
 
@@ -65,7 +65,7 @@ It prints one line per problem, `knowledge: <file>: <id>: <what>`, and exits 0 w
 
 ## In code
 
-The build embeds every `*.json` of this folder except `schema/` in `ursatz_theory` (`cmake/embed_json.py`; the file is regenerated when an entry changes). Nothing reads this folder at run time.
+The build embeds every `*.json` of this folder except `json-schema/` in `ursatz_theory` (`cmake/embed_json.py`; the file is regenerated when an entry changes). Nothing reads this folder at run time.
 
 - `theory/knowledge/knowledge_snapshot.h`: `knowledge_snapshot_build` parses the embedded files, then each user file the caller passes, into an immutable `KnowledgeSnapshot`: every entry by its common fields (unknown kinds kept), the pitch materials with their steps, key word, family, brightness, color notes, aliases and links, the chord types by their members, the relations by family, the instruments and ensemble templates (`knowledge_snapshot_instrument`, `knowledge_snapshot_ensemble`; an ensemble slot naming anything but an instrument entry is refused), the vocabulary entries by subtype (`knowledge_snapshot_vocabulary`; the C tables stay the identity and tests pin them to the entries), the formal functions and theme types (`knowledge_snapshot_theme_type_of` finds a theme type by the codes of its beginning and ending; every link between entries is resolved or the build is refused), a hash per entry and one for the whole snapshot. A material is found by id, name, key word or alias (`knowledge_snapshot_material_named`), a chord type by id or by the pitch classes above its root, a relation by id, name or alias. A broken entry, a repeated id or an id in the wrong namespace (`user.` is for a user's own files only) is refused with `<file>: <id>: <field>: <problem>`.
 - Whoever calls the library builds the snapshot and hands it on. The library holds no global copy, so two snapshots in one process are independent, and a snapshot outlives every key, motive sketch and analysis made from it (they point into it). The applications build it with `knowledge_snapshot_build(NULL, 0, ...)`: the Analyzer CLI once at start, the GUI backend at server start (`service/knowledge_service.h`), the Composer CLI once per process. The Composer takes it from the call context of every entry that composes or reads (`ComposerContext.knowledge`, [the call context](../composer/docs/api.md#the-call-context); a NULL context or snapshot is refused with `a knowledge snapshot is required`), and its keys, key texts and plan files are made of its materials. The Analyzer takes it in `AnalyzerOptions.knowledge` (`analyzer_analyze` with none is `URSATZ_ERR_REQUEST`), the chain in `AnalysisChainConfig.knowledge` (none is `ANALYSIS_CHAIN_ERR_KNOWLEDGE`). Library tests use `tests/support/test_knowledge.h`; the Analyzer, Composer and GUI tests have the same helper in their support folders.
