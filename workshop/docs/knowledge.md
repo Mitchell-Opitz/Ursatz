@@ -1,6 +1,6 @@
 # Knowledge queries
 
-The workshop answers four queries about the knowledge (R-765), none of which changes anything. The commands that write her entries (`knowledge.add` and the rest) are added with the user knowledge commands. Back to the [docs index](README.md).
+The workshop answers four queries about the knowledge (R-765), none of which changes anything. The commands that write her entries are [below](#the-commands). Back to the [docs index](README.md).
 
 The snapshot they read is the one the workshop opened with: the built-in entries and the `.json` files of the data folder's `knowledge/` folder, whose ids start `user.`.
 
@@ -29,3 +29,13 @@ Params `file`, an object: a knowledge document. A snapshot is built from the bui
 ## On the command line
 
 `ursatz knowledge find|show|check` ([cli-knowledge.md](../../cli/docs/cli-knowledge.md)) calls them on the data folder, or, with no data folder, their tools of the same names (`knowledge-find`, `knowledge-show`, `knowledge-check`) on a tools workshop, which reads the built-in entries only.
+
+## The commands
+
+The `knowledge` family (R-768) writes her entries in `<data>/knowledge/user.json` (`{"schema": "ursatz-knowledge", "schema_version": 1, "source": "user", "entries": []}`; a missing file is an empty one) and nothing else: her other files in the folder stay hers to edit. Each command is journaled in one transaction, as `settings.set` is.
+
+- `knowledge.add` (`entry`, `note`): an entry whose id starts `user.` and that the snapshot does not hold. A duplicate is `URSATZ_ERR_CONFLICT` at `/entry/id`.
+- `knowledge.update` (`id`, `entry`, `note`) and `knowledge.delete` (`id`, `note`): an entry of `user.json`. An id another file of the folder defines is refused with "`<id>` is in `<file>`; edit that file"; an id that is nowhere is not found.
+- `knowledge.keep-schema` (`item`, `version`, `name`, `slug`, `loop`, `note`): the composed harmony version's `result.harmony.stages` as `user.schema.<slug>`, a progression schema of hers (`role` `loop` or `cadence`, `materials` the plan's mode and `with`, a `michelle` citation "kept from `<item>` version `<n>`", and the plan's chord texts as its example). No music is computed in the workshop: the stages are the Composer's. A version that is not composed is refused at `/params/version`.
+
+Each answers the entry as stored (`{"entry": ...}`; delete answers the id). Before the commit a snapshot is built from the built-in entries, the folder's other files and the candidate `user.json`; a refusal is the loader's message (`knowledge/user.json: <id>: <field>: <problem>`) at `/entry`, and nothing is written. After the commit the workshop's snapshot is built again (`workshop_knowledge_rebuild`; the old one is kept until the workshop closes, since a running job may hold it) and the Composer's vocabulary is forgotten (`workshop_composer_vocabulary_reset`), so a new voicing, pattern or schema is offered by `composer.vocabulary` and read by the next request at once. The commands publish the journal's change as every command does.
