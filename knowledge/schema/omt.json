@@ -2167,8 +2167,27 @@
      "note": "the twelve bars as six chords, I for four bars, IV for two, I for two, then V, IV and I"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "I",
+      "I",
+      "I",
+      "IV",
+      "IV",
+      "I",
+      "I",
+      "V",
+      "IV",
+      "I",
+      "I"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.double-plagal",
@@ -2213,8 +2232,18 @@
      "note": "bVII, IV, I: two plagal motions in a row to the tonic"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C mixolydian",
+     "chords": [
+      "VII",
+      "IV",
+      "I"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.extended-plagal",
@@ -2261,8 +2290,20 @@
      "note": "bVI, bIII, bVII, IV, I: a chain of plagal motions to the tonic"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "bVI",
+      "bIII",
+      "bVII",
+      "IV",
+      "I"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.doo-wop",
@@ -2310,8 +2351,19 @@
      "note": "I, vi, IV, V as a loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "VI",
+      "IV",
+      "V"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.singer-songwriter",
@@ -2362,8 +2414,19 @@
      "note": "vi, IV, I, V as a loop; any of its four chords may begin it"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "VI",
+      "IV",
+      "I",
+      "V"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.hopscotch",
@@ -2410,8 +2473,19 @@
      "note": "IV, V, vi, I as a loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "IV",
+      "V",
+      "VI",
+      "I"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.lament",
@@ -2462,8 +2536,19 @@
      "note": "i, bVII, bVI, V as a loop, a falling bass line to the dominant"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "VII",
+      "VI",
+      "V"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.circle-of-fifths",
@@ -2510,8 +2595,19 @@
      "note": "i, iv, bVII, bIII as a loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "IV",
+      "VII",
+      "III"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.puff",
@@ -2555,8 +2651,18 @@
      "note": "I, iii, IV as an opening"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "III",
+      "IV"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.subtonic-shuttle",
@@ -2598,8 +2704,17 @@
      "note": "I and bVII in turn; either chord may begin the loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C mixolydian",
+     "chords": [
+      "I",
+      "VII"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.aeolian-shuttle",
@@ -2646,8 +2761,19 @@
      "note": "i, bVII, bVI, bVII as a loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "VII",
+      "VI",
+      "VII"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.aeolian-cadence",
@@ -2694,8 +2820,18 @@
      "note": "bVI, bVII, i: a cadence with no dominant"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "VI",
+      "VII",
+      "I"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.dorian-shuttle",
@@ -2737,8 +2873,17 @@
      "note": "i and IV in turn, the major IV marking the raised sixth degree; either chord may begin the loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C dorian",
+     "chords": [
+      "I",
+      "IV"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.lydian-shuttle",
@@ -2780,8 +2925,17 @@
      "note": "I and II in turn, the major II marking the raised fourth degree; either chord may begin the loop"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C lydian",
+     "chords": [
+      "I",
+      "II"
+     ]
+    }
+   ]
   },
   {
    "id": "omt.schema.lydian-cadence",
@@ -2825,8 +2979,18 @@
      "note": "II, IV, I as a cadence"
     }
    ],
-   "status": "reference",
-   "version": 1
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C lydian",
+     "chords": [
+      "II",
+      "bIV",
+      "I"
+     ]
+    }
+   ]
   }
  ]
 }
