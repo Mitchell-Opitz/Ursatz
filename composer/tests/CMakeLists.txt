@@ -269,6 +269,9 @@ ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS he
 ursatz_test(test_accompaniment_patterns LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 ursatz_test(test_accompaniment_patterns_smoke TARGET test_accompaniment_patterns ARGS smoke)
+ursatz_test(test_accompaniment_patterns_smoke_b TARGET test_accompaniment_patterns ARGS smoke-b)
+# The planed chords (R-763): a plan of four chords with the planed pattern; the first block's order and register carry through.
+ursatz_test(test_accompaniment_planed TARGET test_accompaniment_patterns ARGS planed)
 
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
@@ -661,6 +664,7 @@ ursatz_test(test_blueprint_generate LIBS ursatz_composer_engine composer_test_su
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+ursatz_test(test_blueprint_generate_ranking TARGET test_blueprint_generate ARGS ranking)
 
 # Gate 2 of P69c (R-757): the four motif fixtures as sentences and periods, seeds 1 to 10, no development, through composer_api_theme; the composed count is pinned.
 # Slow: see test_blueprint_generator_sweep.c; the smoke test runs seed 1 of every case.

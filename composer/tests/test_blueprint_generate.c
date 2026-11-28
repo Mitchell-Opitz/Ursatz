@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -397,17 +398,23 @@ static void test_refusals(void) {
     refused_with("mode", "null", "material", "\"dorian\"");
 }
 
-int main(void) {
+/* With no argument everything but the ranking runs (it writes the request and response for test_api_schema); `ranking` runs the ranking alone, a test of its own so
+   that each stays well under the fast set's 30 s on a CI runner. */
+int main(int argc, char **argv) {
+    bool ranking_only = argc > 1 && strcmp(argv[1], "ranking") == 0;
     for (size_t i = 0; i < FIXTURES; i++) {
         char path[256];
         snprintf(path, sizeof path, "%s%s", COMPOSER_FIXTURE_DIR, FILES[i]);
         MOTIVE_OF[i] = load_motive(path);
     }
-    test_drawn_blueprints();
-    test_weights();
-    test_through_the_api();
-    test_ranking();
-    test_refusals();
-    printf("test_blueprint_generate: ok\n");
+    if (ranking_only) {
+        test_ranking();
+    } else {
+        test_drawn_blueprints();
+        test_weights();
+        test_through_the_api();
+        test_refusals();
+    }
+    printf("test_blueprint_generate%s: ok\n", ranking_only ? " ranking" : "");
     return 0;
 }

@@ -23,7 +23,7 @@
  * first 16 digits of the SHA-256 of the MIDI file and of the plan JSON compared with the values of `229c40f`. The plan is
  * hashed without the lines of `producer_key`, `composition_key` and `knowledge_hash`, which move with every change to the
  * knowledge or the composer and say nothing about the accompaniment. Run with no argument, all 45 are composed (slow);
- * with `smoke`, seed 1 of each pattern in 4/4 C major.
+ * with `smoke` and `smoke-b`, seed 1 of two patterns each in 4/4 C major (two tests, each well under the fast set's 30 s on a CI runner); with `planed`, the planed chords alone (R-763: its own test, so the smoke stays under the fast set's 30 s on a CI runner).
  */
 
 #define HASH_DIGITS 16
@@ -86,10 +86,11 @@ static const Golden GOLDEN[] = {
 
 static const char *const SMOKE[] = {"block-44-Cmajor-period", "arpeggiated-44-Cmajor-period", "alberti-44-Cmajor-period",
                                     "oom-pah-44-Cmajor-period"};
-#define SMOKE_COUNT (sizeof SMOKE / sizeof SMOKE[0])
+#define SMOKE_COUNT 2 /* of each of the two smoke tests: the first two names, then the last two */
+static size_t smoke_first = 0;
 
 static bool in_smoke(const Golden *golden) {
-    for (size_t i = 0; i < SMOKE_COUNT; i++) {
+    for (size_t i = smoke_first; i < smoke_first + SMOKE_COUNT; i++) {
         if (golden->seed == 1 && strcmp(golden->name, SMOKE[i]) == 0) {
             return true;
         }
@@ -252,7 +253,13 @@ static void check_planed(void) {
 }
 
 int main(int argc, char **argv) {
-    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    bool smoke = argc > 1 && (strcmp(argv[1], "smoke") == 0 || strcmp(argv[1], "smoke-b") == 0);
+    smoke_first = argc > 1 && strcmp(argv[1], "smoke-b") == 0 ? SMOKE_COUNT : 0;
+    if (argc > 1 && strcmp(argv[1], "planed") == 0) {
+        check_planed();
+        printf("test_accompaniment_patterns passed (the planed chords)\n");
+        return 0;
+    }
     size_t checked = 0;
     for (size_t i = 0; i < GOLDEN_COUNT; i++) {
         if (smoke && !in_smoke(&GOLDEN[i])) {
@@ -262,7 +269,6 @@ int main(int argc, char **argv) {
         checked++;
     }
     assert(checked == (smoke ? SMOKE_COUNT : GOLDEN_COUNT));
-    check_planed();
-    printf("test_accompaniment_patterns passed (%zu themes and the planed chords)\n", checked);
+    printf("test_accompaniment_patterns passed (%zu themes)\n", checked);
     return 0;
 }
