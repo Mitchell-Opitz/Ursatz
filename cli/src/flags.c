@@ -5,7 +5,7 @@
 
 const CliFlag CLI_FLAGS[] = {
     {"--above", NULL, CLI_FLAG_SWITCH, NULL, "the line is the bass and the counter-melody sings above it"},
-    {"--accompaniment", NULL, CLI_FLAG_VALUE, "<pattern>", "write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any"},
+    {"--accompaniment", NULL, CLI_FLAG_VALUE, "<pattern>", "write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any, or a K11 accompaniment id"},
     {"--accompaniment-format", NULL, CLI_FLAG_VALUE, "<format>", "the format of the accompaniment motive's file, as --input-format"},
     {"--accompaniment-motive", NULL, CLI_FLAG_VALUE, "<file>", "a saved accompaniment motive, restated on each chord in chord tones"},
     {"--accompaniment-pickup", NULL, CLI_FLAG_VALUE, "<beats>", "the pickup of the accompaniment motive, as 1 or 1/2"},
@@ -93,6 +93,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--op", NULL, CLI_FLAG_VALUE, "<name>", "the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish"},
     {"--out", NULL, CLI_FLAG_VALUE, "<file>", "where the output is written: a plan, a corpus output folder or a style model"},
     {"--out-dir", NULL, CLI_FLAG_VALUE, "<dir>", "where the files are written; created if missing"},
+    {"--palette", NULL, CLI_FLAG_VALUE, "<file>", "progression: a JSON file holding the palette object (chords drawn from one or two modes, R-766)"},
     {"--params", NULL, CLI_FLAG_VALUE, "<file>", "a JSON file with the params object, or - for standard input"},
     {"--pickup", NULL, CLI_FLAG_VALUE, "<beats>", "the beats before the first barline, as 1 or 1/2"},
     {"--plain-midi", NULL, CLI_FLAG_SWITCH, NULL, "MIDI: no track names and no section markers"},

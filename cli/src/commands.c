@@ -42,7 +42,7 @@ static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL}
 static const char *const FLAGS_SHOW[] = {"--measures", "--view", NULL};
 static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
 static const char *const FLAGS_APPLY[] = {"--format", "--wait", NULL};
-static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
+static const char *const FLAGS_PROGRESSION[] = {"--accompaniment", "--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--palette", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
 static const char *const FLAGS_VARIANTS[] = {"--basic", "--basic-format", "--basic-harmony", "--basic-pickup", "--chain", "--count", "--distance", "--each-op", "--feature", "--form", "--format", "--function", "--harmony", "--input-format", "--key", "--list-ops", "--meter", "--pickup", "--role", "--seed", NULL};
@@ -70,7 +70,7 @@ static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--bl
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
-    "progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
+    "progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--palette <file>] [--accompaniment <pattern>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
      "Write a chord progression with a bass line for one phrase",
     "Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.\n"
     "\n"
@@ -83,7 +83,9 @@ const CliCommand CLI_COMMANDS[] = {
     "  printed). --embellish is none (default), low, medium or high. --bass is the default; --no-bass writes only\n"
     "  the chords (and --midi and --musicxml need the bass). --suggest is 1 to 8; with files, alternative k goes to\n"
     "  <name>-k.<extension>. --out writes the plan as JSON. --tempo is a whole number or a fraction like 195/2; the\n"
-    "  default is none (the file default of 120 applies).\n"
+    "  default is none (the file default of 120 applies). --palette names a JSON file holding the palette object of the\n"
+    "  request (chords drawn from one or two modes, spans, schemas, shapes: cli/docs/cli-progression.md); with it --cadence\n"
+    "  may be none, and --accompaniment (a pattern name or a K11 accompaniment id) sounds the chords.\n"
     "\n"
     "Exit status: 0 success; 1 usage or an invalid argument; 2 the request cannot be satisfied;\n"
     "3 an output file could not be written.\n"

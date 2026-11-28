@@ -5,7 +5,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | Flag | Meaning | Commands |
 | --- | --- | --- |
 | `--above` | the line is the bass and the counter-melody sings above it | `counterpoint` |
-| `--accompaniment <pattern>` | write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any | `grow`, `plan` |
+| `--accompaniment <pattern>` | write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any, or a K11 accompaniment id | `progression`, `grow`, `plan` |
 | `--accompaniment-format <format>` | the format of the accompaniment motive's file, as --input-format | `grow` |
 | `--accompaniment-motive <file>` | a saved accompaniment motive, restated on each chord in chord tones | `grow` |
 | `--accompaniment-pickup <beats>` | the pickup of the accompaniment motive, as 1 or 1/2 | `grow` |
@@ -93,6 +93,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
+| `--palette <file>` | progression: a JSON file holding the palette object (chords drawn from one or two modes, R-766) | `progression` |
 | `--params <file>` | a JSON file with the params object, or - for standard input | `query` |
 | `--pickup <beats>` | the beats before the first barline, as 1 or 1/2 | `motive`, `variants`, `recognize`, `analyze` |
 | `--plain-midi` | MIDI: no track names and no section markers | `progression`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `variations`, `harmonize`, `render` |
