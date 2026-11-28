@@ -170,7 +170,8 @@ static UrsatzStatus resolve_plain(const ComposerChords *tones, const SpelledKey 
         return fail(error, path, "chords bar %ld: that color chord does not fit the key (a color type goes on a triad of the key whose third and fifth are its own)", bar);
     }
     harmony.color = chord->color;
-    if (!(chord->color != NULL ? harmony_roman_format_in(&plain, &harmony, numeral_out) : harmony_roman_format(harmony_key_mode(key), &harmony, numeral_out))) {
+    /* The key's own chord by the key's kind: a major or minor key's tables, a modal key's stacked triad (IV in C dorian is the major triad, R-725). */
+    if (!harmony_roman_format_in(&plain, &harmony, numeral_out)) {
         return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);
     }
     return URSATZ_OK;
