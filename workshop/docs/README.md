@@ -8,6 +8,7 @@ The workshop is the process that holds the data folder, the jobs and the events,
 
 ## The data
 
+- [harmony-plans.md](harmony-plans.md): harmony plans as items (`hrm-`): the body, compose, files, references in a theme's chords and a section's harmony, `item.apply-harmony`.
 - [settings.md](settings.md): the setting keys, the scope files, how a request's settings resolve and where each comes from, and the `settings` commands.
 - [ratings.md](ratings.md): listening sessions with batches, ratings and picks, ratings of item versions, and keep as default.
 - [data-folder.md](data-folder.md): the folder layout, every format with its version and schema, transactions and recovery, the migration with its dry run and backup, the settings.
