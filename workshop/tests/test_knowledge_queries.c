@@ -105,7 +105,7 @@ static void test_palette(void) {
 }
 
 int main(void) {
-    if (!harness_open(18994)) {
+    if (!harness_open(18996)) {
         return 1;
     }
     test_find();

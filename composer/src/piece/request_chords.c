@@ -316,12 +316,12 @@ static bool text_chord(const ComposerChords *tones, const SpelledKey *key, const
 
 bool composer_chord_text_of(const ComposerChords *chords, const SpelledKey *key, int degree, int alteration, StandardTonalityTriadQuality quality,
                             const PitchMaterial *mode, char out[PLAN_ROMAN_NUMERAL_MAX]) {
-    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     if (chords == NULL || key == NULL || key->material == NULL || out == NULL || degree < 1 || degree > 7) {
         return false;
     }
     const PitchMaterial *own = key->material;
-    int wanted = ((MAJOR[degree - 1] + alteration) % 12 + 12) % 12;
+    const PitchMaterial *major = chords->materials.major;
+    int wanted = major == NULL ? -1 : ((pitch_material_step(major, degree) + alteration) % 12 + 12) % 12;
     char text[PLAN_ROMAN_NUMERAL_MAX];
     /* The upper-case numeral first (the key's own chord on the degree, or its alteration), then the numeral that names the quality
        (v, iv, iio, III+), then the suffix of the mode. */
