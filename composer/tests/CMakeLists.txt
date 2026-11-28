@@ -753,6 +753,10 @@ ursatz_test(test_api_vocabulary LIBS ursatz_composer_engine composer_test_suppor
 ursatz_test(test_api_forms LIBS ursatz_composer_engine composer_test_support cjson
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written)
 
+# The palette entry (R-765): the chords of two modes on one key with the text the Composer reads for each; it writes a request and a response for test_api_schema.
+ursatz_test(test_palette LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_palette_files)
+
 ursatz_test(test_job_cancel LIBS ursatz_composer_engine composer_test_support)
 
 if(URSATZ_VALGRIND)
@@ -778,10 +782,10 @@ endif()
 # schema/api/<kind>.schema.json (needs python3 with jsonschema).
 if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
-        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files)
+        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files api_palette_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique
+                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique,palette
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json

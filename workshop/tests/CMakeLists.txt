@@ -131,6 +131,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_queries)
 ursatz_test(workshop_queries SOURCES test_queries.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_WORKSHOP_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_queries)
+# The knowledge queries (R-765): find, show, check and the palette.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_queries)
+ursatz_test(workshop_knowledge_queries SOURCES test_knowledge_queries.c LIBS ursatz_workshop_internal ursatz_test_support
+    DEFINITIONS URSATZ_USER_KNOWLEDGE_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/knowledge-user/voicings.json"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_queries)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
 ursatz_test(workshop_base_version SOURCES test_base_version.c LIBS ursatz_workshop_internal ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
