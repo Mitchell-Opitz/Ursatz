@@ -4,7 +4,7 @@
 set(URSATZ_CLI_SOURCES
     commands.c flags.c cli_params.c analyze.c corpus.c session.c remote.c status.c query.c address.c show.c apply.c items.c migrate.c render.c cli_tools.c cli_options.c progression.c motive.c develop.c grow.c grow_text.c theme.c piece.c piece_text.c counterpoint.c
     plan.c fill.c regenerate.c variations.c listen.c workflow.c variants_cmd.c random_motive.c motive_extras.c motive_input.c motive_text.c
-    recognize.c help.c rate.c critique.c)
+    recognize.c help.c rate.c critique.c knowledge.c)
 list(TRANSFORM URSATZ_CLI_SOURCES PREPEND src/)
 add_library(ursatz_cli STATIC ${URSATZ_CLI_SOURCES})
 target_include_directories(ursatz_cli PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

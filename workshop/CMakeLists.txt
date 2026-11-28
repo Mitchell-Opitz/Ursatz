@@ -74,6 +74,7 @@ add_library(ursatz_workshop_engine STATIC
     src/composition/restore.c
     src/composition/sections.c
     src/composition/themes.c
+    src/composition/harmonies.c
     src/composition/variants.c
     src/rendering/export.c
     src/rendering/playback.c
@@ -82,11 +83,13 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_analysis.c
     src/coordinator/api_collections.c
     src/coordinator/api_commands_items.c
+    src/coordinator/api_commands_knowledge.c
     src/coordinator/api_commands_library.c
     src/coordinator/api_commands_sections.c
     src/coordinator/api_commands_settings.c
     src/coordinator/api_commands_ratings.c
     src/coordinator/api_composer.c
+    src/coordinator/api_knowledge.c
     src/coordinator/api_items.c
     src/coordinator/api_jobs.c
     src/coordinator/api_journal.c

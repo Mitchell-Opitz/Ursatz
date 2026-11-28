@@ -16,6 +16,7 @@ add_library(ursatz_theory
     knowledge/knowledge_form.c
     knowledge/knowledge_pattern.c
     knowledge/knowledge_rule.c
+    knowledge/knowledge_schema.c
     knowledge/knowledge_snapshot.c
     knowledge/knowledge_vocabulary.c
     knowledge/knowledge_voicing.c
@@ -35,6 +36,7 @@ add_library(ursatz_theory
     tonality/common_practice_materials.c
     tonality/interval.c
     tonality/modal_chords.c
+    tonality/modal_palette.c
     tonality/key_vocabulary.c
     tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
@@ -46,6 +48,7 @@ add_library(ursatz_theory
     tonality/tonal_key.c
     tonality/triad_in_key_rules.c
     tonality/triad_rules.c
+    harmony/chord_value.c
     harmony/harmonic_function.c
     harmony/harmony_applied.c
     harmony/harmony_cadence_kinds.c
@@ -187,6 +190,7 @@ ursatz_public_headers(ursatz_theory
         theory/knowledge/pattern_entry.h
         theory/knowledge/relation.h
         theory/knowledge/rule_entry.h
+        theory/knowledge/schema_entry.h
         theory/knowledge/vocabulary_entry.h
         theory/knowledge/voicing_entry.h
         theory/tonality/brightness.h
@@ -195,6 +199,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/common_practice_materials.h
         theory/tonality/interval.h
         theory/tonality/modal_chords.h
+        theory/tonality/modal_palette.h
         theory/tonality/key_vocabulary.h
         theory/tonality/region_relation.h
         theory/tonality/roman_numeral_analysis_rules.h
@@ -206,6 +211,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/tonal_key.h
         theory/tonality/triad_in_key_rules.h
         theory/tonality/triad_rules.h
+        theory/harmony/chord_value.h
         theory/harmony/harmonic_function.h
         theory/harmony/harmony_applied.h
         theory/harmony/harmony_cadence_kinds.h
@@ -318,7 +324,7 @@ add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
     COMMAND ${Python3_EXECUTABLE} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_json.py ${URSATZ_REPOSITORY_ROOT}/knowledge
         ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c theory/knowledge/knowledge_embedded.h KnowledgeEmbeddedFile knowledge_embedded_files
-        --skip schema
+        --skip json-schema
     DEPENDS ${URSATZ_KNOWLEDGE_FILES} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_json.py
     COMMENT "Embedding the knowledge files"
     VERBATIM)

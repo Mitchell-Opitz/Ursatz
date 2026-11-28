@@ -361,6 +361,60 @@
    "version": 1
   },
   {
+   "id": "michelle.pattern.planed-chords",
+   "kind": "pattern",
+   "subtype": "accompaniment",
+   "name": "Planed chords",
+   "content": {
+    "grid": "beat",
+    "steps": [
+     "chord",
+     "chord",
+     "chord",
+     "chord"
+    ],
+    "by_meter": {
+     "3/4": [
+      "chord",
+      "chord",
+      "chord"
+     ],
+     "2/4": [
+      "chord",
+      "chord"
+     ]
+    },
+    "compound": false,
+    "planing": true
+   },
+   "citations": [
+    {
+     "source": "persichetti",
+     "chapter": 11,
+     "note": "parallel harmony that keeps the mode"
+    },
+    {
+     "source": "michelle",
+     "chapter": "Reference themes",
+     "section": "ref-7-debussy",
+     "note": "the planed chords of bars 5 and 6"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "meter": "4/4",
+     "steps": [
+      "chord",
+      "chord",
+      "chord",
+      "chord"
+     ]
+    }
+   ],
+   "version": 1
+  },
+  {
    "id": "michelle.pattern.run-eighths-dotted",
    "kind": "pattern",
    "subtype": "rhythm",

@@ -212,7 +212,7 @@ static bool add_materials(cJSON *root, const KnowledgeSnapshot *knowledge, const
     return ok && (!with_style || add_choice(list, "style", "From the brief"));
 }
 
-/* The meters: the value, the beats of a bar and where a second chord may start (theme chords start on a cell of the meter). */
+/* The meters: the value, the beats of a bar, how many chords a bar takes (R-761) and where the drawn harmony's second chord starts. */
 static bool add_meters(cJSON *root) {
     cJSON *list = add_list(root, "meters");
     for (size_t i = 0; list && API_METERS[i].value; i++) {
@@ -224,7 +224,7 @@ static bool add_meters(cJSON *root) {
         Rational cell;
         if (!entry || !cJSON_AddNumberToObject(entry, "beats", meter.beats_per_bar) ||
             !cJSON_AddNumberToObject(entry, "beat_unit", meter.beat_unit) ||
-            !cJSON_AddStringToObject(entry, "chord_onset_step", "1/2")) {
+            !cJSON_AddStringToObject(entry, "chord_onset_step", "1/2") || !cJSON_AddNumberToObject(entry, "chords_max", 4)) {
             return false;
         }
         if (given_cell_length(&meter, &cell) && cell.num * (long long)meter.beat_unit / cell.den < meter.beats_per_bar &&

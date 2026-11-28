@@ -8,7 +8,7 @@ a monolithic application.
 
 ## Views
 
-The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive links and Analysis views are described in [docs/views/](docs/views/library.md):
+The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Harmony Lab, Motive links and Analysis views are described in [docs/views/](docs/views/library.md):
 
 - [Library and navigation](docs/views/library.md): upload, the table, filters, the Tags panel.
 - [Motifs](docs/views/motifs.md): the Materials views and the Motif editor.

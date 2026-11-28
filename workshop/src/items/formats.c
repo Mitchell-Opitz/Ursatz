@@ -27,6 +27,7 @@ static const Format kFormats[] = {
     {WORKSHOP_FORMAT_THEME_BODY, {"uses", "request"}, "ao", 2},
     {WORKSHOP_FORMAT_PIECE_BODY, {"uses", "piece"}, "ao", 1},
     {WORKSHOP_FORMAT_PIECE_BODY, {"uses", "request"}, "ao", 2},
+    {WORKSHOP_FORMAT_HARMONY_BODY, {"uses", "request"}, "ao", 1},
     {WORKSHOP_FORMAT_OP_CHECKS, {"checks"}, "o", 1},
     {WORKSHOP_FORMAT_SUBJECT, {"id", "name", "kind", "note", "items", "pieces", "related", "created_at", "updated_at"}, "ssssaaass", 1},
     {WORKSHOP_FORMAT_LIBRARY_PIECE, {"filename", "source_format", "uploaded_at", "analyzer_version", "document_schema_version"}, "ssssn", 1},

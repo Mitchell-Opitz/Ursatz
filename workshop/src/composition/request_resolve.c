@@ -29,6 +29,50 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
     return NULL;
 }
 
+static int reference_version(const cJSON *reference);
+static UrsatzStatus out_of_memory(UrsatzError *error);
+
+/* The copy of a used version of any item (the whole version body), from the body's uses. NULL when the use is not there. */
+static const cJSON *used_copy(const cJSON *body, const char *item_id, int version) {
+    const cJSON *use = NULL;
+    cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
+        const cJSON *number = cJSON_GetObjectItemCaseSensitive(use, "version");
+        if (strcmp(common_json_string(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) && number->valueint == version) {
+            return cJSON_GetObjectItemCaseSensitive(use, "copy");
+        }
+    }
+    return NULL;
+}
+
+/* The chords of a harmony version a reference names (R-767), as {bar, text} entries with bars counted from `first_bar` (the plan counts from 1, a theme from 0):
+   a new array, NULL with *error set when the body does not use the version or it is not composed. */
+static cJSON *harmony_chords(const cJSON *body, const cJSON *reference, int first_bar, const char *path, UrsatzError *error) {
+    const cJSON *copy = used_copy(body, common_json_string(reference, "item_id"), reference_version(reference));
+    if (!copy) {
+        ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, path, "the harmony version is not one the body uses");
+        return NULL;
+    }
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(copy, "result"), "harmony"), "chords");
+    if (!cJSON_IsArray(chords)) {
+        ursatz_error_set(error, URSATZ_ERR_NOT_FOUND, path, "the harmony version is not composed");
+        return NULL;
+    }
+    cJSON *list = cJSON_CreateArray();
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, chords) {
+        const cJSON *bar = cJSON_GetObjectItemCaseSensitive(entry, "bar");
+        cJSON *item = cJSON_CreateObject();
+        if (!list || !item || !cJSON_IsNumber(bar) || !cJSON_AddNumberToObject(item, "bar", bar->valueint - 1 + first_bar) ||
+            !common_json_add_copy_or_null(item, entry, "text") || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            cJSON_Delete(list);
+            out_of_memory(error);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* The reference of a node, {item_id, version[, file]} under "$item", or NULL. */
 static const cJSON *reference_of(const cJSON *node, const char *key) {
     const cJSON *reference = cJSON_IsObject(node) ? cJSON_GetObjectItemCaseSensitive(node, key) : NULL;
@@ -332,6 +376,20 @@ static UrsatzStatus resolve_piece(const cJSON *body, cJSON *request, const char 
         const char *id = common_json_string(section, "id");
         id = id[0] != '\0' ? id : common_json_string(section, "name");
         char path[128];
+        /* a section's harmony given as a harmony plan (R-767): {"chords": [...]}, bars from 1 */
+        const cJSON *harmony_reference = reference_of(cJSON_GetObjectItemCaseSensitive(section, "harmony"), "$item");
+        if (harmony_reference) {
+            snprintf(path, sizeof(path), "/sections/%d/harmony", index);
+            cJSON *chords = harmony_chords(body, harmony_reference, 1, path, error);
+            cJSON *wrapper = chords ? cJSON_CreateObject() : NULL;
+            if (!chords) {
+                return URSATZ_ERR_NOT_FOUND;
+            }
+            if (!wrapper || !cJSON_AddItemToObject(wrapper, "chords", chords) || !replace_member(section, "harmony", wrapper)) {
+                cJSON_Delete(chords == NULL || wrapper == NULL ? chords : NULL);
+                return out_of_memory(error);
+            }
+        }
         snprintf(path, sizeof(path), "/sections/%d/fill", index);
         UrsatzStatus status = resolve_fill(body, cJSON_GetObjectItemCaseSensitive(section, "fill"), id, dir, path, error);
         if (status != URSATZ_OK) {
@@ -363,6 +421,17 @@ static UrsatzStatus resolve_theme(const cJSON *body, cJSON *request, UrsatzError
         }
         index++;
     }
+    /* chords given as a harmony plan (R-767): its chords, bars from 0 */
+    const cJSON *chords_reference = reference_of(cJSON_GetObjectItemCaseSensitive(request, "chords"), "$item");
+    if (chords_reference) {
+        cJSON *chords = harmony_chords(body, chords_reference, 0, "/chords", error);
+        if (!chords) {
+            return URSATZ_ERR_NOT_FOUND;
+        }
+        if (!replace_member(request, "chords", chords)) {
+            return out_of_memory(error);
+        }
+    }
     cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(request, "accompaniment");
     const cJSON *reference = reference_of(cJSON_GetObjectItemCaseSensitive(accompaniment, "motive"), "$item");
     if (reference) {
@@ -387,7 +456,10 @@ UrsatzStatus workshop_request_resolve(const char *kind, const cJSON *body, const
     if (!request) {
         return out_of_memory(error);
     }
-    UrsatzStatus status = strcmp(kind, "theme") == 0 ? resolve_theme(body, request, error) : resolve_piece(body, request, dir, error);
+    /* A harmony plan's request holds no reference (R-767): it is the Composer's progression request as stored. */
+    UrsatzStatus status = strcmp(kind, "theme") == 0     ? resolve_theme(body, request, error)
+                          : strcmp(kind, "harmony") == 0 ? URSATZ_OK
+                                                         : resolve_piece(body, request, dir, error);
     if (status == URSATZ_OK) {
         /* A style, its weight and its exclusions go together: without a brief the request has none. */
         if (style_path) {

@@ -1,0 +1,22 @@
+{
+  "schema": "ursatz-knowledge-sources",
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "omt",
+      "title": "Open Music Theory, version 2"
+    },
+    {
+      "id": "general-midi",
+      "title": "MIDI Manufacturers Association, General MIDI System Level 1 (sound set)"
+    },
+    {
+      "id": "fux",
+      "title": "Fux, The Study of Counterpoint (Gradus ad Parnassum)"
+    },
+    {
+      "id": "michelle",
+      "title": "Michelle's listening notes (Ursatz listening rounds, kept in Claude Master)"
+    }
+  ]
+}

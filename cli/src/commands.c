@@ -12,6 +12,7 @@
 #include "corpus.h"
 #include "counterpoint.h"
 #include "critique.h"
+#include "knowledge.h"
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
@@ -41,7 +42,7 @@ static const char *const FLAGS_QUERY[] = {"--format", "--out", "--params", NULL}
 static const char *const FLAGS_SHOW[] = {"--measures", "--view", NULL};
 static const char *const FLAGS_HISTORY[] = {"--format", "--limit", NULL};
 static const char *const FLAGS_APPLY[] = {"--format", "--wait", NULL};
-static const char *const FLAGS_PROGRESSION[] = {"--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
+static const char *const FLAGS_PROGRESSION[] = {"--accompaniment", "--bars", "--bass", "--cadence", "--embellish", "--format", "--key", "--list-schemas", "--meter", "--midi", "--musicxml", "--no-bass", "--out", "--palette", "--plain-midi", "--schema", "--seed", "--sequence", "--suggest", "--tempo", NULL};
 static const char *const FLAGS_MOTIVE[] = {"--feature", "--form", "--format", "--harmony", "--input-format", "--key", "--meter", "--midi", "--musicxml", "--pickup", "--render-key", "--role", "--tempo", "--tone", NULL};
 static const char *const FLAGS_DEVELOP[] = {"--amount", "--axis", "--by", "--degree", "--drop", "--input-format", "--interval", "--keep-contour", "--keep-rhythm", "--key", "--length", "--meter", "--midi", "--min", "--musicxml", "--op", "--plain-midi", "--position", "--ratio", "--seed", "--suggest", "--tempo", "--tonal", NULL};
 static const char *const FLAGS_VARIANTS[] = {"--basic", "--basic-format", "--basic-harmony", "--basic-pickup", "--chain", "--count", "--distance", "--each-op", "--feature", "--form", "--format", "--function", "--harmony", "--input-format", "--key", "--list-ops", "--meter", "--pickup", "--role", "--seed", NULL};
@@ -59,6 +60,7 @@ static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_EXPLORE[] = {"--base", "--distance", "--no-wait", "--seed", "--taste", NULL};
+static const char *const FLAGS_KNOWLEDGE[] = {"--format", "--kind", NULL};
 static const char *const FLAGS_CRITIQUE[] = {"--format", "--note", "--rated", "--settings", "--verdict", NULL};
 static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
@@ -68,7 +70,7 @@ static const char *const FLAGS_LISTEN[] = {"--bars", "--batch", "--blend", "--bl
 
 const CliCommand CLI_COMMANDS[] = {
     {"progression",
-    "progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
+    "progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--palette <file>] [--accompaniment <pattern>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]",
      "Write a chord progression with a bass line for one phrase",
     "Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.\n"
     "\n"
@@ -81,7 +83,9 @@ const CliCommand CLI_COMMANDS[] = {
     "  printed). --embellish is none (default), low, medium or high. --bass is the default; --no-bass writes only\n"
     "  the chords (and --midi and --musicxml need the bass). --suggest is 1 to 8; with files, alternative k goes to\n"
     "  <name>-k.<extension>. --out writes the plan as JSON. --tempo is a whole number or a fraction like 195/2; the\n"
-    "  default is none (the file default of 120 applies).\n"
+    "  default is none (the file default of 120 applies). --palette names a JSON file holding the palette object of the\n"
+    "  request (chords drawn from one or two modes, spans, schemas, shapes: cli/docs/cli-progression.md); with it --cadence\n"
+    "  may be none, and --accompaniment (a pattern name or a K11 accompaniment id) sounds the chords.\n"
     "\n"
     "Exit status: 0 success; 1 usage or an invalid argument; 2 the request cannot be satisfied;\n"
     "3 an output file could not be written.\n"
@@ -525,6 +529,23 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz render piece.json --midi piece.mid --musicxml piece.xml --tempo 96\n"
     "  ursatz --data ~/ursatz-data render item:itm-3f2a@v2 --midi piece.mid",
      FLAGS_RENDER, 1, 1, run_render},
+    {"knowledge",
+    "knowledge find <words> [--kind <kind>] | show <id> [--format <text|json>] | check <file>",
+     "Find, show or check knowledge entries",
+    "Finds, shows or checks the entries of the knowledge (R-765): the materials, chord types, vocabulary, schemas, patterns and the rest that the Composer and the Analyzer read, built into the program and, with a data folder, the files of its knowledge folder (user.* entries). Name the data folder before the subcommand (ursatz --data <dir> knowledge find ...) or with URSATZ_DATA; without one only the built-in entries are read.\n"
+    "\n"
+    "  find <words>   the entries whose id, name or an alias holds every word (case ignored), one line each: <id>  <kind>/<subtype>  <name>; at most 50. Quote several words. --kind limits the kind.\n"
+    "  show <id>      the entry as Ursatz Text (the default) or, with --format json, as loaded.\n"
+    "  check <file>   whether the knowledge document in <file> loads beside the built-in entries and the data folder's files: prints ok: <n> entries, or the loader's refusal (the file, the entry id and the field).\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or an id or kind no entry has; 2 a document the loader refuses, or any other failure. See cli/docs/cli-knowledge.md.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz knowledge find mario\n"
+    "  ursatz knowledge find shuttle --kind schema\n"
+    "  ursatz knowledge show omt.schema.aeolian-cadence --format json\n"
+    "  ursatz knowledge check my-voicings.json",
+     FLAGS_KNOWLEDGE, 2, 2, run_knowledge},
     {"critique",
     "critique <file>... [--settings <file>] [--format text|json]\n"
     "critique --rated <file> [--settings <file>] [--format text|json]\n"

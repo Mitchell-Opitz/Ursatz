@@ -691,6 +691,7 @@ static bool melody_idea_read(const Plan *plan, LaneSpanId target, const Composer
         !position_is_positive(span.length) || !position_is_positive(metre->cell_length)) {
         return false;
     }
+    harmony_metre_grid(plan, meter_span, span, &metre->meter, metre->bar_length, &metre->cells_per_bar, &metre->cell_length);
     context->length = span.length;
     context->cell = metre->cell_length;
     context->phase = position_remainder(position_sub(span.start, meter_span.start), context->cell);

@@ -6,7 +6,7 @@ Path `library/theory/knowledge/`. The knowledge snapshot: every entry of `knowle
 
 ## Provides
 
-`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`), `PatternEntry` (K11, `pattern_entry.h`) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
+`KnowledgeSnapshot`, `KnowledgeEntry`, `Relation` (K6), `Instrument`, `EnsembleTemplate` and `EnsembleSlot` (K12), `VocabularyEntry` (K4), `FormalFunction` (K7), `ThemeType` (K8), `VoicingEntry` (K3, `voicing_entry.h`), `PatternEntry` (K11, `pattern_entry.h`), `SchemaEntry` (K5, `schema_entry.h`; see [schemas.md](schemas.md)) and `RuleEntry` (K13). The loaders of the kinds that have a file of their own (`knowledge_vocabulary.c`, `knowledge_rule.c`) read into the snapshot's slot through `knowledge_internal.h`, which only this folder includes. `PitchMaterial` and `ChordType` are `model/pitch`.
 
 ## The instrument kind (K12, R-603)
 
@@ -116,7 +116,7 @@ A `pattern` entry has one of two subtypes. `pattern_entry.h` holds the `PatternE
 | Subtype | Content | Becomes |
 |---|---|---|
 | `rhythm` | `meter` (`2/4`, `3/4`, `4/4`, `6/8`), `rhythm` (one bar as a note-list text: `x:e x:e x:q`, `r` for a rest), `jobs` (1 to 3 of `running`, `long`, `syncopated`, `cadence`) | `PatternRhythm`: the meter, the rhythm text and the `PATTERN_JOB_*` bits |
-| `accompaniment` | `grid` (`beat` or `eighth`), `steps` (1 to 16), optional `by_meter` (a step list for a meter that has its own) and `compound` (default true) | `PatternAccompaniment`: `beat_grid`, `compound`, the steps and one step list per `by_meter` key |
+| `accompaniment` | `grid` (`beat` or `eighth`), `steps` (1 to 16), optional `by_meter` (a step list for a meter that has its own), `compound` (default true) and `planing` (default false) | `PatternAccompaniment`: `beat_grid`, `compound`, `planing`, the steps and one step list per `by_meter` key |
 
 A step is `rest`, `chord` (every voice of the chord), `{"member": 0 to 7}` (one member of the voicing) or `{"bass_octave": 1}` (the bass note an octave up), read as `PatternStep` (`PATTERN_STEP_REST`, `_CHORD`, `_MEMBER`, `_BASS_OCTAVE`). The loader checks the rhythm's tokens (`x` or `r`, a colon, a duration letter with up to two dots or a 3, an optional tie) and that the durations fill one bar of the meter; the Composer's note-list reader reads the text. A rhythm that does not fill its bar is refused with `<file>: <id>: content.rhythm: <why>`; a bad grid, step, member or `by_meter` key with the same form.
 
@@ -125,6 +125,6 @@ const PatternEntry *cell = knowledge_snapshot_pattern(snapshot, "michelle.patter
 /* cell->is_rhythm, cell->rhythm.jobs == PATTERN_JOB_RUNNING, cell->rhythm.rhythm == "x:e x:e x:q x:e x:e x:q" */
 ```
 
-`knowledge_snapshot_pattern`, `_pattern_count` and `_pattern_at` (id order) are defined in `knowledge_pattern.c`; the lookup returns NULL for an id that is absent or of another kind. `knowledge/pattern/` holds the four Schoenberg accompaniment patterns, the five reference ones and 23 rhythm cells.
+`knowledge_snapshot_pattern`, `_pattern_count` and `_pattern_at` (id order) are defined in `knowledge_pattern.c`; the lookup returns NULL for an id that is absent or of another kind. `knowledge/pattern/` holds the four Schoenberg accompaniment patterns, the five reference ones, `michelle.pattern.planed-chords` (the one figure with `planing`: each later chord keeps the first chord's voicing shape, R-763) and 23 rhythm cells.
 
 `ChordMemberRole` gains `CHORD_MEMBER_SUSPENDED_SECOND` (`"suspended-second"` in an entry), and `omt.json` the chord types `omt.chord-type.sus2` (root, second, fifth) and `sus4` (root, fourth, fifth). `knowledge_snapshot_chord_type_of` finds them by their masks, so the chord reading names a bare second-and-fifth or fourth-and-fifth sonority `sus2` or `sus4`. The chord reading's `members_by_role` keeps its ten roles: a suspended-second member is not in it.

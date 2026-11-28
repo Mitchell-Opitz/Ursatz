@@ -1,0 +1,149 @@
+{
+  "schema": "ursatz-commands",
+  "schema_version": 1,
+  "family": "knowledge",
+  "summary": "Knowledge: her own entries in the data folder's knowledge/user.json, and a harmony plan kept as her schema.",
+  "commands": [
+    {
+      "name": "knowledge.add",
+      "summary": "Add an entry of her own to the knowledge",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "entry",
+          "type": "object",
+          "required": true,
+          "help": "The entry (its id starts with user.): kind, subtype, name, content, citations, status and version as the knowledge files hold them."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The journal note.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The entry as stored.",
+      "job": null,
+      "example": "knowledge.add\n  entry id user.voicing.wide kind voicing name wide status active version 1"
+    },
+    {
+      "name": "knowledge.update",
+      "summary": "Replace an entry of hers",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of her entry."
+        },
+        {
+          "name": "entry",
+          "type": "object",
+          "required": true,
+          "help": "The new entry; its id is the id."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The journal note.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The entry as stored.",
+      "job": null,
+      "example": "knowledge.update id user.voicing.wide\n  entry kind voicing name wider status active version 2"
+    },
+    {
+      "name": "knowledge.delete",
+      "summary": "Delete an entry of hers",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true,
+          "help": "The id of her entry."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The journal note.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The id deleted.",
+      "job": null,
+      "example": "knowledge.delete id user.voicing.wide"
+    },
+    {
+      "name": "knowledge.keep-schema",
+      "summary": "Keep a harmony plan as her progression schema",
+      "target": null,
+      "base": false,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "item",
+          "type": "string",
+          "required": true,
+          "help": "The harmony item (hrm-...)."
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The harmony version, which must be composed.",
+          "minimum": 1
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "help": "The schema's name.",
+          "max_length": 80
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "required": true,
+          "help": "The id's last part, lower-case words joined by hyphens: the id is user.schema.<slug>.",
+          "max_length": 60
+        },
+        {
+          "name": "loop",
+          "type": "boolean",
+          "required": false,
+          "help": "Whether the stages repeat (the default) or end a phrase."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The journal note.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The entry as stored.",
+      "job": null,
+      "example": "knowledge.keep-schema item hrm-1 version 2 name \"Sad lift\" slug sad-lift"
+    }
+  ]
+}

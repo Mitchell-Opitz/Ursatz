@@ -53,10 +53,11 @@
  * 4.8 adds the theme request's blueprint (R-743): the theme given bar by bar, its chords (R-744), melody, rhythms or rhythm jobs, anchors,
  * events, bass and inner voices, its climax and accompaniment.
  * 4.9 adds blueprints from a motif (R-751, R-752): the preferences' blueprint group.
+ * 4.10 adds the harmony lab (R-761 to R-766): given chords on beats and half beats, up to four a bar, chords named with a mode, IV:dorian, the palette entry.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 4
-#define COMPOSER_API_VERSION_MINOR 9
+#define COMPOSER_API_VERSION_MINOR 10
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -331,6 +332,16 @@ UrsatzStatus composer_api_harmonize(const ComposerContext *context, const char *
  */
 UrsatzStatus composer_api_progression(const ComposerContext *context, const char *request_json,
                                         const UrsatzJob *job, ComposerResponse *out);
+
+/*
+ * The chords of a key's material and of a second material on the same tonic (R-765, composer/docs/harmony-lab.md). Request: {"key": "C
+ * minor", "with": "dorian"} ("with" optional: a mode the Composer writes keys in other than the key's own). json: {"key", "materials":
+ * [{"material" (K1 id), "word", "chords": [{"degree" (of the material), "numeral" (against the major scale of the tonic: i, bIII, vio),
+ * "name" ("Cm", "Eb", "Adim"), "quality", "text" (the chord text the Composer reads for it, absent for a chord none of its texts reads),
+ * "shared" (the other material holds it), "color" (it holds a tone the other lacks)}]}], "shared": [numerals of the key's material that
+ * both hold], "color": [{"material", "numerals"}]} ("shared" and "color" are empty without "with").
+ */
+UrsatzStatus composer_api_palette(const ComposerContext *context, const char *request_json, ComposerResponse *out);
 
 /*
  * Writes a counter-melody against a line in the first, second, third or fourth species of strict counterpoint

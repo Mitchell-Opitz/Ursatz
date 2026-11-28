@@ -269,6 +269,9 @@ ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS he
 ursatz_test(test_accompaniment_patterns LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 ursatz_test(test_accompaniment_patterns_smoke TARGET test_accompaniment_patterns ARGS smoke)
+ursatz_test(test_accompaniment_patterns_smoke_b TARGET test_accompaniment_patterns ARGS smoke-b)
+# The planed chords (R-763): a plan of four chords with the planed pattern; the first block's order and register carry through.
+ursatz_test(test_accompaniment_planed TARGET test_accompaniment_patterns ARGS planed)
 
 ursatz_test(test_voicing LIBS ursatz_composer_engine composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
@@ -426,7 +429,14 @@ ursatz_test(test_plan_cli LIBS ursatz_composer_engine composer_test_support
 add_dependencies(test_plan_cli ursatz)
 
 # Chords given at exact onsets (given.h plan_give_chords).
-ursatz_test(test_given_chords LIBS ursatz_composer_engine)
+ursatz_test(test_given_chords LIBS ursatz_composer_engine INCLUDES ${PROJECT_SOURCE_DIR}/src)
+# Given chords on beats and half beats, up to four a bar (R-761): the measured requests as processes of the theme command (about
+# 10 s with the processes run at once), and the reading grid of a span.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/beat_chords)
+ursatz_test(beat_chords SOURCES test_beat_chords.c LIBS ursatz_composer_engine composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz>" INCLUDES ${PROJECT_SOURCE_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/beat_chords)
+add_dependencies(test_beat_chords ursatz)
 # The regions and the given harmony of piece.h, and its name tables and basic idea.
 ursatz_test(test_piece_regions LIBS ursatz_composer_engine composer_test_support)
 
@@ -654,6 +664,7 @@ ursatz_test(test_blueprint_generate LIBS ursatz_composer_engine composer_test_su
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+ursatz_test(test_blueprint_generate_ranking TARGET test_blueprint_generate ARGS ranking)
 
 # Gate 2 of P69c (R-757): the four motif fixtures as sentences and periods, seeds 1 to 10, no development, through composer_api_theme; the composed count is pinned.
 # Slow: see test_blueprint_generator_sweep.c; the smoke test runs seed 1 of every case.
@@ -661,6 +672,12 @@ ursatz_test_executable(test_blueprint_generator_sweep LIBS ursatz_composer_engin
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ursatz_test(test_blueprint_generator_sweep TARGET test_blueprint_generator_sweep LABELS slow)
 ursatz_test(test_blueprint_generator_sweep_smoke TARGET test_blueprint_generator_sweep ARGS fast)
+
+# Gate 2 of P70 (R-770): the harmony lab over seeds 1 to 10, each case pinned at its measured count; see test_harmony_lab_sweep.c. The smoke test runs seed 1 of every case.
+ursatz_test_executable(test_harmony_lab_sweep LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_harmony_lab_sweep TARGET test_harmony_lab_sweep LABELS slow)
+ursatz_test(test_harmony_lab_sweep_smoke TARGET test_harmony_lab_sweep ARGS fast)
 
 # The presets (P69c B5, R-754): each reads over the defaults, a request's settings layer over a preset's, a theme request names one, an unknown one is refused.
 ursatz_test(test_presets LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
@@ -746,6 +763,16 @@ ursatz_test(test_api_vocabulary LIBS ursatz_composer_engine composer_test_suppor
 ursatz_test(test_api_forms LIBS ursatz_composer_engine composer_test_support cjson
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written)
 
+# The palette entry (R-765): the chords of two modes on one key with the text the Composer reads for each; it writes a request and a response for test_api_schema.
+ursatz_test(test_palette LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_palette_files)
+
+# The progression request with a palette (R-766): the sad-then-Dorian-lift plan, the schemas' examples, the cadence, given chords, refusals, the accompaniment;
+# it writes a request and a response for test_api_schema.
+ursatz_test(test_progression_lab LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_lab_files)
+
 ursatz_test(test_job_cancel LIBS ursatz_composer_engine composer_test_support)
 
 if(URSATZ_VALGRIND)
@@ -771,10 +798,10 @@ endif()
 # schema/api/<kind>.schema.json (needs python3 with jsonschema).
 if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
-        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files)
+        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files api_palette_files api_lab_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
-                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique
+                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique,palette
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DREALIZATION_SCHEMA=${CMAKE_SOURCE_DIR}/library/realization/schema/realization.v1.schema.json

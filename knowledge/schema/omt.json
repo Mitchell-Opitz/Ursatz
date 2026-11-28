@@ -1,0 +1,2996 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "omt",
+ "entries": [
+  {
+   "id": "omt.schema.meyer",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Meyer",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": false,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "6/4/3",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.prinner",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Prinner",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": true,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 6,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "7-6",
+      "numeral": "vii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.modulating-prinner",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Modulating Prinner",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": true,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I",
+      "numeral_dominant": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V",
+      "numeral_dominant": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "figures": "7-#6",
+      "numeral": "vii/V",
+      "numeral_dominant": "vii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V",
+      "numeral_dominant": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.romanesca",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Romanesca",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "vi"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.do-re-mi",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Do-Re-Mi",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.do-re-mi-four-stage",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Do-Re-Mi Four-Stage",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.sol-fa-mi",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Sol-Fa-Mi",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.aprile",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Aprile",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": false,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "6/4/3",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.jupiter",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Jupiter",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": false,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.pastorella",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Pastorella",
+   "content": {
+    "function": "opening-gambit",
+    "bass_defining": false,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "7",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.prinner-with-dominant",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Prinner with Dominant",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 6,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "7-6",
+      "numeral": "vii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "7",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "either"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.modulating-prinner-with-dominant",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Modulating Prinner with Dominant",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "figures": "7-#6",
+      "numeral": "vii/V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "7/#",
+      "numeral": "V/V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.fonte",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Fonte",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "raised"
+      },
+      "figures": "6/5",
+      "numeral": "V/ii"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.monte",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Monte",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V/IV",
+      "melody_next": {
+       "degree": 7,
+       "alteration": "lowered"
+      }
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "raised"
+      },
+      "figures": "6/5",
+      "numeral": "V/V",
+      "melody_next": {
+       "degree": 1,
+       "alteration": "natural"
+      }
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.ponte",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Ponte",
+   "content": {
+    "function": "continuation",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "7",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "7",
+      "numeral": "V"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.fenaroli",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Fenaroli",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.indugio",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Indugio",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "IV"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "raised"
+      },
+      "figures": "6/5",
+      "numeral": "V/V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.deceptive-cadence",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Deceptive Cadence",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "vi"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.evaded-cadence",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Evaded Cadence",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.passo-indietro",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Passo Indietro",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/4/2",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.comma",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Comma",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.converging-cadence",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Converging Cadence",
+   "content": {
+    "function": "pre-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "raised"
+      },
+      "figures": "6/5",
+      "numeral": "V/V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.cadenza-semplice",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Cadenza Semplice",
+   "content": {
+    "function": "cadence",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.cadenza-composta",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Cadenza Composta",
+   "content": {
+    "function": "cadence",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "figures": "6",
+      "numeral": "I"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "figures": "6/5",
+      "numeral": "ii"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "6/4",
+      "numeral": "Cad."
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "7",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.cadenza-doppia",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Cadenza Doppia",
+   "content": {
+    "function": "cadence",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 4,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 3,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "6/4",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "4",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 2,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 5,
+       "alteration": "natural"
+      },
+      "figures": "3",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.quiescenza",
+   "kind": "schema",
+   "subtype": "galant",
+   "name": "Quiescenza",
+   "content": {
+    "function": "post-cadential",
+    "bass_defining": true,
+    "melody_in_tenths": false,
+    "stages": [
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 7,
+       "alteration": "lowered"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "b7",
+      "numeral": "V/IV"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 6,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "6/4",
+      "numeral": "V"
+     },
+     {
+      "strength": "weak",
+      "melody": {
+       "degree": 7,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "7/4/2",
+      "numeral": "V"
+     },
+     {
+      "strength": "strong",
+      "melody": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "bass": {
+       "degree": 1,
+       "alteration": "natural"
+      },
+      "figures": "5",
+      "numeral": "I"
+     }
+    ]
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 11,
+     "note": "the schema's stages and harmony in the galant schemas chapter"
+    },
+    {
+     "source": "omt",
+     "part": "II",
+     "chapter": 12,
+     "note": "the summary table of the galant schemas"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  },
+  {
+   "id": "omt.schema.twelve-bar-blues",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Twelve-bar blues",
+   "aliases": [
+    "12-bar blues"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "I",
+      "units": 4
+     },
+     {
+      "chord": "IV",
+      "units": 2
+     },
+     {
+      "chord": "I",
+      "units": 2
+     },
+     {
+      "chord": "V"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I",
+      "units": 2
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major",
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "the twelve bars as six chords, I for four bars, IV for two, I for two, then V, IV and I"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "I",
+      "I",
+      "I",
+      "IV",
+      "IV",
+      "I",
+      "I",
+      "V",
+      "IV",
+      "I",
+      "I"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.double-plagal",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Double plagal",
+   "content": {
+    "stages": [
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0,
+     2
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "bVII, IV, I: two plagal motions in a row to the tonic"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C mixolydian",
+     "chords": [
+      "VII",
+      "IV",
+      "I"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.extended-plagal",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Extended plagal",
+   "content": {
+    "stages": [
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bIII"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 7,
+     "note": "bVI, bIII, bVII, IV, I: a chain of plagal motions to the tonic"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "bVI",
+      "bIII",
+      "bVII",
+      "IV",
+      "I"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.doo-wop",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Doo-wop",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     2
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "I, vi, IV, V as a loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "VI",
+      "IV",
+      "V"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.singer-songwriter",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Singer-songwriter",
+   "content": {
+    "stages": [
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major",
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "vi, IV, I, V as a loop; any of its four chords may begin it"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "VI",
+      "IV",
+      "I",
+      "V"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.hopscotch",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Hopscotch",
+   "content": {
+    "stages": [
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "V"
+     },
+     {
+      "chord": "vi"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "IV, V, vi, I as a loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "IV",
+      "V",
+      "VI",
+      "I"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.lament",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lament",
+   "aliases": [
+    "lament bass"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "V"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor",
+     "omt.material.harmonic-minor"
+    ],
+    "realizes": "omt.vocabulary.phrase-model"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 8,
+     "note": "i, bVII, bVI, V as a loop, a falling bass line to the dominant"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "VII",
+      "VI",
+      "V"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.circle-of-fifths",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Circle of fifths",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "iv"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bIII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.sequential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 9,
+     "note": "i, iv, bVII, bIII as a loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "IV",
+      "VII",
+      "III"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.puff",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Puff",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "iii"
+     },
+     {
+      "chord": "IV"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "opening",
+    "materials": [
+     "omt.material.major"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 10,
+     "note": "I, iii, IV as an opening"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C major",
+     "chords": [
+      "I",
+      "III",
+      "IV"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.subtonic-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Subtonic shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "bVII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.mixolydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "I and bVII in turn; either chord may begin the loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C mixolydian",
+     "chords": [
+      "I",
+      "VII"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.aeolian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Aeolian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bVII"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "i, bVII, bVI, bVII as a loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "I",
+      "VII",
+      "VI",
+      "VII"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.aeolian-cadence",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Aeolian cadence",
+   "aliases": [
+    "Mario cadence"
+   ],
+   "content": {
+    "stages": [
+     {
+      "chord": "bVI"
+     },
+     {
+      "chord": "bVII"
+     },
+     {
+      "chord": "i"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.natural-minor"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "bVI, bVII, i: a cadence with no dominant"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C minor",
+     "chords": [
+      "VI",
+      "VII",
+      "I"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.dorian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Dorian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "i"
+     },
+     {
+      "chord": "IV"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.dorian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "i and IV in turn, the major IV marking the raised sixth degree; either chord may begin the loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C dorian",
+     "chords": [
+      "I",
+      "IV"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.lydian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lydian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "II"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     1
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.lydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "I and II in turn, the major II marking the raised fourth degree; either chord may begin the loop"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C lydian",
+     "chords": [
+      "I",
+      "II"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "omt.schema.lydian-cadence",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lydian cadence",
+   "content": {
+    "stages": [
+     {
+      "chord": "II"
+     },
+     {
+      "chord": "IV"
+     },
+     {
+      "chord": "I"
+     }
+    ],
+    "loop": false,
+    "rotations": [
+     0
+    ],
+    "role": "cadence",
+    "materials": [
+     "omt.material.lydian"
+    ],
+    "realizes": "omt.vocabulary.cadential"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 6,
+     "example": 1,
+     "note": "the schemas of Example 1 as a chart"
+    },
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "II, IV, I as a cadence"
+    }
+   ],
+   "status": "active",
+   "version": 1,
+   "examples": [
+    {
+     "key": "C lydian",
+     "chords": [
+      "II",
+      "bIV",
+      "I"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -230,13 +230,14 @@ static cJSON *lineage_of(const char *type, const cJSON *body) {
 }
 
 static bool type_ok(const char *type) {
-    return strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 || strcmp(type, "piece") == 0;
+    return strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 || strcmp(type, "piece") == 0 || strcmp(type, "harmony") == 0;
 }
 
 static const char *body_format_of(const char *type) {
-    return strcmp(type, "motif") == 0   ? WORKSHOP_FORMAT_MOTIF_BODY
-           : strcmp(type, "theme") == 0 ? WORKSHOP_FORMAT_THEME_BODY
-                                        : WORKSHOP_FORMAT_PIECE_BODY;
+    return strcmp(type, "motif") == 0     ? WORKSHOP_FORMAT_MOTIF_BODY
+           : strcmp(type, "theme") == 0   ? WORKSHOP_FORMAT_THEME_BODY
+           : strcmp(type, "harmony") == 0 ? WORKSHOP_FORMAT_HARMONY_BODY
+                                          : WORKSHOP_FORMAT_PIECE_BODY;
 }
 
 /* The render cache of a motif version (items/<id>/v<n>/render/) becomes cache/renders/<id>/v<n>/. Its render.json named the Composer

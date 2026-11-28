@@ -1,9 +1,11 @@
 #include "analysis/dimension/dimension.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "analysis/notes/contour.h"
 #include "analysis/similarity/similarity_scoring.h"
+#include "theory/harmony/chord_value.h"
 
 static const Rational ZERO = {0, 1};
 static const Rational ONE = {1, 1};
@@ -130,11 +132,91 @@ static DimensionResult measure_brightness(const DimensionSpan *span, Rational *o
     return DIMENSION_OK;
 }
 
+/*
+ * Tension (R-764): the span's notes are cut at every onset and release into sonorities; each sonority of three or more pitch classes takes
+ * the rank 1 to 12 of its Hindemith chord group (chord_value_classify, the lowest note the bass), weighted by its length; the value is the
+ * weighted mean. A span with no such sonority is refused (INVALID_INPUT).
+ */
+static DimensionResult measure_tension(const DimensionSpan *span, Rational *out) {
+    size_t capacity = 2 * span->count;
+    Rational *cuts = malloc(capacity * sizeof(*cuts));
+    int *pitches = malloc(span->count * sizeof(*pitches));
+    if (cuts == NULL || pitches == NULL) {
+        free(cuts);
+        free(pitches);
+        return DIMENSION_ERR_ALLOC;
+    }
+    size_t cut_count = 0;
+    DimensionResult result = DIMENSION_OK;
+    for (size_t i = 0; result == DIMENSION_OK && i < span->count; i++) {
+        Rational end;
+        result = from_rational(rational_add(span->notes[i].onset, span->notes[i].duration, &end));
+        Rational edges[2] = {span->notes[i].onset, end};
+        for (size_t e = 0; result == DIMENSION_OK && e < 2; e++) {
+            size_t at = 0;
+            while (at < cut_count && rational_cmp(cuts[at], edges[e]) < 0) {
+                at++;
+            }
+            if (at < cut_count && rational_cmp(cuts[at], edges[e]) == 0) {
+                continue;
+            }
+            memmove(cuts + at + 1, cuts + at, (cut_count - at) * sizeof(*cuts));
+            cuts[at] = edges[e];
+            cut_count++;
+        }
+    }
+    Rational weight = ZERO;
+    Rational total = ZERO;
+    for (size_t c = 0; result == DIMENSION_OK && c + 1 < cut_count; c++) {
+        size_t sounding = 0;
+        for (size_t i = 0; i < span->count; i++) {
+            Rational end;
+            result = from_rational(rational_add(span->notes[i].onset, span->notes[i].duration, &end));
+            if (result != DIMENSION_OK) {
+                break;
+            }
+            if (rational_cmp(span->notes[i].onset, cuts[c]) <= 0 && rational_cmp(end, cuts[c + 1]) >= 0) {
+                pitches[sounding++] = span->notes[i].pitch;
+            }
+        }
+        ChordValue value;
+        if (result != DIMENSION_OK || !chord_value_classify(pitches, sounding, &value)) {
+            continue;
+        }
+        Rational length;
+        Rational part;
+        Rational rank;
+        result = from_rational(rational_sub(cuts[c + 1], cuts[c], &length));
+        if (result == DIMENSION_OK) {
+            result = from_rational(rational_from_int(value.rank, &rank));
+        }
+        if (result == DIMENSION_OK) {
+            result = from_rational(rational_mul(length, rank, &part));
+        }
+        if (result == DIMENSION_OK) {
+            result = from_rational(rational_add(total, part, &total));
+        }
+        if (result == DIMENSION_OK) {
+            result = from_rational(rational_add(weight, length, &weight));
+        }
+    }
+    free(cuts);
+    free(pitches);
+    if (result != DIMENSION_OK) {
+        return result;
+    }
+    if (rational_cmp(weight, ZERO) <= 0) {
+        return DIMENSION_ERR_INVALID_INPUT;
+    }
+    return from_rational(rational_div(total, weight, out));
+}
+
 /* The name table of the dimensions (target architecture 5.3): a name and the function that measures it. */
 static const struct {
     const char *name;
     DimensionResult (*measure)(const DimensionSpan *span, Rational *out);
-} MEASURES[DIMENSION_COUNT] = {{"register", measure_register}, {"density", measure_density}, {"brightness", measure_brightness}};
+} MEASURES[DIMENSION_COUNT] = {{"register", measure_register}, {"density", measure_density}, {"brightness", measure_brightness},
+    {"tension", measure_tension}};
 
 const char *dimension_name(Dimension dimension) {
     return dimension >= 0 && dimension < DIMENSION_COUNT ? MEASURES[dimension].name : NULL;

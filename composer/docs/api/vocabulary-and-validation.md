@@ -14,7 +14,7 @@ The words an application offers and the requests accept, in the order an applica
 
 | Member | Entries |
 |---|---|
-| `meters` | `2/4 3/4 4/4 6/8`: `{"value", "label", "beats", "beat_unit" (4.4), "chord_onset_step": "1/2", "second_chord_beat"}`. A theme chord starts on any half beat of a bar and, where the bar takes two chords, the second on `second_chord_beat` (4/4: 2, 6/8: 3; absent for 2/4 and 3/4). |
+| `meters` | `2/4 3/4 4/4 6/8`: `{"value", "label", "beats", "beat_unit" (4.4), "chord_onset_step": "1/2", "chords_max" (4.10), "second_chord_beat"}`. A chord starts on any half beat, up to `chords_max` (4) a bar; the drawn harmony's second chord is at `second_chord_beat` (4/4: 2, 6/8: 3; none for 2/4, 3/4). |
 | `materials`, `piece_materials` | `{"value": <material id>, "label": <key word>}` for the materials the Composer composes in: `omt.material.major` (`major`) and `omt.material.natural-minor` (`minor`); `piece_materials` adds `{"value": "style", "label": "From the brief"}` (API 2.0; they were `modes` and `piece_modes`). |
 | `keys` | the 24 keys as the Composer spells a tonic: C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B major, then C, C#, D, D#, E, F, F#, G, G#, A, Bb, B minor. |
 | `pitch_class_names` | `{"value": 0 to 11, "names": {<material id>: <spelling>}}`: the tonic of each pitch class in each of the two materials (API 2.0; the entries were `{"value", "major", "minor"}`). |

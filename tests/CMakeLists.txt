@@ -60,7 +60,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
         -DCHECK=${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
         -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/knowledge
-        -DSCHEMA=${CMAKE_SOURCE_DIR}/knowledge/schema
+        -DSCHEMA=${CMAKE_SOURCE_DIR}/knowledge/json-schema
         -P ${CMAKE_CURRENT_SOURCE_DIR}/knowledge_fixtures.cmake LABELS schema)
 endif()
 

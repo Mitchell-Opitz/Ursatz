@@ -45,3 +45,5 @@ ursatz_test(standard_harmony_resolution_rules SOURCES test_harmony_resolution_ru
 
 
 ursatz_test(standard_harmony_applied_label_grammar SOURCES test_harmony_applied_label_grammar.c LIBS ursatz_theory)
+
+ursatz_test(chord_value SOURCES test_chord_value.c LIBS ursatz_theory VALGRIND)

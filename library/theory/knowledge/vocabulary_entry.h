@@ -8,8 +8,8 @@
 
 /*
  * K4 vocabulary (target architecture 5.2, R-707): the names the enums of the theory library stand for, as entries a person can read
- * and cite. The `vocabulary` kind has five subtypes: cadence-kind, embellishment (a non-chord tone), texture, progression-type and
- * function (a harmonic function). Every entry has a `code`, the text the C table uses for the same thing ("perfect-authentic",
+ * and cite. The `vocabulary` kind has seven subtypes: cadence-kind, embellishment (a non-chord tone), texture, progression-type,
+ * function (a harmonic function), and Hindemith's interval-class and chord-group (R-764: the tables `chord_value` and the tension measure use). Every entry has a `code`, the text the C table uses for the same thing ("perfect-authentic",
  * "escape-tone", "melody and accompaniment", "tonic"); the enums stay the identity at run time and a test pins each table to its
  * entries. A cadence kind holds the row of the cadence table, an embellishment how the tone is approached and left, a texture the
  * code of its category's entry; the other two subtypes hold the code only (a progression type's example chords are for readers and
@@ -21,7 +21,9 @@ typedef enum {
     VOCABULARY_EMBELLISHMENT,
     VOCABULARY_TEXTURE,
     VOCABULARY_PROGRESSION_TYPE,
-    VOCABULARY_FUNCTION
+    VOCABULARY_FUNCTION,
+    VOCABULARY_INTERVAL_CLASS,
+    VOCABULARY_CHORD_GROUP
 } VocabularySubtype;
 
 /* How an embellishing tone is approached or left. */
@@ -68,6 +70,24 @@ typedef struct {
     const char *category; /* the code of the texture entry this texture belongs to (its own code for a category) */
 } VocabularyTexture;
 
+/* A row of Hindemith's Series 2 (the intervals from the most to the least consonant): its size in semitones, its rank 1 to 12, and the
+   root of the interval (1 the lower tone, 2 the upper, 0 none). */
+typedef struct {
+    int semitones;
+    int rank;
+    int root;
+} VocabularyInterval;
+
+/* A chord group of Hindemith's table of chords, with its rank 1 (Ia) to 12 (VI) and the words of its description, as the
+   schema's words in order: tritones none, one, several, any (0 to 3); sharp none, mild, sharp, any (0 to 3); root bass, above, none, any (0 to 3: any is a group that has a root in either place). */
+typedef struct {
+    int group; /* 1 to 6 */
+    int rank;
+    int tritones;
+    int sharp;
+    int root;
+} VocabularyChordGroup;
+
 /* The member for the entry's subtype holds its fields; the others are zero. */
 typedef struct {
     const char *id;
@@ -77,6 +97,8 @@ typedef struct {
     VocabularyCadence cadence;
     VocabularyEmbellishment embellishment;
     VocabularyTexture texture;
+    VocabularyInterval interval;
+    VocabularyChordGroup chord_group;
 } VocabularyEntry;
 
 #endif

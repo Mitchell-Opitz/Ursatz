@@ -29,7 +29,7 @@ ratings/critiques/<item id>.json                   the critic's judgments of the
 projects/<prj>/settings.json                       the project's settings, overrides and switches
 projects/<prj>/items/<id>/settings.json            the item's
 projects/<prj>/items/<id>/v<n>/settings.json       how the settings resolved for the compose that made the version (ursatz-settings-snapshot)
-knowledge/*.json                                   the user's own knowledge entries (ids user.*): read when the workshop opens, never written
+knowledge/*.json                                   the user's own knowledge entries (ids user.*): read when the workshop opens; only knowledge/user.json is written, by the knowledge commands
 cache/                                             motive-link-cache.json, renders/<item>/v<n>/, index/: rebuilt, never the source of truth
 ```
 
@@ -48,6 +48,7 @@ Every file the workshop owns has `format` and `format_version`. A reader refuses
 | `ursatz-item-version` | 1 | `envelope.json` | `ursatz-item-version.v1` |
 | `ursatz-motif-body` | 1 | a motif's `body.json` | `ursatz-motif-body.v1` |
 | `ursatz-theme-body` | 2 | a theme's `body.json` | `ursatz-theme-body.v2` |
+| `ursatz-harmony-body` | 1 | a harmony plan's `body.json` (`hrm-` items, R-767) | `ursatz-harmony-body.v1` |
 | `ursatz-piece-body` | 2 | a piece's `body.json` | `ursatz-piece-body.v2` |
 | `ursatz-op-checks` | 1 | `op-checks.json` | `ursatz-op-checks.v1` |
 | `ursatz-subject` | 1 | `subjects/<sub>.json` | `ursatz-subject.v1` |
@@ -62,7 +63,7 @@ Files other parts own keep their own versions: the analysis document (`analysis.
 
 ## Items and versions
 
-A project holds items (motifs, themes, pieces). An item has numbered versions; saving or composing adds one, nothing rewrites an old one. The header holds no versions: they are read from the envelopes. A theme or piece body (format 2) is `{uses, request, brief, result, check, seed}`: `request` is the Composer request as it is sent, with `{"$item": {"item_id", "version"[, "file"]}}` in place of a motif's motive, a theme fill's plan or the accompaniment motif, and `{"$pool": {"item_id", "pool"}}` in place of a motif's saved forms; `uses` copies what the references name; `check` and `seed` are run options beside the request. A placeholder body is `request: {}`. The store checks only what it owns (the shape, ids, uses and their versions, derived records and lineage, notes, byte caps): a draft may hold any word, and the Composer judges the request at validate and compose (R-649). A resolver (`composition/request_resolve.c`) replaces each reference before the Composer is called.
+A project holds items (motifs, themes, pieces and harmony plans, `hrm-`: [harmony-plans.md](harmony-plans.md)). An item has numbered versions; saving or composing adds one, nothing rewrites an old one. The header holds no versions: they are read from the envelopes. A theme or piece body (format 2) is `{uses, request, brief, result, check, seed}`: `request` is the Composer request as it is sent, with `{"$item": {"item_id", "version"[, "file"]}}` in place of a motif's motive, a theme fill's plan or the accompaniment motif, and `{"$pool": {"item_id", "pool"}}` in place of a motif's saved forms; `uses` copies what the references name; `check` and `seed` are run options beside the request. A placeholder body is `request: {}`. The store checks only what it owns (the shape, ids, uses and their versions, derived records and lineage, notes, byte caps): a draft may hold any word, and the Composer judges the request at validate and compose (R-649). A resolver (`composition/request_resolve.c`) replaces each reference before the Composer is called.
 
 The envelope of a version (`envelope.json`) holds its `note`, its `actor` (the command's: `michelle` for the GUI, `claude` for `ursatz apply`, `michelle` for a migration), its time and its `lineage`: `derived_from` (the motif version a derived motif comes from, or null) and, for a version made by `item.restore`, `restored_from` (the version it copies, from 1). A restored version has every file of the old one but its envelope, its body is the old body with the paths of its `result` moved to its own folder, and its `uses` are the old version's, not refreshed (R-667).
 

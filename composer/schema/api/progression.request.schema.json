@@ -50,7 +50,10 @@
         "iac",
         "hc",
         "dc",
-        "pc"
+        "pc",
+        "none",
+        "NONE",
+        "None"
       ]
     },
     "seed": {
@@ -103,6 +106,138 @@
     "layers": {
       "type": "boolean",
       "description": "Also return the realization and the reading of the first result as \"realization\" and \"reading\"."
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Chords drawn from one or two modes on the key's tonic (R-766); with it the cadence may be none, and schema, sequence and embellish are refused.",
+      "properties": {
+        "with": {
+          "type": "string"
+        },
+        "chords_per_bar": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "spans": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bars"
+            ],
+            "properties": {
+              "bars": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "chords": {
+                "enum": [
+                  "shared",
+                  "color",
+                  "first",
+                  "second",
+                  "any"
+                ]
+              },
+              "schema": {
+                "type": "string"
+              },
+              "loop": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "chords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bar",
+              "text"
+            ],
+            "properties": {
+              "bar": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "brightness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shape"
+          ],
+          "properties": {
+            "shape": {
+              "enum": [
+                "rise",
+                "fall",
+                "hold",
+                "peak",
+                "step"
+              ]
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "tension": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shape"
+          ],
+          "properties": {
+            "shape": {
+              "enum": [
+                "rise",
+                "fall",
+                "hold",
+                "peak",
+                "step"
+              ]
+            },
+            "at": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "accompaniment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern"
+      ],
+      "description": "With a palette: the accompaniment the chords are sounded with, a pattern name or a K11 accompaniment id and a K3 voicing id.",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "voicing": {
+          "type": "string"
+        }
+      }
     }
   }
 }

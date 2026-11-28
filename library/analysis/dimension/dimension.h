@@ -12,7 +12,8 @@
  * The dimensions of music a span can be measured in, and how far two spans contrast (R-709, target architecture 5.3). A
  * dimension is a name and a measure over a span of notes; the table in dimension.c is the one place that lists them, so a new one
  * (harmonic tension, dynamics, intensity: later phases) is a row and a function. It has register (the mean MIDI pitch), density (notes
- * per beat) and brightness (R-730: from 1, locrian, to 7, lydian, read from the notes against a center, see measure_brightness). Every value is an exact Rational.
+ * per beat), brightness (R-730: from 1, locrian, to 7, lydian, read from the notes against a center, see measure_brightness) and tension
+ * (R-764: Hindemith's chord group of each sounding chord, ranked 1 to 12, weighted by length, see measure_tension). Every value is an exact Rational.
  *
  * A DimensionSpan is the notes of a span in onset order, each with its onset from the span's start, its duration (whole notes) and
  * its MIDI pitch, the span's length in whole notes and the length of its beat. An empty span, a length or beat that is not positive,
@@ -27,7 +28,7 @@
  *   density   the absolute difference of the notes per beat.
  */
 
-typedef enum { DIMENSION_REGISTER = 0, DIMENSION_DENSITY, DIMENSION_BRIGHTNESS, DIMENSION_COUNT } Dimension;
+typedef enum { DIMENSION_REGISTER = 0, DIMENSION_DENSITY, DIMENSION_BRIGHTNESS, DIMENSION_TENSION, DIMENSION_COUNT } Dimension;
 
 typedef struct {
     Rational onset;    /* from the start of the span */

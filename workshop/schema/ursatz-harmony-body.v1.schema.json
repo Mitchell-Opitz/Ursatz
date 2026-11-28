@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-harmony-body.v1.schema.json",
+  "title": "Harmony body, format version 1",
+  "description": "projects/<prj>/items/<id>/v<n>/body.json: the body of a harmony plan version (R-767): the progression request of R-766 and, once composed, its result.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "uses",
+    "request"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "format": {
+      "const": "ursatz-harmony-body"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "uses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "version"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "copy": {}
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": [
+        "schema",
+        "schema_version"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ursatz-theme-request"
+        },
+        "schema_version": {
+          "const": 2
+        }
+      }
+    },
+    "brief": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

@@ -16,6 +16,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [The command line](../../cli/docs/README.md): the `ursatz` commands, one page each ([motive](../../cli/docs/cli-motive.md), [grow](../../cli/docs/cli-grow.md), [plan](../../cli/docs/cli-plan.md), [piece](../../cli/docs/cli-piece.md), [listen](../../cli/docs/cli-listen.md) and the others), the workflows (middle-out, checking, styles and corpora) and the flag table.
 - [export.md](export.md): writing a plan as MIDI or MusicXML.
 - [theme-request.md](theme-request.md): the JSON request of the `theme` command and API entry.
+- [harmony-lab.md](harmony-lab.md): the harmony lab (P70): the reading grid for given chords on beats and half beats (API 4.10).
 - [piece-request.md](piece-request.md): the JSON request of the `piece` command and API entry.
 - [style.md](style.md): style models, blending and seeding from a corpus.
 - [middle-out.md](middle-out.md): planning a piece from a given phrase, progression or bass line.

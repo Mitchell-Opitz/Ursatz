@@ -716,7 +716,8 @@
         "label",
         "beats",
         "beat_unit",
-        "chord_onset_step"
+        "chord_onset_step",
+        "chords_max"
       ],
       "properties": {
         "value": {
@@ -738,6 +739,10 @@
           "type": "string"
         },
         "second_chord_beat": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chords_max": {
           "type": "integer",
           "minimum": 1
         }

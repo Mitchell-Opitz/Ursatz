@@ -17,6 +17,7 @@ Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md). 
 - [views/themes-and-pieces.md](views/themes-and-pieces.md): the Themes view, the Pieces view and item references.
 - [views/piece-sections.md](views/piece-sections.md): a section's region, harmony and the overlays of a sized form.
 - [views/analysis-and-score.md](views/analysis-and-score.md): Subjects, Motive links, the Analysis view, the Score, its layers and the Inspector.
+- [views/harmony-lab.md](views/harmony-lab.md): the Harmony Lab: the palette, the bars, spans and shapes, Hear, keep as my schema, apply to a theme or a section; the theme editor's chord hint.
 - [views/playback.md](views/playback.md): playback of pieces and motifs.
 
 ## API reference

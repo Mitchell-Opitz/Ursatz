@@ -233,6 +233,9 @@
         },
         "compound": {
           "type": "boolean"
+        },
+        "planing": {
+          "type": "boolean"
         }
       }
     }

@@ -16,7 +16,7 @@
 #include "piece/request_chords.h"
 
 #define NUMERALS_MAX 32
-#define CHORDS_MAX 16
+#define CHORDS_MAX 64
 
 /* The numerals of a progression text, "I vi IV V", split in place; false for none or more than NUMERALS_MAX. */
 static bool split_numerals(char *text, const char **out, size_t *count) {

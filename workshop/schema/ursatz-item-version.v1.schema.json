@@ -30,7 +30,8 @@
       "enum": [
         "motif",
         "theme",
-        "piece"
+        "piece",
+        "harmony"
       ]
     },
     "version": {

@@ -319,7 +319,7 @@ MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const c
 bool motive_color_type(const KnowledgeSnapshot *knowledge, const char *suffix, const ChordType **type);
 
 /* The most characters of a chord's numeral with its NUL ("bVII65", "#IV43"). */
-#define MOTIVE_CHORD_NUMERAL_MAX 16
+#define MOTIVE_CHORD_NUMERAL_MAX 24
 
 /* A chord as the numeral motive_harmony_parse reads, without its onset ("V65", "bVII7"). False for a chord that has none. */
 bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size);

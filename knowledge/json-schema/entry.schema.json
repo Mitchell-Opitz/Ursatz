@@ -186,6 +186,7 @@
             "enum": [
               "material",
               "vocabulary",
+              "schema",
               "relation",
               "function",
               "instrument",

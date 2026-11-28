@@ -33,3 +33,4 @@ ursatz_test(region_relation SOURCES test_region_relation.c LIBS ursatz_theory cj
 ursatz_test(spelled_key LIBS ursatz_theory VALGRIND)
 
 ursatz_test(standard_tonality_interval SOURCES test_interval.c LIBS ursatz_theory)
+ursatz_test(modal_palette SOURCES test_modal_palette.c LIBS ursatz_theory VALGRIND)

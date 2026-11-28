@@ -2,7 +2,7 @@
 
 #include "theory/knowledge/knowledge_internal.h"
 
-/* K11 pattern: a rhythm cell (content.meter, rhythm, jobs) or an accompaniment (content.grid, steps, by_meter, compound). */
+/* K11 pattern: a rhythm cell (content.meter, rhythm, jobs) or an accompaniment (content.grid, steps, by_meter, compound, planing). */
 
 static const char *const METERS[] = {"2/4", "3/4", "4/4", "6/8"};
 static const unsigned BAR_UNITS[] = {48, 72, 96, 72}; /* a bar of each meter in 96ths of a whole note */
@@ -139,6 +139,12 @@ static KnowledgeStatus read_accompaniment(Slot *slot, const cJSON *content, cons
         return KNOWLEDGE_ERR_FIELD;
     }
     accompaniment->compound = compound == NULL || cJSON_IsTrue(compound);
+    const cJSON *planing = knowledge_member(content, "planing");
+    if (planing != NULL && !cJSON_IsBool(planing)) {
+        knowledge_fail(message, message_size, path, id, "content.planing", "not a boolean");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    accompaniment->planing = planing != NULL && cJSON_IsTrue(planing);
     const char *problem = read_steps(knowledge_member(content, "steps"), accompaniment->steps, &accompaniment->step_count);
     if (problem != NULL) {
         knowledge_fail(message, message_size, path, id, "content.steps", problem);

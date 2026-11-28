@@ -368,7 +368,7 @@ check(
 const ideaRow = T.resultView({ summary: { themes: [{ slots: [{ idea: "repetition", slot: "basic", motive: "M2", source: "idea" }] }] } }, { motiveNames: { M2: "Two" } });
 check(ideaRow.rows[0].source === "From its own motif" && ideaRow.rows[0].motive === "Two", "an idea source reads From its own motif");
 
-/* the chord row (R-208): the cell grid of B2 allows a second chord at @2 in 4/4, @3 in 6/8 and none in 2/4 and 3/4 */
+/* the chord row (R-208, R-761): a bar takes up to four chords on beats and half beats */
 function chordState(chords, meter, bars) {
   const state = T.emptyState("c");
   state.meter = meter || "4/4";
@@ -378,6 +378,7 @@ function chordState(chords, meter, bars) {
   });
   return state;
 }
+check(T.chordHint("4/4").includes("at most 4 per bar") && T.chordHint("6/8").includes("on a beat or a half beat") && T.chordHint("3/4").includes("I IV@1 V@2 I@3"), "the chord hint says up to four chords a bar from the meter's chords_max");
 const eightToFour = chordState({ 1: "IV", 5: "V", 7: "I" });
 eightToFour.bars = 4;
 check(T.dropChords(eightToFour).join() === "6,8", "bars 8 to 4 drops the chords of bars 6 and 8");

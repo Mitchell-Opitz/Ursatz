@@ -6,6 +6,7 @@
 
 #include <theory/harmony/harmony_applied.h>
 #include <theory/harmony/harmony_chord.h>
+#include <theory/tonality/modal_chords.h>
 #include <theory/tonality/roman_numeral_grammar.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
@@ -95,6 +96,46 @@ static UrsatzStatus resolve_borrowed(const ComposerChords *tones, const SpelledK
     return URSATZ_OK;
 }
 
+/* A chord named with a mode (R-762, IV:dorian): the triad on the degree of that mode, or with a seventh figure the mode's own seventh. It
+   is refused when it is diminished or augmented, a seventh the numeral grammar has no quality for, or the mode is the key's own. Else it is
+   read as the chord of its quality, which resolve_borrowed takes from the nearest mode that holds it, as for every borrowed chord. */
+static UrsatzStatus resolve_mode(const ComposerChords *tones, const SpelledKey *key, const MotiveSketchChord *chord, long bar, const char *path,
+                                 char numeral_out[PLAN_ROMAN_NUMERAL_MAX], UrsatzError *error) {
+    HarmonyKind kind = harmony_kind(tones, key);
+    const PitchMaterial *own = tones == NULL ? NULL : composer_chords_key_material(kind.chords, kind.mode, kind.modal);
+    const char *roman = standard_tonality_roman_numeral_degree(chord->degree, true);
+    if (own == NULL) {
+        return fail(error, path, "chords bar %ld: a chord with a mode needs the knowledge snapshot", bar);
+    }
+    if (strcmp(own->id, chord->mode->id) == 0) {
+        return fail(error, path, "chords bar %ld: %s is the key's own mode; write the numeral without it", bar, chord->mode->key_word);
+    }
+    int root;
+    StandardTonalityTriadQuality triad;
+    if (!pitch_material_triad_on(chord->mode, chord->degree, &root, NULL, &triad) ||
+        (triad != STANDARD_TONALITY_TRIAD_MAJOR && triad != STANDARD_TONALITY_TRIAD_MINOR)) {
+        return fail(error, path, "chords bar %ld: the triad on %s in %s is not a major or minor chord", bar, roman, chord->mode->key_word);
+    }
+    MotiveSketchChord named = *chord;
+    named.mode = NULL;
+    named.quality_given = true;
+    named.quality = triad == STANDARD_TONALITY_TRIAD_MAJOR ? STANDARD_TONALITY_NUMERAL_MAJOR : STANDARD_TONALITY_NUMERAL_MINOR;
+    if (chord->seventh) {
+        int seventh = pitch_material_step(chord->mode, (chord->degree + 5) % 7 + 1);
+        int above = seventh < 0 || root < 0 ? -1 : (seventh - root + 12) % 12;
+        if (triad == STANDARD_TONALITY_TRIAD_MAJOR && above == 10) {
+            named.quality = STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH;
+        } else if (triad == STANDARD_TONALITY_TRIAD_MAJOR && above == 11) {
+            named.quality = STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH;
+        } else if (triad == STANDARD_TONALITY_TRIAD_MINOR && above == 10) {
+            named.quality = STANDARD_TONALITY_NUMERAL_MINOR_SEVENTH;
+        } else {
+            return fail(error, path, "chords bar %ld: the seventh chord on %s in %s is not one the Composer writes", bar, roman, chord->mode->key_word);
+        }
+    }
+    return resolve_borrowed(tones, key, &named, bar, path, numeral_out, error);
+}
+
 /* Whether the key's material holds a major seventh chord on the degree: a major third, a perfect fifth and a major seventh above its root. */
 static bool key_has_major_seventh(const HarmonyKind *kind, int degree) {
     const PitchMaterial *material = composer_chords_key_material(kind->chords, kind->mode, kind->modal);
@@ -129,7 +170,8 @@ static UrsatzStatus resolve_plain(const ComposerChords *tones, const SpelledKey 
         return fail(error, path, "chords bar %ld: that color chord does not fit the key (a color type goes on a triad of the key whose third and fifth are its own)", bar);
     }
     harmony.color = chord->color;
-    if (!(chord->color != NULL ? harmony_roman_format_in(&plain, &harmony, numeral_out) : harmony_roman_format(harmony_key_mode(key), &harmony, numeral_out))) {
+    /* The key's own chord by the key's kind: a major or minor key's tables, a modal key's stacked triad (IV in C dorian is the major triad, R-725). */
+    if (!harmony_roman_format_in(&plain, &harmony, numeral_out)) {
         return fail(error, path, "chords bar %ld: that chord does not exist in the key", bar);
     }
     return URSATZ_OK;
@@ -184,8 +226,8 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
             return fail(error, path, "chords bar %ld: '%s' at %s: %s", bar, text,
                             motive_error.location, motive_error.message);
         }
-        if (count == 0 || count > 2) {
-            return fail(error, path, "chords bar %ld: write 1 or 2 chords, not %zu", bar, count);
+        if (count == 0 || count > 4) {
+            return fail(error, path, "chords bar %ld: write 1 to 4 chords, not %zu", bar, count);
         }
         if (*chord_count + count > capacity) {
             return fail(error, base, "chords: too many chords");
@@ -203,26 +245,12 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
                 return fail(error, path, "chords bar %ld: a chord starts on a beat or a half beat",
                                 bar);
             }
-            Rational cell;
-            Rational in_cells;
-            if (!given_cell_length(meter, &cell) ||
-                rational_make(chord->onset.num * (long)cell.den, chord->onset.den * (long long)cell.num, &in_cells) !=
-                    RATIONAL_OK ||
-                in_cells.den != 1) {
-                /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
-                long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
-                return rational_cmp(cell, bar_length) == 0
-                           ? fail(error, path, "chords bar %ld: a bar of %d/%d takes one chord", bar,
-                                      meter->beats_per_bar, meter->beat_unit)
-                           : fail(error, path,
-                                      "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)", bar,
-                                      meter->beats_per_bar, meter->beat_unit, beats, beats);
-            }
             if (rational_cmp(chord->onset, bar_length) >= 0) {
                 return fail(error, path, "chords bar %ld: a chord starts inside the bar", bar);
             }
             size_t at = *chord_count;
-            UrsatzStatus resolved = chord->has_target ? resolve_applied(tones, key, chord, bar, path, numerals[at], error)
+            UrsatzStatus resolved = chord->mode != NULL ? resolve_mode(tones, key, chord, bar, path, numerals[at], error)
+                                    : chord->has_target ? resolve_applied(tones, key, chord, bar, path, numerals[at], error)
                                     : chord->alteration != 0 || (chord->quality_given && chord->quality != STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH)
                                         ? resolve_borrowed(tones, key, chord, bar, path, numerals[at], error)
                                         : resolve_plain(tones, key, chord, bar, path, numerals[at], error);
@@ -242,4 +270,106 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
         }
     }
     return URSATZ_OK;
+}
+
+/* ---------------------------------------------------------------- the text of a chord (the palette) */
+
+/* The root and quality of the triad a chord numeral (the plan's text) names in the key, by the one owner of a chord's pitch classes: the harmony tables' V of a
+   minor key is the major triad. */
+bool composer_given_chord_triad(const ComposerChords *tones, const SpelledKey *key, const char *numeral, int *root, StandardTonalityTriadQuality *quality) {
+    HarmonyKind kind = harmony_kind(tones, key);
+    HarmonyChord chord;
+    if (!harmony_roman_parse_in(&kind, numeral, &chord) || chord.seventh || chord.color != NULL) {
+        return false;
+    }
+    int intervals[4];
+    size_t size = 3;
+    if (!composer_chord_intervals(kind.chords, kind.mode, kind.modal, &chord, root, intervals, &size) || size != 3) {
+        return false;
+    }
+    bool found = false;
+    for (int q = 0; !found && q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
+        int triad[3];
+        found = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, triad) && triad[1] == intervals[1] && triad[2] == intervals[2];
+        *quality = found ? (StandardTonalityTriadQuality)q : *quality;
+    }
+    return found;
+}
+
+/* The root and quality of the triad a chord text reads as in the key, as request_read_chords resolves it: false when the text is not read. */
+static bool text_chord(const ComposerChords *tones, const SpelledKey *key, const char *text, int *root, StandardTonalityTriadQuality *quality) {
+    PlanMeter meter = {4, 4, 0};
+    cJSON *list = cJSON_CreateArray();
+    cJSON *entry = list != NULL ? cJSON_CreateObject() : NULL;
+    GivenChord given[4];
+    char numerals[4][PLAN_ROMAN_NUMERAL_MAX];
+    size_t count = 0;
+    UrsatzError error;
+    bool read = false;
+    if (entry != NULL && cJSON_AddNumberToObject(entry, "bar", 1) != NULL && cJSON_AddStringToObject(entry, "text", text) != NULL) {
+        cJSON_AddItemToArray(list, entry);
+        entry = NULL;
+        read = request_read_chords(tones, list, "/chords", "the section", 1, &meter, key, 1, given, numerals, 4, &count, &error) == URSATZ_OK &&
+               count == 1;
+    }
+    cJSON_Delete(entry);
+    cJSON_Delete(list);
+    return read && composer_given_chord_triad(tones, key, numerals[0], root, quality);
+}
+
+bool composer_chord_text_of(const ComposerChords *chords, const SpelledKey *key, int degree, int alteration, StandardTonalityTriadQuality quality,
+                            const PitchMaterial *mode, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    if (chords == NULL || key == NULL || key->material == NULL || out == NULL || degree < 1 || degree > 7) {
+        return false;
+    }
+    const PitchMaterial *own = key->material;
+    const PitchMaterial *major = chords->materials.major;
+    int wanted = major == NULL ? -1 : ((pitch_material_step(major, degree) + alteration) % 12 + 12) % 12;
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    /* The upper-case numeral first (the key's own chord on the degree, or its alteration), then the numeral that names the quality
+       (v, iv, iio, III+), then the suffix of the mode. */
+    for (int styled = 0; styled < 2; styled++) {
+        for (int pass = 0; pass < 3; pass++) {
+            for (int k = 1; k <= 7; k++) {
+                int step = pitch_material_step(own, k);
+                int offset = pass == 0 ? 0 : pass == 1 ? -1 : 1;
+                if (step < 0 || ((step + offset) % 12 + 12) % 12 != wanted) {
+                    continue;
+                }
+                StandardTonalityNumeralText numeral;
+                memset(&numeral, 0, sizeof(numeral));
+                numeral.degree = k;
+                numeral.alteration = offset;
+                numeral.quality = styled ? (StandardTonalityNumeralQuality)quality : STANDARD_TONALITY_NUMERAL_MAJOR;
+                int root;
+                StandardTonalityTriadQuality read;
+                if (standard_tonality_numeral_format(&numeral, text, sizeof(text)) && text_chord(chords, key, text, &root, &read) && root == wanted &&
+                    read == quality) {
+                    snprintf(out, PLAN_ROMAN_NUMERAL_MAX, "%s", text);
+                    return true;
+                }
+            }
+        }
+    }
+    for (int k = 1; mode != NULL && k <= 7; k++) {
+        int root;
+        StandardTonalityTriadQuality triad;
+        if (pitch_material_triad_on(mode, k, &root, NULL, &triad) && root == wanted && triad == quality) {
+            StandardTonalityNumeralText numeral;
+            memset(&numeral, 0, sizeof(numeral));
+            numeral.degree = k;
+            numeral.quality = STANDARD_TONALITY_NUMERAL_MAJOR;
+            int read_root;
+            StandardTonalityTriadQuality read;
+            size_t used;
+            if (standard_tonality_numeral_format(&numeral, text, sizeof(text)) && (used = strlen(text)) + strlen(mode->key_word) + 2 <= sizeof(text)) {
+                snprintf(text + used, sizeof(text) - used, ":%s", mode->key_word);
+                if (text_chord(chords, key, text, &read_root, &read) && read_root == wanted && read == quality) {
+                    snprintf(out, PLAN_ROMAN_NUMERAL_MAX, "%s", text);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }

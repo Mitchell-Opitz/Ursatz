@@ -30,7 +30,9 @@ add_library(ursatz_composer_engine STATIC
     api/api_piece_regenerate.c
     api/api_piece_rows.c
     api/api_piece_variations.c
+    api/api_palette.c
     api/api_progression.c
+    api/api_progression_lab.c
     api/api_counterpoint.c
     api/api_develop.c
     api/api_grow_request.c
@@ -65,6 +67,7 @@ add_library(ursatz_composer_engine STATIC
     fill/fill_record.c
     fill/fill_suggest.c
     candidates/variations.c
+    harmony/harmony_palette.c
     harmony/harmony_roman.c
     harmony/harmony_mask.c
     harmony/harmony_rhythm.c

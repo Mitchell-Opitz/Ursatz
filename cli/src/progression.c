@@ -11,6 +11,7 @@
 #include "cli_options.h"
 #include "cli_params.h"
 #include "flags.h"
+#include "session.h"
 #include "workflow.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
@@ -38,6 +39,8 @@ typedef struct {
     bool list_schemas;
     bool bass;
     bool json;
+    const char *palette_path;
+    const char *accompaniment_text;
 } Options;
 
 
@@ -61,6 +64,8 @@ static const CliOptionRow ROWS[] = {
     {"--musicxml", offsetof(Options, musicxml_path), false},
     {"--tempo", offsetof(Options, tempo_text), false},
     {"--plain-midi", offsetof(Options, plain_midi), true},
+    {"--palette", offsetof(Options, palette_path), false},
+    {"--accompaniment", offsetof(Options, accompaniment_text), false},
 };
 
 static int read_options(const CliArgs *args, Options *options) {
@@ -101,6 +106,26 @@ static cJSON *build_request(const Options *options) {
               (!options->musicxml_path || cJSON_AddTrueToObject(request, "musicxml")) &&
               (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
               (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi"));
+    if (ok && options->palette_path) {
+        /* The palette: the JSON object the file holds (R-766). */
+        char *path = cli_path_absolute(options->palette_path);
+        char *text = NULL;
+        size_t size = 0;
+        cJSON *palette = path && cli_read_file(path, &text, &size) ? cJSON_Parse(text) : NULL;
+        free(path);
+        free(text);
+        if (!cJSON_IsObject(palette) || !cJSON_AddItemToObject(request, "palette", palette)) {
+            cJSON_Delete(palette);
+            ok = false;
+            fprintf(stderr, "Error: --palette %s is not a readable file holding a JSON object\n", options->palette_path);
+            cJSON_Delete(request);
+            return NULL;
+        }
+    }
+    if (ok && options->accompaniment_text) {
+        cJSON *accompaniment = cJSON_AddObjectToObject(request, "accompaniment");
+        ok = accompaniment && cJSON_AddStringToObject(accompaniment, "pattern", options->accompaniment_text);
+    }
     if (!ok) {
         cJSON_Delete(request);
         return NULL;
@@ -117,7 +142,18 @@ static void print_table(const Options *options, const cJSON *entry, const char *
         printf("%-4.0f %-4.0f %-10s %-12s %s\n", cli_json_number(row, "bar"), cli_json_number(row, "beat"),
                cli_json_string(row, "chord"), cli_json_string(row, "function"), cli_json_string(row, "bass"));
     }
-    printf("\ncadence %s (heard: %s)\n", cadence, cli_json_string(entry, "heard"));
+    const cJSON *measures = cJSON_GetObjectItemCaseSensitive(entry, "measures");
+    if (cJSON_IsArray(measures)) {
+        printf("\n%-4s %-9s %s\n", "bar", "tension", "brightness");
+        const cJSON *measure = NULL;
+        cJSON_ArrayForEach(measure, measures) {
+            const char *tension = cli_json_string(measure, "tension");
+            const char *brightness = cli_json_string(measure, "brightness");
+            printf("%-4.0f %-9s %s\n", cli_json_number(measure, "bar"), tension[0] ? tension : "-", brightness[0] ? brightness : "-");
+        }
+    }
+    const char *heard = cli_json_string(entry, "heard");
+    printf("\ncadence %s (heard: %s)\n", cadence, heard[0] ? heard : "none");
 }
 
 static void print_text(const Options *options, const cJSON *document, const cJSON *const *entries, size_t count,

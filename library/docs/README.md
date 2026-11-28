@@ -38,6 +38,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: style models and the framework names.
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
+- [docs/modules/schemas.md](modules/schemas.md): L7 knowledge: the K5 schema kind, the galant subtype and its pin to the prototype table.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.
 - [docs/modules/reading.md](modules/reading.md): Reading: what one reader says about one realization, as claims; the builder and the JSON codec.
 - [text/README.md](../text/README.md): Text: Ursatz Text, the lossless text form of plans, readings, realizations and knowledge (grammar 1, codecs, API).
@@ -48,7 +49,8 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.
 - [docs/modules/query.md](modules/query.md): L9 query: similarity scoring.
-- [docs/modules/dimension.md](modules/dimension.md): Dimensions of a span (register, density) and contrast.
+- [docs/modules/dimension.md](modules/dimension.md): Dimensions of a span (register, density, brightness, tension) and contrast.
+- [docs/modules/tension.md](modules/tension.md): Hindemith's interval series and chord groups, and the tension of a sonority.
 - [docs/modules/motive-link.md](modules/motive-link.md): Motive links: chains of relations between motives, choosing and grouping.
 - [docs/modules/motive-relations.md](modules/motive-relations.md): Motive sketches and relations.
 - [docs/modules/motive-variant-recognition.md](modules/motive-variant-recognition.md): Recognizing varied statements of a motive.

@@ -22,7 +22,7 @@ await boot();
 await page.settle(12);
 
 const tools = page.document.getElementById("tool-list").children.map((li) => li.textContent);
-check(tools.join(",") === "Library,Analysis,Collections,Motifs,Themes,Pieces,Subjects,Motive links", "boot lists the eight tools");
+check(tools.join(",") === "Library,Analysis,Collections,Motifs,Themes,Pieces,Harmony Lab,Subjects,Motive links", "boot lists the nine tools");
 check(page.document.getElementById("tool-list").children[0].classList.contains("active"), "the Library is the open tool");
 check(page.content.textContent.includes("nocturne.mid"), "the Library table lists the pieces");
 check(page.document.getElementById("tags-panel").textContent.includes("Field"), "the Tags panel lists the composers");

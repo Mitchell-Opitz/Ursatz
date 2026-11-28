@@ -207,6 +207,55 @@ static size_t times_in(Rational time, Rational unit) {
     return (size_t)((time.num * (long)unit.den) / ((long)time.den * unit.num));
 }
 
+void harmony_metre_grid(const Plan *plan, PlanSpan meter_span, PlanSpan span, const PlanMeter *meter, Rational bar_length,
+                        size_t *cells_per_bar, Rational *cell_length) {
+    bool compound = meter->beat_unit == 8 && meter->beats_per_bar == 6;
+    if (meter->beat_unit != 4 && !compound) {
+        return;
+    }
+    LaneSpanId ids[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, 64);
+    Rational span_end;
+    plan_span_end(span, &span_end);
+    size_t want = *cells_per_bar;
+    for (int level = 0; level < 2; level++) {
+        size_t cells = compound ? 6 : level == 0 ? (size_t)meter->beats_per_bar : (size_t)meter->beats_per_bar * 2;
+        if (want >= cells) {
+            continue;
+        }
+        Rational grid;
+        bool off_grid = false;
+        if (rational_div_int(bar_length, want, &grid) != RATIONAL_OK) {
+            return;
+        }
+        for (size_t i = 0; i < found && i < 64; i++) {
+            if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN) {
+                continue;
+            }
+            PlanSpan given = plan_lane_span_span(plan, ids[i]);
+            Rational edges[2];
+            edges[0] = given.start;
+            plan_span_end(given, &edges[1]);
+            for (int e = 0; e < 2; e++) {
+                Rational from;
+                Rational times;
+                if (rational_cmp(edges[e], span.start) <= 0 || rational_cmp(edges[e], span_end) >= 0 ||
+                    rational_sub(edges[e], meter_span.start, &from) != RATIONAL_OK) {
+                    continue;
+                }
+                off_grid = off_grid || (rational_div(from, grid, &times) == RATIONAL_OK && times.den != 1);
+            }
+        }
+        if (!off_grid) {
+            break;
+        }
+        want = cells;
+    }
+    if (want != *cells_per_bar && rational_div_int(bar_length, want, cell_length) == RATIONAL_OK) {
+        *cells_per_bar = want;
+    }
+}
+
 bool harmony_read_metre(const Plan *plan, PlanSpan span, PhraseMetre *out) {
     PhraseMetre metre;
     LaneSpanId meters[2];
@@ -225,6 +274,7 @@ bool harmony_read_metre(const Plan *plan, PlanSpan span, PhraseMetre *out) {
             RATIONAL_OK) {
         return false;
     }
+    harmony_metre_grid(plan, meter_span, span, &metre.meter, metre.bar_length, &metre.cells_per_bar, &metre.cell_length);
 
     /* The span starts and ends on a beat of the meter span: its start is `offset` after the last barline at or before it. */
     Rational barline = meter_span.start;
@@ -552,6 +602,7 @@ bool harmony_read_cells(const Plan *plan, PlanSpan span, CellMetre *out) {
         !harmony_rhythm_cells_per_bar(&metre.meter, &metre.cells_per_bar) ||
         rational_div_int(metre.bar_length, metre.cells_per_bar, &metre.cell_length) !=
             RATIONAL_OK ||
+        (harmony_metre_grid(plan, meter_span, span, &metre.meter, metre.bar_length, &metre.cells_per_bar, &metre.cell_length), false) ||
         rational_add(span.start, before, &offset) != RATIONAL_OK ||
         !harmony_count_cells_or_zero(metre.cell_length, offset, &metre.first_cell) ||
         !harmony_count_cells(metre.cell_length, span.length, &metre.cells)) {
@@ -565,7 +616,7 @@ bool harmony_count_cells(Rational cell_length, Rational length, size_t *cells) {
     Rational sum = {0, 1};
     size_t count = 0;
     while (rational_cmp(sum, length) < 0) {
-        if (count >= MAX_PHRASE_BARS * 4 || rational_add(sum, cell_length, &sum) != RATIONAL_OK) {
+        if (count >= MAX_PHRASE_BARS * 8 || rational_add(sum, cell_length, &sum) != RATIONAL_OK) {
             return false;
         }
         count++;

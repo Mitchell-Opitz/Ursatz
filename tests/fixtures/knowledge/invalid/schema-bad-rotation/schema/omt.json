@@ -1,0 +1,43 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "omt",
+ "entries": [
+  {
+   "id": "omt.schema.lydian-shuttle",
+   "kind": "schema",
+   "subtype": "progression",
+   "name": "Lydian shuttle",
+   "content": {
+    "stages": [
+     {
+      "chord": "I"
+     },
+     {
+      "chord": "II"
+     }
+    ],
+    "loop": true,
+    "rotations": [
+     0,
+     4
+    ],
+    "role": "loop",
+    "materials": [
+     "omt.material.lydian"
+    ],
+    "realizes": "omt.vocabulary.prolongational"
+   },
+   "citations": [
+    {
+     "source": "omt",
+     "part": "VII",
+     "chapter": 11,
+     "note": "the shuttle between the tonic and the raised second degree"
+    }
+   ],
+   "status": "reference",
+   "version": 1
+  }
+ ]
+}

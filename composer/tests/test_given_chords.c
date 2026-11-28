@@ -7,6 +7,8 @@
 #include <ursatz_composer/given.h>
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/piece.h>
+#include <cJSON.h>
+#include "piece/request_chords.h"
 #include <plan/plan_state.h>
 #include "support/test_knowledge.h"
 
@@ -14,6 +16,8 @@
  * plan_give_chords (given.h): one Given harmony span for each chord, exactly its onset and length.
  *
  *   exact     chords on beats and on a half beat give spans of exactly that start and length, Given, with the numeral
+ *   modes     a chord named with a mode (R-762, IV:dorian) is read by request_read_chords as the chord of that mode, a Given span
+ *             whose payload borrows from it; the key's own mode, a diminished triad and a bad word are refused
  *   refused   an overlap of the chords, an overlap with harmony that is there, a chord past the section's end, an
  *             unreadable numeral and a negative onset are refused, and a refused call adds nothing
  */
@@ -36,12 +40,12 @@ static NodeId section_a(const Plan *plan) {
     return PLAN_NODE_NONE;
 }
 
-static Plan *new_plan(NodeId *section) {
+static Plan *new_plan_in(const char *word, NodeId *section) {
     PieceRequest request;
     Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
-    request.key = test_key(0, "major");
+    request.key = test_key(0, word);
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -50,6 +54,10 @@ static Plan *new_plan(NodeId *section) {
     *section = section_a(plan);
     assert(*section != PLAN_NODE_NONE);
     return plan;
+}
+
+static Plan *new_plan(NodeId *section) {
+    return new_plan_in("major", section);
 }
 
 static size_t harmony_spans(const Plan *plan, NodeId section, LaneSpanId *ids, size_t capacity) {
@@ -111,8 +119,71 @@ static void test_refused(void) {
     plan_destroy(plan);
 }
 
+/* The chords of one bar of text in a key of `word`, read as a request does: the status, with the message in `error`. */
+static UrsatzStatus read_text(const char *word, const char *text, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count,
+                              UrsatzError *error) {
+    char json[160];
+    snprintf(json, sizeof(json), "[{\"bar\": 0, \"text\": \"%s\"}]", text);
+    cJSON *list = cJSON_Parse(json);
+    assert(list != NULL);
+    PlanMeter meter;
+    memset(&meter, 0, sizeof(meter));
+    meter.beats_per_bar = 4;
+    meter.beat_unit = 4;
+    SpelledKey key = test_key(0, word);
+    memset(error, 0, sizeof(*error));
+    *count = 0;
+    UrsatzStatus status = request_read_chords(test_composer_chords(), list, "/chords", "the theme", 0, &meter, &key, 4, chords, numerals, 8,
+                                              count, error);
+    cJSON_Delete(list);
+    return status;
+}
+
+/* The one span `text` gives in a plan of the key: its numeral and the key word of the material it borrows from ("" for none). */
+static void expect_mode(const char *word, const char *text, const char *numeral, const char *from) {
+    GivenChord chords[8];
+    char numerals[8][PLAN_ROMAN_NUMERAL_MAX];
+    size_t count;
+    UrsatzError error;
+    assert(read_text(word, text, chords, numerals, &count, &error) == URSATZ_OK && count == 1);
+    NodeId section;
+    Plan *plan = new_plan_in(word, &section);
+    LaneSpanId ids[8];
+    assert(plan_give_chords_in(plan, test_composer_chords(), section, chords, count) == GIVEN_OK);
+    assert(harmony_spans(plan, section, ids, 8) == 1);
+    const PlanHarmony *harmony = &plan_lane_span_payload(plan, ids[0])->harmony;
+    assert(strcmp(harmony->roman_numeral, numeral) == 0);
+    assert(from[0] == '\0' ? harmony->borrowed_from == NULL
+                           : harmony->borrowed_from != NULL && strcmp(harmony->borrowed_from->key_word, from) == 0);
+    plan_destroy(plan);
+}
+
+static void expect_refusal(const char *word, const char *text, const char *message) {
+    GivenChord chords[8];
+    char numerals[8][PLAN_ROMAN_NUMERAL_MAX];
+    size_t count;
+    UrsatzError error;
+    if (read_text(word, text, chords, numerals, &count, &error) != URSATZ_ERR_REQUEST || strstr(error.message, message) == NULL) {
+        fprintf(stderr, "%s '%s': %s\n", word, text, error.message);
+    }
+    assert(strstr(error.message, message) != NULL);
+}
+
+static void test_modes(void) {
+    /* IV in C minor from dorian is F major (the key's own iv is minor); II in C major from lydian is D major (its own ii is minor). */
+    expect_mode("minor", "IV:dorian", "IV", "dorian");
+    expect_mode("major", "II:lydian", "II", "lydian");
+    /* A mode that holds the key's own chord gives it, borrowed from nothing. */
+    expect_mode("major", "IV:dorian", "IV", "");
+    /* Refused: the key's own mode (by its own word or the other), and a diminished triad. */
+    expect_refusal("minor", "I:minor", "minor is the key's own mode; write the numeral without it");
+    expect_refusal("major", "IV:lydian", "the triad on IV in lydian is not a major or minor chord");
+    expect_refusal("major", "VII:major", "major is the key's own mode");
+}
+
 int main(void) {
     test_exact();
+    test_modes();
     test_refused();
     printf("test_given_chords: ok\n");
     return 0;

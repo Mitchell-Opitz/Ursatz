@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <cJSON.h>
+
+#include "theory/harmony/chord_value.h"
 #include "theory/harmony/harmonic_function.h"
 #include "theory/harmony/harmony_cadence_kinds.h"
 #include "theory/knowledge/knowledge_snapshot.h"
@@ -118,6 +121,62 @@ static void test_fields(void) {
     knowledge_snapshot_destroy(snapshot);
 }
 
+/* Hindemith's tables (R-764): each C row has its entry with equal fields, each entry a row, and every example classifies to its code. */
+static void test_hindemith(void) {
+    KnowledgeSnapshot *snapshot = build();
+    assert(with_code(snapshot, VOCABULARY_INTERVAL_CLASS, NULL, NULL) == CHORD_VALUE_RANKS);
+    assert(with_code(snapshot, VOCABULARY_CHORD_GROUP, NULL, NULL) == CHORD_VALUE_RANKS);
+    for (int i = 0; i < CHORD_VALUE_RANKS; i++) {
+        const ChordValueInterval *row = &CHORD_VALUE_SERIES_TWO[i];
+        const VocabularyEntry *entry = NULL;
+        assert(with_code(snapshot, VOCABULARY_INTERVAL_CLASS, row->code, &entry) == 1);
+        assert(entry->interval.semitones == row->semitones && entry->interval.rank == row->rank && entry->interval.root == row->root);
+        const ChordValueGroup *group = &CHORD_VALUE_GROUPS[i];
+        assert(with_code(snapshot, VOCABULARY_CHORD_GROUP, group->code, &entry) == 1);
+        assert(entry->chord_group.group == group->group && entry->chord_group.rank == group->rank &&
+               entry->chord_group.tritones == group->tritones && entry->chord_group.sharp == group->sharp &&
+               entry->chord_group.root == group->root);
+    }
+    /* the examples of the file: {"pitches": [...], "group": code} classifies to its code, {"low", "high"} spans the interval's semitones */
+    FILE *file = fopen(HINDEMITH_FILE, "rb");
+    assert(file != NULL);
+    static char text[200000];
+    size_t size = fread(text, 1, sizeof(text) - 1, file);
+    fclose(file);
+    text[size] = '\0';
+    cJSON *document = cJSON_Parse(text);
+    assert(document != NULL);
+    size_t checked = 0;
+    const cJSON *json;
+    cJSON_ArrayForEach(json, cJSON_GetObjectItemCaseSensitive(document, "entries")) {
+        const VocabularyEntry *entry = knowledge_snapshot_vocabulary(snapshot, cJSON_GetObjectItemCaseSensitive(json, "id")->valuestring);
+        assert(entry != NULL);
+        const cJSON *example = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(json, "examples"), 0);
+        assert(example != NULL);
+        if (entry->subtype == VOCABULARY_INTERVAL_CLASS) {
+            int low = cJSON_GetObjectItemCaseSensitive(example, "low")->valueint;
+            int high = cJSON_GetObjectItemCaseSensitive(example, "high")->valueint;
+            assert(high - low == entry->interval.semitones);
+        } else {
+            assert(entry->subtype == VOCABULARY_CHORD_GROUP);
+            int pitches[8];
+            size_t count = 0;
+            const cJSON *item;
+            cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(example, "pitches")) {
+                pitches[count++] = item->valueint;
+            }
+            ChordValue value;
+            assert(chord_value_classify(pitches, count, &value));
+            assert(strcmp(value.group, entry->code) == 0 && strcmp(cJSON_GetObjectItemCaseSensitive(example, "group")->valuestring, entry->code) == 0);
+            assert(value.rank == entry->chord_group.rank);
+        }
+        checked++;
+    }
+    assert(checked == 2 * CHORD_VALUE_RANKS);
+    cJSON_Delete(document);
+    knowledge_snapshot_destroy(snapshot);
+}
+
 static void refused(const char *entries, const char *path, const char *id, const char *field) {
     char text[1024];
     snprintf(text, sizeof(text), "{\"schema\":\"ursatz-knowledge\",\"schema_version\":1,\"source\":\"user\",\"entries\":[%s]}", entries);
@@ -159,6 +218,7 @@ int main(void) {
     test_cadence_kinds();
     test_tables();
     test_fields();
+    test_hindemith();
     test_refusals();
     return 0;
 }

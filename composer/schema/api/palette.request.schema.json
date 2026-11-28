@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/composer/schema/api/palette.request.schema.json",
+  "title": "composer_api_palette request",
+  "description": "The chords of a key's material and of a second material on the same tonic.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "key": {
+      "type": "string"
+    },
+    "with": {
+      "type": "string"
+    }
+  }
+}

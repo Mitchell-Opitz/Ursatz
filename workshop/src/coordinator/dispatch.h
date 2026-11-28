@@ -108,6 +108,13 @@ WORKSHOP_HANDLER(workshop_q_composer_render);
 WORKSHOP_HANDLER(workshop_q_composer_random_motifs);
 WORKSHOP_HANDLER(workshop_q_composer_import_motif);
 WORKSHOP_HANDLER(workshop_q_composer_recognize);
+WORKSHOP_HANDLER(workshop_q_composer_progression);
+
+/* knowledge (api_knowledge.c) */
+WORKSHOP_HANDLER(workshop_q_knowledge_palette);
+WORKSHOP_HANDLER(workshop_q_knowledge_find);
+WORKSHOP_HANDLER(workshop_q_knowledge_show);
+WORKSHOP_HANDLER(workshop_q_knowledge_check);
 
 /* projects and items (api_items.c, api_item_files.c, api_motifs.c) */
 WORKSHOP_HANDLER(workshop_q_project_list);
@@ -173,6 +180,10 @@ WORKSHOP_HANDLER(workshop_c_ratings_keep);
 
 /* settings commands (api_commands_settings.c) */
 WORKSHOP_HANDLER(workshop_c_settings_set);
+WORKSHOP_HANDLER(workshop_c_knowledge_add);
+WORKSHOP_HANDLER(workshop_c_knowledge_update);
+WORKSHOP_HANDLER(workshop_c_knowledge_delete);
+WORKSHOP_HANDLER(workshop_c_knowledge_keep_schema);
 WORKSHOP_HANDLER(workshop_c_settings_unset);
 WORKSHOP_HANDLER(workshop_c_settings_import);
 WORKSHOP_HANDLER(workshop_c_settings_override);
@@ -231,6 +242,7 @@ WORKSHOP_HANDLER(workshop_c_item_link_form);
 WORKSHOP_HANDLER(workshop_c_item_reroll);
 WORKSHOP_HANDLER(workshop_c_item_restore);
 WORKSHOP_HANDLER(workshop_c_item_update_use);
+WORKSHOP_HANDLER(workshop_c_item_apply_harmony);
 WORKSHOP_HANDLER(workshop_c_subject_create);
 WORKSHOP_HANDLER(workshop_c_subject_update);
 WORKSHOP_HANDLER(workshop_c_subject_delete);

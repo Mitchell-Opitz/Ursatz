@@ -27,7 +27,7 @@
  *                asks for that motive, exactly, and its melody is not the idea before it; unknown ideas, ideas the pairing
  *                has not and a different basic idea are refused
  *   chords       chords given per bar are kept in the plan's harmony lane, a bar left blank is filled, and what the
- *                harmony operators cannot write (three chords in a bar, an onset off the cells of the meter or off a half
+ *                harmony operators cannot write (five chords in a bar, an onset off a beat or a half
  *                beat, a cadence the chords contradict) is refused with the bar named
  *   v2           saved forms and the version 1 request are refused
  *   brief        the done-when case: two motives under a fast minor style with the mode from the style, checked by the
@@ -438,14 +438,32 @@ static void test_chords(void) {
     free(out);
     assert(given_harmony("theme_chords_none_plan.json", numerals, starts, 16) == 0);
 
-    /* What cannot be written is refused with the bar named: three chords, an onset of 1/3 of a beat, a half beat the
-       harmony operators have no cell for, a bar past the theme, a bar given twice and text that is no chord. */
-    write_chords("[{\"bar\": 1, \"text\": \"I IV@2 V@3\"}]", "theme_chords_three.json");
-    expect_failure("theme_chords_three.json --seed 1", 1, "chords bar 1: ");
+    /* A bar takes up to four chords on beats and half beats (R-761): three chords, then four, each at its onset (the cadence bar rule
+       decides which bars a given chord may stand in, so the cases use bars it allows). */
+    write_chords("[{\"bar\": 0, \"text\": \"I IV@1 V@2\"}]", "theme_chords_three.json");
+    out = theme_output("theme_chords_three.json --seed 1 --out theme_chords_three_plan.json");
+    free(out);
+    count = given_harmony("theme_chords_three_plan.json", numerals, starts, 16);
+    assert(count == 3 && strcmp(numerals[0], "I") == 0 && strcmp(numerals[1], "IV") == 0 && strcmp(numerals[2], "V") == 0);
+    assert(starts[0].num == 0 && starts[1].num * 4 == (long)starts[1].den && starts[2].num * 2 == (long)starts[2].den);
+    write_chords("[{\"bar\": 1, \"text\": \"IV I@1 II@2 V@3\"}]", "theme_chords_four.json");
+    out = theme_output("theme_chords_four.json --seed 1 --out theme_chords_four_plan.json");
+    free(out);
+    count = given_harmony("theme_chords_four_plan.json", numerals, starts, 16);
+    assert(count == 4 && strcmp(numerals[0], "IV") == 0 && strcmp(numerals[1], "I") == 0 && strcmp(numerals[2], "ii") == 0 &&
+           strcmp(numerals[3], "V") == 0);
+    assert(starts[3].num * 4 == 7 * (long)starts[3].den);
+    write_chords("[{\"bar\": 1, \"text\": \"IV V@3/2\"}]", "theme_chords_half.json");
+    out = theme_output("theme_chords_half.json --seed 1 --out theme_chords_half_plan.json");
+    free(out);
+    count = given_harmony("theme_chords_half_plan.json", numerals, starts, 16);
+    assert(count == 2 && strcmp(numerals[0], "IV") == 0 && strcmp(numerals[1], "V") == 0 && starts[1].num * 8 == 11 * (long)starts[1].den);
+    /* What cannot be written is refused with the bar named: five chords, an onset of 1/3 of a beat, a bar past the theme, a bar
+       given twice and text that is no chord. */
+    write_chords("[{\"bar\": 1, \"text\": \"I IV@1 V@2 VI@3 I@7/2\"}]", "theme_chords_five.json");
+    expect_failure("theme_chords_five.json --seed 1", 1, "chords bar 1: write 1 to 4 chords, not 5");
     write_chords("[{\"bar\": 1, \"text\": \"IV V@1/3\"}]", "theme_chords_third.json");
     expect_failure("theme_chords_third.json --seed 1", 1, "chords bar 1: a chord starts on a beat or a half beat");
-    write_chords("[{\"bar\": 1, \"text\": \"IV V@3/2\"}]", "theme_chords_half.json");
-    expect_failure("theme_chords_half.json --seed 1", 1, "chords bar 1: in 4/4 a chord starts only every 2 beats (@2)");
     write_chords("[{\"bar\": 4, \"text\": \"I\"}]", "theme_chords_past.json");
     expect_failure("theme_chords_past.json --seed 1", 1, "chords bar 4: the theme has bars 0 to 3");
     write_chords("[{\"bar\": 1, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"V\"}]", "theme_chords_twice.json");

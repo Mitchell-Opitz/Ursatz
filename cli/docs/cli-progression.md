@@ -3,7 +3,7 @@
 The `progression` command of `ursatz`, with its options and output. Back to the [docs index](../../composer/docs/README.md).
 
 ```sh
-ursatz progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]
+ursatz progression --key <key> --meter <n/m> --bars <n> --cadence <type> [--seed <n>] [--embellish <level>] [--bass | --no-bass] [--schema <name>] [--sequence <name>] [--palette <file>] [--accompaniment <pattern>] [--list-schemas] [--suggest <n>] [--out <file>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format <text|json>]
 ```
 
 Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.
@@ -60,6 +60,14 @@ Schemas with weak stages only work in 4/4 and 6/8. Not every schema is offered; 
 shows the ones that are.
 
 MIDI and MusicXML hold the bass line only; the harmony lane is not rendered.
+
+## `--palette` and `--accompaniment`
+
+`--palette <file>` names a JSON file holding the `palette` object of the request (R-766, [harmony-lab.md](../../composer/docs/harmony-lab.md#the-progression-request)): chords drawn from one or two modes, spans, schemas, given chords and brightness and tension shapes. With it `--cadence` may be `none`, `--schema`, `--sequence` and `--embellish` are refused, and the text output adds a line for each bar with its tension and brightness. `--accompaniment <pattern>` (a pattern name or a K11 accompaniment id) sounds the chords with no melody.
+
+```sh
+ursatz progression --key "C minor" --meter 4/4 --bars 16 --cadence none --seed 1 --palette lift.json --accompaniment block --midi lift.mid
+```
 
 ## Seeds
 

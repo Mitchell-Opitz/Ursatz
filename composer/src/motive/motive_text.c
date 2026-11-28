@@ -8,7 +8,9 @@
 #include <theory/tonality/roman_numeral_grammar.h>
 #include <theory/tonality/roman_numeral_rules.h>
 
+#include <theory/tonality/common_practice_materials.h>
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /*
  * The motive written back as text: a note list, a degree list, a rhythm or a contour (see motive.h). Each is read
@@ -378,9 +380,37 @@ MotiveResult motive_harmony_parse_in(const KnowledgeSnapshot *knowledge, const c
             motive_set_error(error, location, "'%s' needs an onset in beats after @, as %s@2", token, token);
             return MOTIVE_ERR_SYNTAX;
         }
+        /* A mode after a colon (R-762): an upper-case numeral with no b, # or color, then a material the Composer writes keys in. */
+        const char *mode_word = NULL;
+        char *colon = strchr(token, ':');
+        if (colon) {
+            *colon = '\0';
+            mode_word = colon + 1;
+        }
         const char *bad_figure = NULL;
         NumeralRead read = read_upper(knowledge, token, &chord, &bad_figure);
-        if (read != NUMERAL_READ_OK && read_numeral(knowledge, token, &chord)) {
+        if (mode_word != NULL) {
+            if (read != NUMERAL_READ_OK || chord.alteration != 0 || chord.color != NULL) {
+                motive_set_error(error, location,
+                                 "a chord with a mode is written as an upper-case numeral with no b, # or color, as IV:dorian");
+                return MOTIVE_ERR_SYNTAX;
+            }
+            CommonPracticeMaterials materials;
+            if (knowledge == NULL) {
+                motive_set_error(error, location, "a chord with a mode needs the knowledge snapshot");
+                return MOTIVE_ERR_VALUE;
+            }
+            const PitchMaterial *mode = knowledge_snapshot_material_named(knowledge, mode_word);
+            if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0) || mode == NULL ||
+                !composer_material_supported(&materials, mode)) {
+                motive_set_error(error, location,
+                                 "'%s' is not a mode the Composer writes; write major, minor, dorian, phrygian, lydian, mixolydian or locrian "
+                                 "after the colon",
+                                 mode_word);
+                return MOTIVE_ERR_VALUE;
+            }
+            chord.mode = mode;
+        } else if (read != NUMERAL_READ_OK && read_numeral(knowledge, token, &chord)) {
             read = NUMERAL_READ_OK;
         }
         if (read == NUMERAL_READ_NOT_NUMERAL) {
@@ -432,7 +462,15 @@ bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size
             return false;
         }
     }
-    return standard_tonality_numeral_format(&numeral, out, size);
+    if (!standard_tonality_numeral_format(&numeral, out, size)) {
+        return false;
+    }
+    if (chord->mode != NULL) {
+        size_t used = strlen(out);
+        int written = snprintf(out + used, size - used, ":%s", chord->mode->key_word);
+        return written > 0 && (size_t)written < size - used;
+    }
+    return true;
 }
 
 char *motive_harmony_to_text(const Motive *motive) {

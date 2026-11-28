@@ -23,7 +23,7 @@
  * first 16 digits of the SHA-256 of the MIDI file and of the plan JSON compared with the values of `229c40f`. The plan is
  * hashed without the lines of `producer_key`, `composition_key` and `knowledge_hash`, which move with every change to the
  * knowledge or the composer and say nothing about the accompaniment. Run with no argument, all 45 are composed (slow);
- * with `smoke`, seed 1 of each pattern in 4/4 C major.
+ * with `smoke` and `smoke-b`, seed 1 of two patterns each in 4/4 C major (two tests, each well under the fast set's 30 s on a CI runner); with `planed`, the planed chords alone (R-763: its own test, so the smoke stays under the fast set's 30 s on a CI runner).
  */
 
 #define HASH_DIGITS 16
@@ -86,10 +86,11 @@ static const Golden GOLDEN[] = {
 
 static const char *const SMOKE[] = {"block-44-Cmajor-period", "arpeggiated-44-Cmajor-period", "alberti-44-Cmajor-period",
                                     "oom-pah-44-Cmajor-period"};
-#define SMOKE_COUNT (sizeof SMOKE / sizeof SMOKE[0])
+#define SMOKE_COUNT 2 /* of each of the two smoke tests: the first two names, then the last two */
+static size_t smoke_first = 0;
 
 static bool in_smoke(const Golden *golden) {
-    for (size_t i = 0; i < SMOKE_COUNT; i++) {
+    for (size_t i = smoke_first; i < smoke_first + SMOKE_COUNT; i++) {
         if (golden->seed == 1 && strcmp(golden->name, SMOKE[i]) == 0) {
             return true;
         }
@@ -169,8 +170,96 @@ static void check_golden(const Golden *golden) {
     free(request);
 }
 
+/*
+ * The planed chords (R-763): a 4/4 sentence in C major with `IV I@1 II@2 V@3` in bar 4 and the planed-chords pattern composes on
+ * seed 1 with a chord on every beat of that bar, each block the first block's member order, each later block's lowest note within a
+ * tritone of the first block's (the nearest pitch of its member, R-763). Note onsets are read in sixteenths of a whole note (a beat is 4).
+ */
+#define PLANED_BAR_START 64
+#define PLANED_BEAT 4
+
+static long sixteenths(const cJSON *rational) {
+    long num = (long)cJSON_GetObjectItemCaseSensitive(rational, "num")->valuedouble;
+    long den = (long)cJSON_GetObjectItemCaseSensitive(rational, "den")->valuedouble;
+    assert(den > 0 && (16 * num) % den == 0);
+    return 16 * num / den;
+}
+
+/* The pitch the inner voice `voice` (1 is the top) starts on the sixteenth `at`, or -1. */
+static int inner_pitch_at(const cJSON *plan, int voice, long at) {
+    const cJSON *item;
+    cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(plan, "texture")) {
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(item, "composer");
+        const char *lane = cJSON_GetObjectItemCaseSensitive(composer, "lane")->valuestring;
+        if (strcmp(lane, "inner_voice") != 0 || (int)cJSON_GetObjectItemCaseSensitive(composer, "voice")->valuedouble != voice) {
+            continue;
+        }
+        long start = sixteenths(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(item, "span"), "start"));
+        const cJSON *note;
+        cJSON_ArrayForEach(note, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(composer, "payload"), "notes")) {
+            if (start + sixteenths(cJSON_GetObjectItemCaseSensitive(note, "offset")) == at) {
+                return (int)cJSON_GetObjectItemCaseSensitive(note, "midi_pitch")->valuedouble;
+            }
+        }
+    }
+    return -1;
+}
+
+static void check_planed(void) {
+    static const char REQUEST[] =
+        "{\"schema\":\"ursatz-theme-request\",\"schema_version\":2,\"into\":\"sentence\",\"key\":\"C\",\"material\":\"major\","
+        "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"development\":\"balanced\","
+        "\"motives\":[{\"id\":\"A\",\"form\":\"full\",\"degrees\":\"3:q 2:e 1:e 2:q 3:q | 5:h 4:q 3:q\",\"pickup\":\"0\",\"harmony\":null,"
+        "\"features\":[],\"role\":\"melodic\"}],\"slots\":{\"basic\":\"A\"},"
+        "\"chords\":[{\"bar\":4,\"text\":\"IV I@1 II@2 V@3\"}],\"accompaniment\":{\"pattern\":\"michelle.pattern.planed-chords\"},"
+        "\"seed\":\"1\",\"check\":false,\"midi\":false,\"musicxml\":false,\"plain_midi\":false,\"plans\":false}";
+    /* The triad of each given chord, root, third, fifth. */
+    static const int TRIADS[4][3] = {{5, 9, 0}, {0, 4, 7}, {2, 5, 9}, {7, 11, 2}};
+    ComposerResponse response;
+    UrsatzStatus status = composer_api_theme(test_context(), REQUEST, NULL, &response);
+    if (status != URSATZ_OK) {
+        fprintf(stderr, "planed chords: %s: %s\n", test_status_name(status), response.error.message);
+    }
+    assert(status == URSATZ_OK && response.plan_json);
+    cJSON *plan = cJSON_Parse(response.plan_json);
+    assert(plan);
+    int first_order[3] = {-1, -1, -1};
+    int first_low = 0;
+    for (int beat = 0; beat < 4; beat++) {
+        int block[3];
+        for (int voice = 3; voice >= 1; voice--) {
+            block[3 - voice] = inner_pitch_at(plan, voice, PLANED_BAR_START + beat * PLANED_BEAT);
+            assert(block[3 - voice] >= 0);
+        }
+        assert(block[0] < block[1] && block[1] < block[2]);
+        int order[3];
+        for (int i = 0; i < 3; i++) {
+            order[i] = -1;
+            for (int m = 0; m < 3; m++) {
+                order[i] = block[i] % 12 == TRIADS[beat][m] ? m : order[i];
+            }
+            assert(order[i] >= 0);
+        }
+        if (beat == 0) {
+            memcpy(first_order, order, sizeof order);
+        } else {
+            assert(memcmp(order, first_order, sizeof order) == 0);
+            assert(abs(block[0] - first_low) <= 6);
+        }
+        first_low = beat == 0 ? block[0] : first_low;
+    }
+    cJSON_Delete(plan);
+    composer_response_destroy(&response);
+}
+
 int main(int argc, char **argv) {
-    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    bool smoke = argc > 1 && (strcmp(argv[1], "smoke") == 0 || strcmp(argv[1], "smoke-b") == 0);
+    smoke_first = argc > 1 && strcmp(argv[1], "smoke-b") == 0 ? SMOKE_COUNT : 0;
+    if (argc > 1 && strcmp(argv[1], "planed") == 0) {
+        check_planed();
+        printf("test_accompaniment_patterns passed (the planed chords)\n");
+        return 0;
+    }
     size_t checked = 0;
     for (size_t i = 0; i < GOLDEN_COUNT; i++) {
         if (smoke && !in_smoke(&GOLDEN[i])) {

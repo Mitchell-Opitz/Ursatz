@@ -31,7 +31,7 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 
 | Command | Target | Params | Does |
 |---|---|---|---|
-| `item.create` | none | `type motif\|theme\|piece name string project_id string body object [note string]` | Make a motif, theme or piece with its first version |
+| `item.create` | none | `type motif\|theme\|piece\|harmony name string project_id string body object [note string]` | Make a motif, theme or piece with its first version |
 | `item.update` | `item:<id>@v<n>` | `[name string] [project_id string]` | Rename an item or move it to another project |
 | `item.delete` | `item:<id>@v<n>` | `[force bool]` | Delete an item and its variants |
 | `item.save` | `item:<id>@v<n>` | `body object [note string]` | Save the next version of an item |
@@ -49,6 +49,7 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.reroll` | `item:<id>@v<n>` | none | Run a derived motif's chain again with a new seed |
 | `item.restore` | `item:<id>@v<n>` | `version int [note string]` | Make the next version a copy of an older one |
 | `item.update-use` | `item:<id>@v<n>` | `source_id string` | Move an item's use of a source to the source's current version |
+| `item.apply-harmony` | `item:<id>@v<n>` | `harmony string version int [section string] [note string]` | Apply a composed harmony plan to a theme or a piece section |
 
 ## Job
 
@@ -57,6 +58,17 @@ Jobs: the long work the workshop runs for a command.
 | Command | Target | Params | Does |
 |---|---|---|---|
 | `job.cancel` | `job:<id>` | none | Ask a job to stop |
+
+## Knowledge
+
+Knowledge: her own entries in the data folder's knowledge/user.json, and a harmony plan kept as her schema.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `knowledge.add` | none | `entry object [note string]` | Add an entry of her own to the knowledge |
+| `knowledge.update` | none | `id string entry object [note string]` | Replace an entry of hers |
+| `knowledge.delete` | none | `id string [note string]` | Delete an entry of hers |
+| `knowledge.keep-schema` | none | `item string version int name string slug string [loop bool] [note string]` | Keep a harmony plan as her progression schema |
 
 ## Library
 

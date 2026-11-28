@@ -20,7 +20,8 @@
           "values": [
             "motif",
             "theme",
-            "piece"
+            "piece",
+            "harmony"
           ]
         },
         {
@@ -579,6 +580,46 @@
       "reply": "The item.",
       "job": null,
       "example": "item.update-use item:thm-1@v1 source_id mot-1"
+    },
+    {
+      "name": "item.apply-harmony",
+      "summary": "Apply a composed harmony plan to a theme or a piece section",
+      "target": "item",
+      "base": true,
+      "journaled": true,
+      "bytes": false,
+      "params": [
+        {
+          "name": "harmony",
+          "type": "string",
+          "required": true,
+          "help": "The harmony item (hrm-...) whose composed version is applied."
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "help": "The harmony version, which must be composed.",
+          "minimum": 1
+        },
+        {
+          "name": "section",
+          "type": "string",
+          "required": false,
+          "help": "The name of the piece section the chords go to; required for a piece, refused for a theme."
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "help": "The version note.",
+          "max_length": 500
+        }
+      ],
+      "one_of": [],
+      "reply": "The new version.",
+      "job": null,
+      "example": "item.apply-harmony item:thm-1@v3 harmony hrm-2 version 1"
     }
   ]
 }

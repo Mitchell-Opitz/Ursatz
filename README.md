@@ -88,4 +88,4 @@ Options (both ON by default):
 
 ## Knowledge
 
-`knowledge/` holds the music-theory knowledge as data: entries of pitch material, chord types, relations, instruments and vocabulary, each with its citations, in JSON checked against the schemas in `knowledge/schema/` ([README](knowledge/README.md)). `tools/ci/check-knowledge.py` validates every entry; two tests run it (`knowledge_validate` on the real entries, `knowledge_validate_fixtures` on good and bad sets under `tests/fixtures/knowledge/`), both labelled `schema`.
+`knowledge/` holds the music-theory knowledge as data: entries of pitch material, chord types, relations, instruments and vocabulary, each with its citations, in JSON checked against the schemas in `knowledge/json-schema/` ([README](knowledge/README.md)). `tools/ci/check-knowledge.py` validates every entry; two tests run it (`knowledge_validate` on the real entries, `knowledge_validate_fixtures` on good and bad sets under `tests/fixtures/knowledge/`), both labelled `schema`.

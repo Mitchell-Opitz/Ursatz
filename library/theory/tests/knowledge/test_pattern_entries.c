@@ -104,6 +104,10 @@ static void test_reference_patterns(void) {
     same_steps(wave->steps, wave->step_count, wave_steps, 8);
     assert(!wave->compound && meter_steps(wave, "3/4", &count) != NULL && count == 6);
 
+    /* Planed chords (R-763): the only figure that planes, a chord on every beat of each meter. */
+    const PatternAccompaniment *planed = accompaniment(snapshot, "michelle.pattern.planed-chords");
+    assert(planed->planing && planed->beat_grid && !planed->compound && planed->step_count == 4 && planed->meter_count == 2);
+    assert(!eight->planing && !wave->planing);
     const PatternAccompaniment *compound = accompaniment(snapshot, "michelle.pattern.compound-oom-pah");
     const PatternStep compound_steps[] = {REST, REST, CHORD, REST, REST, CHORD};
     assert(!compound->beat_grid && compound->compound);
@@ -136,12 +140,12 @@ static void test_rhythm_cells(void) {
         by_meter[strcmp(entry->rhythm.meter, "4/4") == 0 ? 0 : strcmp(entry->rhythm.meter, "3/4") == 0 ? 1 : 2]++;
         assert(strcmp(entry->rhythm.meter, "4/4") == 0 || strcmp(entry->rhythm.meter, "3/4") == 0 || strcmp(entry->rhythm.meter, "6/8") == 0);
     }
-    assert(knowledge_snapshot_pattern_count(snapshot) == 32 && accompaniments == 9 && rhythms == 23);
+    assert(knowledge_snapshot_pattern_count(snapshot) == 33 && accompaniments == 10 && rhythms == 23);
     assert(by_meter[0] == 12 && by_meter[1] == 6 && by_meter[2] == 5);
     /* in id order, the accessors list every one of them */
     assert(strcmp(knowledge_snapshot_pattern_at(snapshot, 0)->id, "michelle.pattern.arpeggio-eight") == 0);
-    assert(strcmp(knowledge_snapshot_pattern_at(snapshot, 31)->id, "schoenberg.pattern.oom-pah") == 0);
-    assert(knowledge_snapshot_pattern_at(snapshot, 32) == NULL);
+    assert(strcmp(knowledge_snapshot_pattern_at(snapshot, 32)->id, "schoenberg.pattern.oom-pah") == 0);
+    assert(knowledge_snapshot_pattern_at(snapshot, 33) == NULL);
     assert(knowledge_snapshot_pattern(snapshot, "omt.chord-type.sus2") == NULL && knowledge_snapshot_pattern(snapshot, "no.pattern.here") == NULL);
 
     const PatternEntry *groups = knowledge_snapshot_pattern(snapshot, "michelle.pattern.run-groups");
@@ -195,7 +199,7 @@ static void test_user_files(void) {
     assert(knowledge_snapshot_build(&good, 1, &snapshot, message, sizeof(message)) == KNOWLEDGE_OK);
     const PatternEntry *fine = knowledge_snapshot_pattern(snapshot, "user.pattern.fine");
     assert(fine != NULL && fine->is_rhythm && fine->rhythm.jobs == (PATTERN_JOB_LONG | PATTERN_JOB_CADENCE));
-    assert(knowledge_snapshot_pattern_count(snapshot) == 33);
+    assert(knowledge_snapshot_pattern_count(snapshot) == 34);
     knowledge_snapshot_destroy(snapshot);
 }
 

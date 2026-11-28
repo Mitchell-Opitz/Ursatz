@@ -5,7 +5,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | Flag | Meaning | Commands |
 | --- | --- | --- |
 | `--above` | the line is the bass and the counter-melody sings above it | `counterpoint` |
-| `--accompaniment <pattern>` | write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any | `grow`, `plan` |
+| `--accompaniment <pattern>` | write an accompaniment in the inner voices: block, arpeggiated, alberti, oom-pah or any, or a K11 accompaniment id | `progression`, `grow`, `plan` |
 | `--accompaniment-format <format>` | the format of the accompaniment motive's file, as --input-format | `grow` |
 | `--accompaniment-motive <file>` | a saved accompaniment motive, restated on each chord in chord tones | `grow` |
 | `--accompaniment-pickup <beats>` | the pickup of the accompaniment motive, as 1 or 1/2 | `grow` |
@@ -51,7 +51,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--feature <l:a-b>` | a labelled run of notes by 0-based index, as a:0-2; repeatable | `motive`, `variants`, `recognize`, `grow` |
 | `--first-cadence <type>` | the weaker cadence an antecedent ends in: HC or IAC | `grow` |
 | `--form <name>` | the form: for a motive full, rhythm or contour; for a plan binary, ternary, loop and the like | `motive`, `variants`, `recognize`, `random-motive`, `plan` |
-| `--format <text|json>` | how to print the result on stdout, text (the default) or json | `progression`, `motive`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize`, `critique`, `status`, `query`, `history`, `apply` |
+| `--format <text|json>` | how to print the result on stdout, text (the default) or json | `progression`, `motive`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `variations`, `harmonize`, `knowledge`, `critique`, `status`, `query`, `history`, `apply` |
 | `--from <loop-plan.json>` | work on a loop plan the command wrote, with --request | `piece` |
 | `--from-corpus <dir>` | start from material in a corpus output folder, with --like | `grow`, `plan` |
 | `--function <name>` | keep only variants that suit a function: beginning, continuation, contrast or cadential | `variants` |
@@ -66,6 +66,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--keep-contour` | interval: keep the contour of the motive | `develop` |
 | `--keep-rhythm` | liquidate: keep the rhythm of the motive | `develop` |
 | `--key <key>` | the key, for example 'D minor' | `progression`, `motive`, `develop`, `variants`, `recognize`, `random-motive`, `counterpoint`, `grow`, `plan` |
+| `--kind <kind>` | knowledge find: only the entries of this kind (material, vocabulary, schema, pattern, ...) | `knowledge` |
 | `--lane <lane>` | harmony, bass, melody or inner (and all, where it is the default) | `piece`, `lock`, `regenerate`, `variations` |
 | `--layers <dir>` | write the layers of the result into this folder: the realization, the reading and, for a composed piece, the plan | `theme`, `piece`, `fill`, `analyze` |
 | `--length <n>` | fragment: how many notes the fragment has | `develop` |
@@ -92,6 +93,7 @@ The flag table of `ursatz` (`cli/src/flags.c`): every flag has one meaning in ev
 | `--op <name>` | the operation: restate, invert, retrograde, interval, fragment, liquidate, augment or diminish | `develop` |
 | `--out <file>` | where the output is written: a plan, a corpus output folder or a style model | `progression`, `counterpoint`, `grow`, `theme`, `piece`, `plan`, `fill`, `lock`, `regenerate`, `corpus`, `style-profile`, `query` |
 | `--out-dir <dir>` | where the files are written; created if missing | `piece`, `variations`, `harmonize`, `listen` |
+| `--palette <file>` | progression: a JSON file holding the palette object (chords drawn from one or two modes, R-766) | `progression` |
 | `--params <file>` | a JSON file with the params object, or - for standard input | `query` |
 | `--pickup <beats>` | the beats before the first barline, as 1 or 1/2 | `motive`, `variants`, `recognize`, `analyze` |
 | `--plain-midi` | MIDI: no track names and no section markers | `progression`, `develop`, `counterpoint`, `grow`, `theme`, `piece`, `fill`, `regenerate`, `variations`, `harmonize`, `render` |

@@ -286,6 +286,39 @@ static bool voice_block(const AccompContext *context, size_t chord, Rational sta
     return true;
 }
 
+/*
+ * The planed block of a chord (R-763): the members of the first chord's voicing (`shape`, indexes into `pcs`, low to high) in the same order
+ * from the bottom, in close position, its lowest note the pitch of the first member nearest `anchor_low` (a tie takes the lower). False
+ * when the block leaves [low, high].
+ */
+static bool planed_block(const int pcs[3], const int *shape, size_t size, int anchor_low, int low, int high, int out[3]) {
+    int bottom_pc = util_pitch_class(pcs[shape[0]]);
+    int below = anchor_low - (((anchor_low - bottom_pc) % 12) + 12) % 12;
+    out[0] = anchor_low - below <= below + 12 - anchor_low ? below : below + 12;
+    for (size_t m = 1; m < size; m++) {
+        int pc = util_pitch_class(pcs[shape[m]]);
+        int pitch = out[m - 1] + 1;
+        pitch += (((pc - pitch) % 12) + 12) % 12;
+        out[m] = pitch;
+    }
+    return out[0] >= low && out[size - 1] <= high;
+}
+
+/* The members of a voicing as indexes into the voiced pitch classes of its chord, low to high. False when a tone is none of them. */
+static bool voicing_members(const int pcs[3], const int *voicing, size_t size, int out[3]) {
+    for (size_t i = 0; i < size; i++) {
+        size_t m = 0;
+        while (m < 3 && util_pitch_class(pcs[m]) != util_pitch_class(voicing[i])) {
+            m++;
+        }
+        if (m == 3) {
+            return false;
+        }
+        out[i] = (int)m;
+    }
+    return true;
+}
+
 /* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */
 static void beat_window(const AccompContext *context, Rational start, Rational end, int *low, int *high) {
     *low = context->low;
@@ -522,6 +555,11 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     /* The chord on each beat that sounds one, in the position nearest the one before. A beat of rests draws nothing. */
     const int *previous = NULL;
     size_t previous_size = 0;
+    /* A planed figure (R-763) keeps the shape of the first voiced chord: its chord, the member order of its voicing and its lowest note. */
+    size_t anchor_chord = 0;
+    size_t anchor_size = 0;
+    int anchor_shape[3] = {0, 0, 0};
+    int anchor_low = 0;
     for (size_t b = 0; b < out->beat_count; b++) {
         Rational start = out->beat_start[b];
         size_t chord = accomp_chord_at(context, start);
@@ -543,6 +581,22 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         if (!choose_voicing(pcs, low, high, previous, previous_size, previous ? 0 : FIRST_SLACK, rng, out->voicing[b],
                             &out->voicing_size[b])) {
             return false;
+        }
+        if (figure->planing) {
+            /* The draw above is made and discarded for a planed block, so the figure's other choices do not shift. */
+            if (anchor_size == 0) {
+                if (out->voicing_size[b] > 0 && voicing_members(pcs, out->voicing[b], out->voicing_size[b], anchor_shape)) {
+                    anchor_chord = chord;
+                    anchor_size = out->voicing_size[b];
+                    anchor_low = out->voicing[b][0];
+                }
+            } else if (chord != anchor_chord) {
+                int block[3];
+                if (planed_block(pcs, anchor_shape, anchor_size, anchor_low, low, high, block)) {
+                    memcpy(out->voicing[b], block, sizeof(block));
+                    out->voicing_size[b] = anchor_size;
+                }
+            }
         }
         if (out->voicing_size[b] == 0) {
             continue;

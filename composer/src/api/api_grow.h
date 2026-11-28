@@ -28,9 +28,9 @@
  * result document. Private to the library and the command line.
  */
 
-/* At most two chords a bar in a theme of eight bars (the request's chords), of sixteen bars (a blueprint's, R-743). */
-#define GROW_REQUEST_CHORDS 16
-#define GROW_EXT_CHORDS 32
+/* At most four chords a bar in a theme of eight bars (the request's chords), of sixteen bars (a blueprint's, R-743). */
+#define GROW_REQUEST_CHORDS 32
+#define GROW_EXT_CHORDS 64
 
 /* The motives of a theme run (the `theme` request's), besides the basic one. */
 typedef struct {

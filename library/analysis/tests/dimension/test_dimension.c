@@ -80,6 +80,42 @@ static void test_brightness(void) {
     assert(strcmp(dimension_name(DIMENSION_BRIGHTNESS), "brightness") == 0);
 }
 
+/*
+ * Tension (R-764): a block I-IV-V-I (a chord a bar, root position) measures 1, a bar of V7 3, a bar half C E G and half B D F 13/2; a
+ * sonority of two pitch classes does not count, a melody alone is refused, and an empty span is refused.
+ */
+static void test_tension(void) {
+    Rational value = q(0, 1);
+    static const int PROGRESSION[4][3] = {{60, 64, 67}, {65, 69, 72}, {67, 71, 74}, {60, 64, 67}};
+    DimensionNote block[12];
+    for (size_t bar = 0; bar < 4; bar++) {
+        for (size_t tone = 0; tone < 3; tone++) {
+            block[bar * 3 + tone] = note((long long)bar, 1, 1, 1, PROGRESSION[bar][tone]);
+        }
+    }
+    DimensionSpan span = {block, 12, q(4, 1), q(1, 4)};
+    assert(strcmp(dimension_name(DIMENSION_TENSION), "tension") == 0);
+    assert(dimension_measure(DIMENSION_TENSION, &span, &value) == DIMENSION_OK);
+    assert(is(value, 1, 1));
+    const DimensionNote dominant[4] = {note(0, 1, 1, 1, 55), note(0, 1, 1, 1, 59), note(0, 1, 1, 1, 62), note(0, 1, 1, 1, 65)};
+    DimensionSpan seventh = {dominant, 4, q(1, 1), q(1, 4)};
+    assert(dimension_measure(DIMENSION_TENSION, &seventh, &value) == DIMENSION_OK && is(value, 3, 1));
+    const DimensionNote halves[6] = {note(0, 1, 1, 2, 60), note(0, 1, 1, 2, 64), note(0, 1, 1, 2, 67),
+                                     note(1, 2, 1, 2, 59), note(1, 2, 1, 2, 62), note(1, 2, 1, 2, 65)};
+    DimensionSpan mixed = {halves, 6, q(1, 1), q(1, 4)};
+    assert(dimension_measure(DIMENSION_TENSION, &mixed, &value) == DIMENSION_OK && is(value, 13, 2));
+    /* a note that starts later cuts the sonority: a quarter of two tones, then three tones for the rest of the bar */
+    const DimensionNote late[3] = {note(0, 1, 1, 1, 60), note(0, 1, 1, 1, 67), note(1, 4, 3, 4, 64)};
+    DimensionSpan cut = {late, 3, q(1, 1), q(1, 4)};
+    assert(dimension_measure(DIMENSION_TENSION, &cut, &value) == DIMENSION_OK && is(value, 1, 1));
+    const DimensionNote melody[3] = {note(0, 1, 1, 4, 60), note(1, 4, 1, 4, 62), note(1, 2, 1, 4, 64)};
+    DimensionSpan alone = {melody, 3, q(3, 4), q(1, 4)};
+    assert(dimension_measure(DIMENSION_TENSION, &alone, &value) == DIMENSION_ERR_INVALID_INPUT);
+    DimensionSpan empty = {NULL, 0, q(1, 1), q(1, 4)};
+    assert(dimension_measure(DIMENSION_TENSION, &empty, &value) == DIMENSION_ERR_INVALID_INPUT);
+    assert(is(value, 1, 1)); /* untouched by the refusals */
+}
+
 static void test_contrast(void) {
     const DimensionNote a[3] = {note(0, 1, 3, 8, 60), note(3, 8, 1, 8, 62), note(1, 2, 1, 2, 64)};
     const DimensionNote b[3] = {note(0, 1, 3, 8, 60), note(3, 8, 1, 8, 62), note(1, 2, 1, 4, 60)};
@@ -139,6 +175,7 @@ static void test_refusals(void) {
 int main(void) {
     test_measures();
     test_brightness();
+    test_tension();
     test_contrast();
     test_refusals();
     printf("test_dimension: ok\n");
