@@ -11,6 +11,7 @@ import { buildStyleFromPanelRow } from "./styles.js";
 import { mountProjectPicker, refreshMaterialsView, renderMaterialsDetail, renderMaterialsView } from "./materials-view.js";
 import { openSubject, renderSubjectsView } from "./subjects-view.js";
 import { reloadMotiveLinkRuns, renderMotiveLinksView } from "./motive-links-view.js";
+import { refreshHarmonyLab, renderHarmonyLabView } from "./harmony-lab-view.js";
 import { setShell } from "./shell-context.js";
 import { fetchJsonResult } from "../core/api.js";
 
@@ -24,6 +25,7 @@ const TOOLS = [
   { id: "motifs", label: "Motifs", active: false, render: () => renderMaterialsView("motif") },
   { id: "themes", label: "Themes", active: false, render: () => renderMaterialsView("theme") },
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
+  { id: "harmony", label: "Harmony Lab", active: false, render: renderHarmonyLabView },
   { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
   { id: "motive-links", label: "Motive links", active: false, render: renderMotiveLinksView },
 ];
@@ -184,16 +186,20 @@ function startFollowingEvents() {
         renderSubjectsView();
       }
     });
+  const reloadHarmony = () => later("harmony", () => activeToolId() === "harmony" && refreshHarmonyLab());
   const reloadLinks = () => later("links", () => activeToolId() === "motive-links" && reloadMotiveLinkRuns && reloadMotiveLinkRuns());
   Events.on("library-changed", reloadLibrary);
   Events.on("item-changed", reloadMaterials);
   Events.on("item-removed", reloadMaterials);
+  Events.on("item-changed", reloadHarmony);
+  Events.on("item-removed", reloadHarmony);
   Events.on("collection-changed", reloadCollections);
   Events.on("subject-changed", reloadSubjects);
   Events.on("links-changed", reloadLinks);
   Events.on("reset", () => {
     reloadLibrary();
     reloadMaterials();
+    reloadHarmony();
     reloadCollections();
     reloadSubjects();
     reloadLinks();

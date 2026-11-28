@@ -2410,3 +2410,18 @@ button.button-danger:disabled {
 .export-message {
   font-size: 0.85rem;
 }
+
+/* The Harmony Lab (R-769). */
+.lab-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin: 0.5rem 0; }
+.lab-field { display: flex; flex-direction: column; gap: 0.2rem; }
+.lab-label { font-size: 0.8rem; opacity: 0.8; }
+.lab-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+.lab-chip { padding: 0.25rem 0.6rem; border-radius: 1rem; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.lab-chip-shared { border-style: solid; }
+.lab-chip-color { border-style: dashed; font-style: italic; }
+.lab-timeline { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+.lab-unit { display: flex; flex-direction: column; gap: 0.15rem; min-width: 5.5rem; }
+.lab-unit input { width: 100%; }
+.lab-bar { font-size: 0.75rem; opacity: 0.7; }
+.lab-measures { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.8rem; opacity: 0.85; }
+.lab-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }

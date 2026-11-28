@@ -189,9 +189,11 @@ UrsatzStatus workshop_progression_preview(const cJSON *request, cJSON **answer_o
   if (!copy) {
     return refuse(http_status, 400, URSATZ_ERR_REQUEST, error, "", "params is a progression request");
   }
+  /* The lists of schemas and sequences have no music to play. */
+  bool names = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(copy, "list_schemas"));
   cJSON_DeleteItemFromObjectCaseSensitive(copy, "midi");
   cJSON_DeleteItemFromObjectCaseSensitive(copy, "musicxml");
-  char *text = cJSON_AddTrueToObject(copy, "midi") && cJSON_AddTrueToObject(copy, "musicxml") ? cJSON_PrintUnformatted(copy) : NULL;
+  char *text = names || (cJSON_AddTrueToObject(copy, "midi") && cJSON_AddTrueToObject(copy, "musicxml")) ? cJSON_PrintUnformatted(copy) : NULL;
   cJSON_Delete(copy);
   if (!text) {
     return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
@@ -208,13 +210,13 @@ UrsatzStatus workshop_progression_preview(const cJSON *request, cJSON **answer_o
   if (workshop_composer_reply_refused(&reply)) {
     status = refuse(http_status, workshop_composer_reply_failure_status(&reply), reply.status, error, reply.path,
                     reply.message[0] ? reply.message : "composer could not write the progression");
-  } else if (reply.status != URSATZ_OK || !reply.json || !reply.midi || !reply.musicxml || !(document = cJSON_Parse(reply.json))) {
+  } else if (reply.status != URSATZ_OK || !reply.json || (!names && (!reply.midi || !reply.musicxml)) || !(document = cJSON_Parse(reply.json))) {
     status = refuse(http_status, 500, URSATZ_ERR_INTERNAL, error, "", "composer could not write the progression");
-  } else {
+  } else if (!names) {
     status = playback_of_bytes(reply.midi, reply.midi_size, &playback, http_status, error);
   }
-  if (status == URSATZ_OK && (!cJSON_AddBoolToObject(document, "ok", 1) || !cJSON_AddStringToObject(document, "musicxml", reply.musicxml) ||
-                              !cJSON_AddItemToObject(document, "playback", playback))) {
+  if (status == URSATZ_OK && (!cJSON_AddBoolToObject(document, "ok", 1) ||
+                              (!names && (!cJSON_AddStringToObject(document, "musicxml", reply.musicxml) || !cJSON_AddItemToObject(document, "playback", playback))))) {
     cJSON_Delete(playback);
     status = refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
   }
