@@ -288,6 +288,16 @@ static void test_composer_queries(void) {
     }
     check(formed && has_rounded_binary && has_game_loop, "composer.forms is the forms it builds: the rounded binary and the game loop among them");
     workshop_reply_destroy(&reply);
+    check(ask("composer.progression", "{\"key\":\"C minor\",\"meter\":\"4/4\",\"bars\":4,\"cadence\":\"none\",\"seed\":1,\"palette\":{\"with\":\"dorian\"}}", &reply, &error) &&
+              cJSON_IsTrue(member(reply.json, "ok")) && strstr(str(reply.json, "musicxml"), "score-partwise") != NULL && cJSON_IsArray(member(member(reply.json, "playback"), "notes")) &&
+              cJSON_GetArraySize(member(reply.json, "measures")) == 4,
+          "composer.progression writes a palette progression with its MusicXML, playback and measures; nothing is saved");
+    workshop_reply_destroy(&reply);
+    check(ask("composer.progression", "{\"list_schemas\":true}", &reply, &error) && cJSON_GetArraySize(member(reply.json, "progression_schemas")) >= 15 && member(reply.json, "playback") == NULL,
+          "composer.progression with list_schemas lists the progression schemas, with no playback");
+    workshop_reply_destroy(&reply);
+    check(query("composer.progression", "{\"key\":\"C minor\",\"meter\":\"4/4\",\"bars\":4,\"cadence\":\"DC\",\"palette\":{}}", &reply, &error) == URSATZ_ERR_REQUEST && strcmp(error.path, "/cadence") == 0,
+          "and the Composer's refusal keeps its path");
     check(ask("composer.variant-operations", NULL, &reply, &error) && cJSON_IsArray(member(reply.json, "operations")) && cJSON_GetArraySize(member(reply.json, "operations")) > 0,
           "composer.variant-operations lists the operations");
     workshop_reply_destroy(&reply);
