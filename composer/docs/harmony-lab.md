@@ -61,3 +61,17 @@ A given chord in a modal key reads as the material's stacked triad: `IV` in C do
 Without the grid, `IV I@1 II@2 V@3` in bar 4 of a sentence stuck in the bass stage on every seed; with the grid in `harmony_read_metre` and `harmony_read_cells` it stuck in the melody stage; with `melody_idea_read` too it composes. The test `beat_chords` composes six requests (a sentence of eight bars with one bar of given chords: 4/4 on beats and on half beats, 3/4 and 6/8) on seeds 1 to 3, each on its own seed with every given chord at its onset, and pins the grid of a span for each meter. The listen gate's MIDI and MusicXML, the piece sweep and the accompaniment golden equal `main`.
 
 Not a beat-cell problem: a period with given chords in some bars of these motifs, and a 6/8 sentence with `IV` alone in bar 4, fail the cadence rule or the draw on `main` as well.
+
+### The sweep
+
+`test_harmony_lab_sweep` (slow; its smoke test runs seed 1 of every case) runs the lab's promises over seeds 1 to 10 and pins what it measured, 2026-11-28:
+
+| Case | Measured |
+|---|---|
+| her plan (`fixtures/harmony/sad-dorian-lift.json`) | composes on 10 of 10; bars 1 to 12 are among i, III, v and VII and bar 13 holds A natural on all 10; bar 13 is brighter than every bar before it on 1 (it is usually `ii`, as bright as the `v` of bar 8) |
+| each of the fifteen OMT VII schemas, looped over 8 bars (a schema that does not loop: its own length, the rest `any`) | 150 of 150 write their stages in order |
+| C major, 8 bars, tension `rise` | composes on 10 of 10, the bar tension falling at most once |
+| the six sentences of R-761 | 60 of 60 compose with every given chord in the plan at its onset |
+| a doo-wop plan (`IV V I VI IV V V I`, PAC) less bar 2, given to a sentence | 10 of 10 compose with every given chord at its onset |
+
+The doo-wop plan is the lab's, so the rotation is the one it drew; a sentence refuses a given `V` in bar 1 or a `VI` in bar 5 against its PAC, which is why bar 2 is the one left out. The sweep takes 92 s on 3 cores, the sentences of R-761 most of it.
