@@ -300,9 +300,12 @@ bool accomp_read(const Plan *plan, LaneSpanId target, const ComposerChords *comp
         return false;
     }
 
-    /* The bass and the melody are written. */
+    /* The bass is written, and the melody where the plan has one (R-766: a harmony plan heard with no melody has none, and the stage then writes
+       under the window's top). A theme always has a melody span, so its accompaniment reads as it did. */
+    LaneSpanId melody[1];
+    bool has_melody = plan_lane_find(plan, PLAN_LANE_MELODY, 0, out->span, melody, 1) > 0;
     if (!accomp_read_line(plan, PLAN_LANE_BASS, 0, out->span, origin, out->length, out->bass, &out->bass_count) ||
-        !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, out->melody, &out->melody_count)) {
+        (has_melody && !accomp_read_line(plan, PLAN_LANE_MELODY, 0, out->span, origin, out->length, out->melody, &out->melody_count))) {
         return false;
     }
     if (out->pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
