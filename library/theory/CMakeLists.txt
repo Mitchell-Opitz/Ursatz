@@ -36,6 +36,7 @@ add_library(ursatz_theory
     tonality/common_practice_materials.c
     tonality/interval.c
     tonality/modal_chords.c
+    tonality/modal_palette.c
     tonality/key_vocabulary.c
     tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
