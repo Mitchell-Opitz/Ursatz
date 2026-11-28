@@ -44,3 +44,19 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
+composer/src/harmony/harmony_palette.c add_chord  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c apply_cadence  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c avoided  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c build_pools  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c chord_of_numeral  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c cost_of  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c harmony_palette_chord_value  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c harmony_palette_draw  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c interval_rank  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c place_fixed  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c pool_of  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c same_chord  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c same_sequence  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c shape_cost  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c unit_value  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it
+composer/src/harmony/harmony_palette.c usable  # the palette operator is called by the progression request's palette from P70 B9 commit 4; its test calls it

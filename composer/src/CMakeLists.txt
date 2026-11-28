@@ -66,6 +66,7 @@ add_library(ursatz_composer_engine STATIC
     fill/fill_record.c
     fill/fill_suggest.c
     candidates/variations.c
+    harmony/harmony_palette.c
     harmony/harmony_roman.c
     harmony/harmony_mask.c
     harmony/harmony_rhythm.c
