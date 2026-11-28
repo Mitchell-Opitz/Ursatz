@@ -31,6 +31,12 @@ Other meters keep their cells. A span with no such edge keeps the accent cells, 
 
 The lowest notes are the nearest pitch to the first block's, not a step from the block before (R-771): `IV I@1 II@2 V@3` in bar 4 of a C major sentence on seed 1 gives blocks starting on 57, 52, 53 and 59, each within six semitones of the first. The test `test_accompaniment_patterns` pins this case. Planing outside the mode (exact transposition) is Later.
 
+## The palette
+
+`composer_api_palette` (R-765) answers `{"key": "C minor", "with": "dorian"}` with the triads of the key's material and of `with` on the same tonic: `materials` (each `{material, word, chords}`, a chord `{degree, numeral, name, quality, text, shared, color}`), `shared` (the numerals of the key's material that both hold) and `color` (for each material, the numerals of its chords that carry a pitch class the other lacks). The numeral is the Open Music Theory spelling against the major scale of the tonic (i, bIII, vio, #ivo); the name is spelled from the tonic's letter (Cm, Eb, Adim). The library side is `modal_palette` (`library/theory/tonality`): a triad is shared when the other material holds a triad of the same root and quality.
+
+`text` is the chord text the Composer reads for the chord (`composer_chord_text_of`): the first of the upper-case numeral (against the key's own degrees, `III`), the numeral that names the quality (`v`, `iv`, `iio`) and the numeral with its mode, `IV:dorian`, that `request_read_chords` reads in the key as exactly that chord. In C minor with dorian the shared chords are `I`, `III`, `v` and `VII`, the F major chord `IV:dorian`; in C major with lydian D major is `II:lydian`. A chord none of the texts reads has no `text`. The schemas are `palette.request.schema.json` and `palette.response.schema.json`; the workshop's `knowledge.palette` ([knowledge.md](../../workshop/docs/knowledge.md)) answers the same document.
+
 ## Measured
 
 Without the grid, `IV I@1 II@2 V@3` in bar 4 of a sentence stuck in the bass stage on every seed; with the grid in `harmony_read_metre` and `harmony_read_cells` it stuck in the melody stage; with `melody_idea_read` too it composes. The test `beat_chords` composes six requests (a sentence of eight bars with one bar of given chords: 4/4 on beats and on half beats, 3/4 and 6/8) on seeds 1 to 3, each on its own seed with every given chord at its onset, and pins the grid of a span for each meter. The listen gate's MIDI and MusicXML, the piece sweep and the accompaniment golden equal `main`.

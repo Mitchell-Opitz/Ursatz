@@ -117,6 +117,7 @@ Every entry has its request and response in the file named here and its JSON Sch
 | `composer_api_variant_operations`, `composer_api_variants`, `composer_api_recognize`, `composer_api_random_motive` | [motives.md](api/motives.md) |
 | `composer_api_theme` | [theme-and-piece.md](api/theme-and-piece.md) |
 | `composer_api_critique` | [critic.md](critic.md#the-critique-entry) |
+| `composer_api_palette` | [harmony-lab.md](harmony-lab.md#the-palette) |
 | `composer_api_piece`, `composer_api_piece_variations` | [theme-and-piece.md](api/theme-and-piece.md) |
 | `composer_api_plan`, `composer_api_fill`, `composer_api_lock`, `composer_api_regenerate`, `composer_api_variations`, `composer_api_harmonize` | [plan-workflow.md](api/plan-workflow.md) |
 | `composer_api_progression`, `composer_api_counterpoint`, `composer_api_develop`, `composer_api_grow` | [material-commands.md](api/material-commands.md) |
