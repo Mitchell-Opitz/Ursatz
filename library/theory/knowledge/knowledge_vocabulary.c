@@ -5,14 +5,16 @@
 
 /* K4 vocabulary: the common `code` and the fields of the entry's subtype. */
 
-/* Lowercase letter words joined by single spaces, hyphens or underscores: "escape-tone", "melody and accompaniment". */
-static bool code_text(const char *text) {
+/* Lowercase letter words joined by single spaces, hyphens or underscores: "escape-tone", "melody and accompaniment". A chord group's code
+   ("iib1") may also have digits after its first letter. */
+static bool code_text(const char *text, bool digits) {
     size_t length = strlen(text);
-    if (length == 0 || text[0] < 'a' || text[0] > 'z' || text[length - 1] < 'a' || text[length - 1] > 'z') {
+    bool last = length > 0 && ((text[length - 1] >= 'a' && text[length - 1] <= 'z') || (digits && text[length - 1] >= '0' && text[length - 1] <= '9'));
+    if (length == 0 || text[0] < 'a' || text[0] > 'z' || !last) {
         return false;
     }
     for (size_t i = 1; i + 1 < length; i++) {
-        bool letter = text[i] >= 'a' && text[i] <= 'z';
+        bool letter = (text[i] >= 'a' && text[i] <= 'z') || (digits && text[i] >= '0' && text[i] <= '9');
         bool separator = text[i] == ' ' || text[i] == '_' || text[i] == '-';
         if (!letter && (!separator || text[i + 1] < 'a' || text[i + 1] > 'z')) {
             return false;
@@ -120,13 +122,59 @@ static KnowledgeStatus read_embellishment(Slot *slot, const cJSON *content, cons
     return status;
 }
 
+static KnowledgeStatus read_interval_class(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    static const char *const ROOTS[] = {"none", "lower", "upper"};
+    VocabularyInterval *interval = &slot->vocabulary.interval;
+    const cJSON *semitones = knowledge_member(content, "semitones");
+    const cJSON *rank = knowledge_member(content, "rank");
+    if (!knowledge_in_range(semitones, 0, 12)) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.semitones", semitones == NULL ? "missing" : "not an integer from 0 to 12");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (!knowledge_in_range(rank, 1, 12)) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.rank", rank == NULL ? "missing" : "not an integer from 1 to 12");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    interval->semitones = semitones->valueint;
+    interval->rank = rank->valueint;
+    return knowledge_read_word(slot, content, "root", ROOTS, 3, "not lower, upper or none", &interval->root, path, message, message_size);
+}
+
+static KnowledgeStatus read_chord_group(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    static const char *const TRITONES[] = {"none", "one", "several", "any"};
+    static const char *const SHARPS[] = {"none", "mild", "sharp", "any"};
+    static const char *const ROOTS[] = {"bass", "above", "none", "any"};
+    VocabularyChordGroup *group = &slot->vocabulary.chord_group;
+    const cJSON *number = knowledge_member(content, "group");
+    const cJSON *rank = knowledge_member(content, "rank");
+    if (!knowledge_in_range(number, 1, 6)) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.group", number == NULL ? "missing" : "not an integer from 1 to 6");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (!knowledge_in_range(rank, 1, 12)) {
+        knowledge_fail(message, message_size, path, slot->entry.id, "content.rank", rank == NULL ? "missing" : "not an integer from 1 to 12");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    group->group = number->valueint;
+    group->rank = rank->valueint;
+    KnowledgeStatus status = knowledge_read_word(slot, content, "tritones", TRITONES, 4, "not none, one, several or any", &group->tritones, path,
+                                                 message, message_size);
+    if (status == KNOWLEDGE_OK) {
+        status = knowledge_read_word(slot, content, "sharp", SHARPS, 4, "not none, mild, sharp or any", &group->sharp, path, message, message_size);
+    }
+    if (status == KNOWLEDGE_OK) {
+        status = knowledge_read_word(slot, content, "root", ROOTS, 4, "not bass, above, none or any", &group->root, path, message, message_size);
+    }
+    return status;
+}
+
 KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
                                           size_t message_size) {
-    static const char *const SUBTYPES[] = {"cadence-kind", "embellishment", "texture", "progression-type", "function"};
-    int index = knowledge_word_index(subtype, SUBTYPES, 5);
+    static const char *const SUBTYPES[] = {"cadence-kind", "embellishment", "texture", "progression-type", "function", "interval-class", "chord-group"};
+    int index = knowledge_word_index(subtype, SUBTYPES, 7);
     if (index < 0) {
         knowledge_fail(message, message_size, path, slot->entry.id, "subtype",
-                       subtype == NULL ? "missing" : "not cadence-kind, embellishment, texture, progression-type or function");
+                       subtype == NULL ? "missing" : "not cadence-kind, embellishment, texture, progression-type, function, interval-class or chord-group");
         return KNOWLEDGE_ERR_FIELD;
     }
     const cJSON *content = knowledge_member(entry, "content");
@@ -136,7 +184,7 @@ KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const 
     }
     slot->vocabulary.subtype = (VocabularySubtype)index;
     const char *code = knowledge_string_of(knowledge_member(content, "code"));
-    if (code == NULL || !code_text(code)) {
+    if (code == NULL || !code_text(code, index == VOCABULARY_CHORD_GROUP)) {
         knowledge_fail(message, message_size, path, slot->entry.id, "content.code",
                        code == NULL ? "missing" : "not lowercase words");
         return KNOWLEDGE_ERR_FIELD;
@@ -152,6 +200,10 @@ KnowledgeStatus knowledge_vocabulary_read(Slot *slot, const cJSON *entry, const 
         return read_embellishment(slot, content, path, message, message_size);
     case VOCABULARY_TEXTURE:
         return knowledge_read_text(slot, content, "category", &slot->vocabulary.texture.category, path, message, message_size);
+    case VOCABULARY_INTERVAL_CLASS:
+        return read_interval_class(slot, content, path, message, message_size);
+    case VOCABULARY_CHORD_GROUP:
+        return read_chord_group(slot, content, path, message, message_size);
     default:
         return KNOWLEDGE_OK;
     }

@@ -303,7 +303,7 @@ def check_progression_example(path, entry, number, example):
 
 
 def check_vocabulary(vocabulary_entries):
-    """Codes are unique within a subtype, a texture's category is a texture's code, and progression examples follow their type."""
+    """Codes are unique within a subtype, a texture's category is a texture's code, progression examples follow their type, and the ranks of the interval classes and of the chord groups are each used once."""
     codes = {}
     for path, entry in vocabulary_entries:
         content = entry.get("content")
@@ -324,6 +324,15 @@ def check_vocabulary(vocabulary_entries):
         if entry.get("subtype") == "progression-type":
             for number, example in enumerate(entry.get("examples", []), 1):
                 check_progression_example(path, entry, number, example)
+    for subtype in ("interval-class", "chord-group"):
+        ranks = {}
+        for path, entry in vocabulary_entries:
+            content = entry.get("content")
+            if entry.get("subtype") != subtype or not isinstance(content, dict) or not isinstance(content.get("rank"), int):
+                continue
+            if content["rank"] in ranks:
+                problem(path, entry["id"], "content.rank: %d is also the rank of %s" % (content["rank"], ranks[content["rank"]]))
+            ranks.setdefault(content["rank"], entry["id"])
 
 
 RULE_PLACEHOLDERS = {
