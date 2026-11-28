@@ -241,6 +241,90 @@ WORKSHOP_HANDLER(workshop_c_item_update_use) {
     return result == URSATZ_OK ? workshop_reply_member(reply, "item", item, error) : material_failure(error, result);
 }
 
+/*
+ * Applies a composed harmony plan (R-767): params harmony (an hrm- id), version, section (a piece's section name; refused for a theme) and note. A new
+ * version of the target holds the reference ({"$item": {item_id, version}}) as a theme's chords or the named section's harmony, and the use of the
+ * harmony version, in one transaction. Refused when the harmony version is not composed, the target is no theme or piece, or the section is unknown.
+ */
+WORKSHOP_HANDLER(workshop_c_item_apply_harmony) {
+    bool bad = false;
+    const char *harmony_id = NULL;
+    const char *section_name = workshop_param_string(call->params, "section", &bad);
+    const char *note = workshop_param_string(call->params, "note", &bad);
+    const cJSON *version_member = cJSON_GetObjectItemCaseSensitive(call->params, "version");
+    if (bad || !workshop_param_require_string(call->params, "harmony", &harmony_id, error)) {
+        return bad ? workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "section and note are strings") : URSATZ_ERR_REQUEST;
+    }
+    if (!cJSON_IsNumber(version_member) || version_member->valuedouble < 1 || version_member->valuedouble != (double)(int)version_member->valuedouble) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/version", "version is a whole number from 1");
+    }
+    int version = version_member->valueint;
+    cJSON *harmony_version = NULL;
+    UrsatzStatus result = workshop_material_item_get_version(harmony_id, version, &harmony_version);
+    if (result != URSATZ_OK) {
+        return workshop_call_fail(error, result == URSATZ_ERR_NOT_FOUND ? URSATZ_ERR_NOT_FOUND : URSATZ_ERR_REQUEST, "/params/harmony", "no version %d of the harmony item %s", version, harmony_id);
+    }
+    bool composed = cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(harmony_version, "result"), "harmony"));
+    cJSON_Delete(harmony_version);
+    cJSON *meta = NULL;
+    cJSON *body = NULL;
+    result = workshop_material_item_get(call->target, &meta, &body);
+    if (result != URSATZ_OK) {
+        return material_failure(error, result);
+    }
+    const char *type = common_json_string(meta, "type");
+    bool theme = strcmp(type, "theme") == 0;
+    bool piece = strcmp(type, "piece") == 0;
+    cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    cJSON *reference = cJSON_CreateObject();
+    cJSON *inner = reference ? cJSON_AddObjectToObject(reference, "$item") : NULL;
+    UrsatzStatus refused = URSATZ_OK;
+    if (!theme && !piece) {
+        refused = workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "the target is not a theme or a piece");
+    } else if (!composed) {
+        refused = workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/version", "the harmony version is not composed");
+    } else if (theme && section_name != NULL) {
+        refused = workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/section", "a theme has no sections; leave section out");
+    } else if (piece && section_name == NULL) {
+        refused = workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/section", "a piece needs the section the chords go to");
+    } else if (!cJSON_IsObject(request) || !inner || !cJSON_AddStringToObject(inner, "item_id", harmony_id) || !cJSON_AddNumberToObject(inner, "version", version)) {
+        refused = workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    } else if (theme) {
+        cJSON_DeleteItemFromObjectCaseSensitive(request, "chords");
+        cJSON_AddItemToObject(request, "chords", reference);
+        reference = NULL;
+    } else {
+        cJSON *section = NULL;
+        cJSON *found = NULL;
+        cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(request, "sections")) {
+            const char *id = common_json_string(section, "id");
+            id = id[0] != '\0' ? id : common_json_string(section, "name");
+            if (strcmp(id, section_name) == 0) {
+                found = section;
+            }
+        }
+        if (!found) {
+            refused = workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "/params/section", "the piece has no section '%s'", section_name);
+        } else {
+            cJSON_DeleteItemFromObjectCaseSensitive(found, "harmony");
+            cJSON_AddItemToObject(found, "harmony", reference);
+            reference = NULL;
+        }
+    }
+    cJSON_Delete(reference);
+    cJSON_Delete(meta);
+    if (refused != URSATZ_OK) {
+        cJSON_Delete(body);
+        return refused;
+    }
+    char text[600];
+    snprintf(text, sizeof(text), "%s", note && note[0] ? note : "Applied a harmony plan");
+    cJSON *item = NULL;
+    result = workshop_material_item_add_version(call->target, body, text, &item);
+    cJSON_Delete(body);
+    return result == URSATZ_OK ? workshop_reply_member(reply, "item", item, error) : material_failure(error, result);
+}
+
 /* --- compose jobs ---------------------------------------------------------------------------------------------------------------- */
 
 /* The optional member seed: a whole number from 0 to 4294967295. */

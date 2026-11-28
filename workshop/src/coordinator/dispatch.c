@@ -121,6 +121,7 @@ static const CommandEntry kCommands[] = {
     {"item.reroll", workshop_c_item_reroll},
     {"item.restore", workshop_c_item_restore},
     {"item.update-use", workshop_c_item_update_use},
+    {"item.apply-harmony", workshop_c_item_apply_harmony},
     {"subject.create", workshop_c_subject_create},
     {"subject.update", workshop_c_subject_update},
     {"subject.delete", workshop_c_subject_delete},

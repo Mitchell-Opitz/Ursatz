@@ -49,6 +49,7 @@ Items: the motifs, themes and pieces of a project, their versions and compositio
 | `item.reroll` | `item:<id>@v<n>` | none | Run a derived motif's chain again with a new seed |
 | `item.restore` | `item:<id>@v<n>` | `version int [note string]` | Make the next version a copy of an older one |
 | `item.update-use` | `item:<id>@v<n>` | `source_id string` | Move an item's use of a source to the source's current version |
+| `item.apply-harmony` | `item:<id>@v<n>` | `harmony string version int [section string] [note string]` | Apply a composed harmony plan to a theme or a piece section |
 
 ## Job
 

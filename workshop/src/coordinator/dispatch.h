@@ -237,6 +237,7 @@ WORKSHOP_HANDLER(workshop_c_item_link_form);
 WORKSHOP_HANDLER(workshop_c_item_reroll);
 WORKSHOP_HANDLER(workshop_c_item_restore);
 WORKSHOP_HANDLER(workshop_c_item_update_use);
+WORKSHOP_HANDLER(workshop_c_item_apply_harmony);
 WORKSHOP_HANDLER(workshop_c_subject_create);
 WORKSHOP_HANDLER(workshop_c_subject_update);
 WORKSHOP_HANDLER(workshop_c_subject_delete);
