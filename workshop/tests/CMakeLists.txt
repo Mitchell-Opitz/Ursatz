@@ -136,6 +136,10 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_queries)
 ursatz_test(workshop_knowledge_queries SOURCES test_knowledge_queries.c LIBS ursatz_workshop_internal ursatz_test_support
     DEFINITIONS URSATZ_USER_KNOWLEDGE_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/knowledge-user/voicings.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_queries)
+# Harmony plans as items (R-767): compose, files, playback, export, validate, apply to a theme, the refusals.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_harmony_items)
+ursatz_test(workshop_harmony_items SOURCES test_harmony_items.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_harmony_items TIMEOUT 300)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
 ursatz_test(workshop_base_version SOURCES test_base_version.c LIBS ursatz_workshop_internal ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
