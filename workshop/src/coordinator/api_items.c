@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "base/knowledge.h"
 #include "coordinator/dispatch.h"
 #include "items/views.h"
 
@@ -383,18 +384,57 @@ static UrsatzStatus incomplete(WorkshopReply *reply, const char *message, Ursatz
 }
 
 /*
- * params type ("motif", "theme" or "piece") and body: the Composer reads the request the body would compose (or analyze) with and
+ * params type ("motif", "theme", "piece" or "harmony") and body: the Composer reads the request the body would compose (or analyze) with and
  * composes nothing (R-276). The reply is {"complete": true, "request"} with the Composer's defaults filled, {"complete": false,
  * "message"} when the body is not composable yet, or the refusal with the request member at fault as its path.
  */
+/* A harmony body (R-767): its request is run through composer_api_progression with no files and no suggestions, and the Composer's refusal answers with its path. */
+static UrsatzStatus validate_harmony(const cJSON *body, WorkshopReply *reply, UrsatzError *error) {
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+    if (!cJSON_IsObject(request) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "key")) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "meter")) ||
+        !cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(request, "bars")) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(request, "cadence"))) {
+        return incomplete(reply, "the harmony request needs key, meter, bars and cadence", error);
+    }
+    cJSON *copy = cJSON_Duplicate(request, 1);
+    for (size_t i = 0; copy && i < 5; i++) {
+        static const char *const FILES[] = {"midi", "musicxml", "plain_midi", "suggest", "plans"};
+        cJSON_DeleteItemFromObjectCaseSensitive(copy, FILES[i]);
+    }
+    char *text = copy ? cJSON_PrintUnformatted(copy) : NULL;
+    cJSON_Delete(copy);
+    if (!text) {
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    ComposerResponse response;
+    UrsatzStatus status = composer_api_progression(workshop_composer_context_global(), text, NULL, &response);
+    cJSON_free(text);
+    if (status != URSATZ_OK) {
+        UrsatzStatus failed = workshop_call_fail(error, status, response.error.path, "%s", response.error.message[0] ? response.error.message : "composer could not check the request");
+        composer_response_destroy(&response);
+        return failed;
+    }
+    composer_response_destroy(&response);
+    cJSON *answer = workshop_reply_object(reply);
+    cJSON *filled = cJSON_Duplicate(request, 1);
+    if (!answer || !filled || !cJSON_AddBoolToObject(answer, "complete", 1) || !cJSON_AddItemToObject(answer, "request", filled)) {
+        cJSON_Delete(filled);
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    return URSATZ_OK;
+}
+
 WORKSHOP_HANDLER(workshop_q_item_validate) {
     const cJSON *type = cJSON_GetObjectItemCaseSensitive(call->params, "type");
     const cJSON *body = cJSON_GetObjectItemCaseSensitive(call->params, "body");
     bool is_motif = cJSON_IsString(type) && strcmp(type->valuestring, "motif") == 0;
     bool is_theme = cJSON_IsString(type) && strcmp(type->valuestring, "theme") == 0;
     bool is_piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
-    if (!(is_motif || is_theme || is_piece) || !cJSON_IsObject(body)) {
-        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "type is motif, theme or piece and body an object");
+    bool is_harmony = cJSON_IsString(type) && strcmp(type->valuestring, "harmony") == 0;
+    if (!(is_motif || is_theme || is_piece || is_harmony) || !cJSON_IsObject(body)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params", "type is motif, theme, piece or harmony and body an object");
+    }
+    if (is_harmony) {
+        return validate_harmony(body, reply, error);
     }
     cJSON *request = NULL;
     UrsatzError failure = {{0}, {0}};

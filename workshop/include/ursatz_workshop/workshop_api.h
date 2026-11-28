@@ -36,6 +36,7 @@ typedef struct Workshop Workshop;
 #define WORKSHOP_FORMAT_MOTIF_BODY "ursatz-motif-body"
 #define WORKSHOP_FORMAT_THEME_BODY "ursatz-theme-body"
 #define WORKSHOP_FORMAT_PIECE_BODY "ursatz-piece-body"
+#define WORKSHOP_FORMAT_HARMONY_BODY "ursatz-harmony-body" /* a harmony plan: the progression request and what its compose left (R-767) */
 #define WORKSHOP_FORMAT_OP_CHECKS "ursatz-op-checks"
 #define WORKSHOP_FORMAT_SUBJECT "ursatz-subject"
 #define WORKSHOP_FORMAT_LIBRARY_PIECE "ursatz-library-piece"

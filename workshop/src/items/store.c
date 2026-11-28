@@ -482,6 +482,9 @@ const char *store_prefix_for_type(const char *type) {
     if (strcmp(type, "piece") == 0) {
         return "pce";
     }
+    if (strcmp(type, "harmony") == 0) {
+        return "hrm";
+    }
     return NULL;
 }
 
@@ -507,9 +510,10 @@ static bool project_exists_locked(const char *project_id) {
 }
 
 static const char *body_format_of(const char *type) {
-    return strcmp(type, "motif") == 0   ? WORKSHOP_FORMAT_MOTIF_BODY
-           : strcmp(type, "theme") == 0 ? WORKSHOP_FORMAT_THEME_BODY
-                                        : WORKSHOP_FORMAT_PIECE_BODY;
+    return strcmp(type, "motif") == 0     ? WORKSHOP_FORMAT_MOTIF_BODY
+           : strcmp(type, "theme") == 0   ? WORKSHOP_FORMAT_THEME_BODY
+           : strcmp(type, "harmony") == 0 ? WORKSHOP_FORMAT_HARMONY_BODY
+                                          : WORKSHOP_FORMAT_PIECE_BODY;
 }
 
 int store_current_version_of(const cJSON *item) {

@@ -29,7 +29,8 @@
       "enum": [
         "motif",
         "theme",
-        "piece"
+        "piece",
+        "harmony"
       ]
     },
     "name": {

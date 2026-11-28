@@ -544,6 +544,31 @@ static void build_theme(Build *build, const char *id, int version, const cJSON *
   }
 }
 
+/* A harmony plan (R-767): the way it is made as facts, and its MusicXML as the one draft. */
+static void build_harmony(Build *build, const char *id, int version, const cJSON *body) {
+  const cJSON *request = cJSON_GetObjectItemCaseSensitive(body, "request");
+  if (!cJSON_IsObject(request)) {
+    fail(build, URSATZ_ERR_INTERNAL, "the item has no harmony request");
+    return;
+  }
+  static const char *const members[] = {"key", "meter", "bars", "cadence"};
+  for (size_t i = 0; i < sizeof(members) / sizeof(members[0]); i++) {
+    add_fact(build, &build->material_facts, members[i], scalar_text(build, cJSON_GetObjectItemCaseSensitive(request, members[i])));
+  }
+  const cJSON *chord = NULL;
+  const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "result"), "harmony");
+  cJSON_ArrayForEach(chord, cJSON_GetObjectItemCaseSensitive(harmony, "chords")) {
+    const cJSON *bar = cJSON_GetObjectItemCaseSensitive(chord, "bar");
+    const cJSON *text = cJSON_GetObjectItemCaseSensitive(chord, "text");
+    if (cJSON_IsNumber(bar) && cJSON_IsString(text)) {
+      add_fact(build, &build->material_facts, format(build, "bar %d", bar->valueint), text->valuestring);
+    }
+  }
+  const char *xml = NULL;
+  read_version_xml(build, id, version, "harmony.musicxml", &xml);
+  add_draft(build, "harmony", xml);
+}
+
 static void build_piece(Build *build, const char *id, int version, const cJSON *body) {
   const cJSON *piece = body; /* the result is a member of the body, the structure is its request */
   const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "request");
@@ -709,8 +734,10 @@ UrsatzStatus workshop_material_export(const char *item_id, int version, char **t
     build_theme(&build, item_id, version, body);
   } else if (strcmp(type, "piece") == 0) {
     build_piece(&build, item_id, version, body);
+  } else if (strcmp(type, "harmony") == 0) {
+    build_harmony(&build, item_id, version, body);
   } else {
-    fail(&build, URSATZ_ERR_INTERNAL, "the item is not a motif, theme or piece");
+    fail(&build, URSATZ_ERR_INTERNAL, "the item is not a motif, theme, piece or harmony plan");
   }
   UrsatzStatus result = build.result;
   if (!failed(&build)) {

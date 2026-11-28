@@ -347,7 +347,7 @@ void workshop_txn_abort(WorkshopTxn *txn) {
 
 static bool is_body_format(const char *name) {
     return strcmp(name, WORKSHOP_FORMAT_MOTIF_BODY) == 0 || strcmp(name, WORKSHOP_FORMAT_THEME_BODY) == 0 ||
-           strcmp(name, WORKSHOP_FORMAT_PIECE_BODY) == 0;
+           strcmp(name, WORKSHOP_FORMAT_PIECE_BODY) == 0 || strcmp(name, WORKSHOP_FORMAT_HARMONY_BODY) == 0;
 }
 
 /* The parent of path's parent folder, "<dir>/realization.json" in out (the realization a readings/<name>.json is about). */
