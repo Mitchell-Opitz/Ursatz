@@ -757,6 +757,12 @@ ursatz_test(test_api_forms LIBS ursatz_composer_engine composer_test_support cjs
 ursatz_test(test_palette LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_palette_files)
 
+# The progression request with a palette (R-766): the sad-then-Dorian-lift plan, the schemas' examples, the cadence, given chords, refusals, the accompaniment;
+# it writes a request and a response for test_api_schema.
+ursatz_test(test_progression_lab LIBS ursatz_composer_engine composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_lab_files)
+
 ursatz_test(test_job_cancel LIBS ursatz_composer_engine composer_test_support)
 
 if(URSATZ_VALGRIND)
@@ -782,7 +788,7 @@ endif()
 # schema/api/<kind>.schema.json (needs python3 with jsonschema).
 if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
-        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files api_palette_files)
+        api_plan_workflow_files api_material_files api_vocabulary_files api_critique_files api_palette_files api_lab_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate,critique,palette

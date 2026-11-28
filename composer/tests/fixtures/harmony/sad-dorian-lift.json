@@ -1,0 +1,5 @@
+{"key": "C minor", "meter": "4/4", "bars": 16, "cadence": "none", "seed": 1,
+ "palette": {"with": "dorian", "chords_per_bar": 1,
+   "spans": [{"bars": [1, 12], "chords": "shared"}, {"bars": [13, 13], "chords": "color"}, {"bars": [14, 16], "chords": "any"}],
+   "brightness": {"shape": "step", "at": 13}},
+ "accompaniment": {"pattern": "block"}, "bass": true, "plans": true}
