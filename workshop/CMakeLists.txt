@@ -74,6 +74,7 @@ add_library(ursatz_workshop_engine STATIC
     src/composition/restore.c
     src/composition/sections.c
     src/composition/themes.c
+    src/composition/harmonies.c
     src/composition/variants.c
     src/rendering/export.c
     src/rendering/playback.c

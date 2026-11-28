@@ -56,6 +56,8 @@ const char *workshop_compose_job_kind(WorkshopComposeOp op) {
       return "theme";
     case WORKSHOP_COMPOSE_PIECE:
       return "piece";
+    case WORKSHOP_COMPOSE_HARMONY:
+      return "harmony";
     case WORKSHOP_COMPOSE_PIECE_REGENERATE:
       return "regenerate";
     case WORKSHOP_COMPOSE_PIECE_VARIATIONS:
@@ -98,6 +100,11 @@ UrsatzStatus workshop_compose_job_run(void *input, const UrsatzJob *composer_job
       break;
     case WORKSHOP_COMPOSE_PIECE:
       result = workshop_piece_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);
+      break;
+    case WORKSHOP_COMPOSE_HARMONY:
+      invalid_text = "invalid harmony plan";
+      failed_text = "the harmony plan could not be composed";
+      result = workshop_harmony_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, &error);
       break;
     case WORKSHOP_COMPOSE_PIECE_REGENERATE:
       failed_text = "the section could not be written again";

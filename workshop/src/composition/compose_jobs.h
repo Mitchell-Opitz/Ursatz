@@ -8,6 +8,7 @@
 #include <cJSON.h>
 
 #include "jobs/job_queue.h"
+#include "harmonies.h"
 #include "pieces.h"
 #include "themes.h"
 
@@ -17,6 +18,7 @@
 typedef enum {
   WORKSHOP_COMPOSE_THEME,
   WORKSHOP_COMPOSE_PIECE,
+  WORKSHOP_COMPOSE_HARMONY,
   WORKSHOP_COMPOSE_PIECE_REGENERATE,
   WORKSHOP_COMPOSE_PIECE_VARIATIONS,
   WORKSHOP_COMPOSE_PIECE_CHOOSE

@@ -387,7 +387,10 @@ UrsatzStatus workshop_request_resolve(const char *kind, const cJSON *body, const
     if (!request) {
         return out_of_memory(error);
     }
-    UrsatzStatus status = strcmp(kind, "theme") == 0 ? resolve_theme(body, request, error) : resolve_piece(body, request, dir, error);
+    /* A harmony plan's request holds no reference (R-767): it is the Composer's progression request as stored. */
+    UrsatzStatus status = strcmp(kind, "theme") == 0     ? resolve_theme(body, request, error)
+                          : strcmp(kind, "harmony") == 0 ? URSATZ_OK
+                                                         : resolve_piece(body, request, dir, error);
     if (status == URSATZ_OK) {
         /* A style, its weight and its exclusions go together: without a brief the request has none. */
         if (style_path) {

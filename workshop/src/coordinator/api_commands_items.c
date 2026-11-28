@@ -328,9 +328,10 @@ static UrsatzStatus compose_or_explore(const WorkshopCall *call, WorkshopReply *
     }
     const cJSON *type = cJSON_GetObjectItemCaseSensitive(meta, "type");
     bool piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
+    bool harmony = cJSON_IsString(type) && strcmp(type->valuestring, "harmony") == 0;
     cJSON_Delete(meta);
     cJSON_Delete(stored);
-    if (explore && piece) {
+    if (explore && (piece || harmony)) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/target", "explore composes themes");
     }
     int distance = 0;
@@ -342,7 +343,7 @@ static UrsatzStatus compose_or_explore(const WorkshopCall *call, WorkshopReply *
         }
         distance = distance_member->valueint;
     }
-    WorkshopComposeOp op = piece ? WORKSHOP_COMPOSE_PIECE : WORKSHOP_COMPOSE_THEME;
+    WorkshopComposeOp op = harmony ? WORKSHOP_COMPOSE_HARMONY : piece ? WORKSHOP_COMPOSE_PIECE : WORKSHOP_COMPOSE_THEME;
     WorkshopComposeJob *job = workshop_compose_job_new(op, call->target);
     if (!job) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
@@ -352,7 +353,7 @@ static UrsatzStatus compose_or_explore(const WorkshopCall *call, WorkshopReply *
     job->update_uses = cJSON_IsTrue(update_uses);
     job->explore = explore;
     job->distance = distance;
-    UrsatzStatus settings_status = read_settings_params(call, piece, call->target, job, error);
+    UrsatzStatus settings_status = read_settings_params(call, piece || harmony, call->target, job, error);
     if (settings_status != URSATZ_OK) {
         workshop_compose_job_free(job);
         return settings_status;
