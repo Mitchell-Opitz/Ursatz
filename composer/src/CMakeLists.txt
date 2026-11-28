@@ -30,6 +30,7 @@ add_library(ursatz_composer_engine STATIC
     api/api_piece_regenerate.c
     api/api_piece_rows.c
     api/api_piece_variations.c
+    api/api_palette.c
     api/api_progression.c
     api/api_counterpoint.c
     api/api_develop.c

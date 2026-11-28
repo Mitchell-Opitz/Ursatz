@@ -10,6 +10,7 @@ composer_api_lock
 composer_api_motive
 composer_api_motive_from_midi
 composer_api_motive_render
+composer_api_palette
 composer_api_piece
 composer_api_piece_variations
 composer_api_plan

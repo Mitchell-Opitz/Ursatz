@@ -270,3 +270,103 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
     }
     return URSATZ_OK;
 }
+
+/* ---------------------------------------------------------------- the text of a chord (the palette) */
+
+/* The root and quality of the triad a chord numeral reads as in the key, as request_read_chords resolves it: false when the text is not read. */
+static bool text_chord(const ComposerChords *tones, const SpelledKey *key, const char *text, int *root, StandardTonalityTriadQuality *quality) {
+    PlanMeter meter = {4, 4, 0};
+    cJSON *list = cJSON_CreateArray();
+    cJSON *entry = list != NULL ? cJSON_CreateObject() : NULL;
+    GivenChord given[4];
+    char numerals[4][PLAN_ROMAN_NUMERAL_MAX];
+    size_t count = 0;
+    UrsatzError error;
+    bool read = false;
+    if (entry != NULL && cJSON_AddNumberToObject(entry, "bar", 1) != NULL && cJSON_AddStringToObject(entry, "text", text) != NULL) {
+        cJSON_AddItemToArray(list, entry);
+        entry = NULL;
+        read = request_read_chords(tones, list, "/chords", "the section", 1, &meter, key, 1, given, numerals, 4, &count, &error) == URSATZ_OK &&
+               count == 1;
+    }
+    cJSON_Delete(entry);
+    cJSON_Delete(list);
+    if (!read) {
+        return false;
+    }
+    HarmonyKind kind = harmony_kind(tones, key);
+    HarmonyChord chord;
+    if (!harmony_roman_parse_in(&kind, numerals[0], &chord) || chord.seventh || chord.color != NULL) {
+        return false;
+    }
+    /* What sounds, by the one owner of a chord's pitch classes: the harmony tables' V of a minor key is the major triad. */
+    int intervals[4];
+    size_t size = 3;
+    if (!composer_chord_intervals(kind.chords, kind.mode, kind.modal, &chord, root, intervals, &size) || size != 3) {
+        return false;
+    }
+    bool found = false;
+    for (int q = 0; !found && q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
+        int triad[3];
+        found = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, triad) && triad[1] == intervals[1] && triad[2] == intervals[2];
+        *quality = found ? (StandardTonalityTriadQuality)q : *quality;
+    }
+    return found;
+}
+
+bool composer_chord_text_of(const ComposerChords *chords, const SpelledKey *key, int degree, int alteration, StandardTonalityTriadQuality quality,
+                            const PitchMaterial *mode, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
+    if (chords == NULL || key == NULL || key->material == NULL || out == NULL || degree < 1 || degree > 7) {
+        return false;
+    }
+    const PitchMaterial *own = key->material;
+    int wanted = ((MAJOR[degree - 1] + alteration) % 12 + 12) % 12;
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    /* The upper-case numeral first (the key's own chord on the degree, or its alteration), then the numeral that names the quality
+       (v, iv, iio, III+), then the suffix of the mode. */
+    for (int styled = 0; styled < 2; styled++) {
+        for (int pass = 0; pass < 3; pass++) {
+            for (int k = 1; k <= 7; k++) {
+                int step = pitch_material_step(own, k);
+                int offset = pass == 0 ? 0 : pass == 1 ? -1 : 1;
+                if (step < 0 || ((step + offset) % 12 + 12) % 12 != wanted) {
+                    continue;
+                }
+                StandardTonalityNumeralText numeral;
+                memset(&numeral, 0, sizeof(numeral));
+                numeral.degree = k;
+                numeral.alteration = offset;
+                numeral.quality = styled ? (StandardTonalityNumeralQuality)quality : STANDARD_TONALITY_NUMERAL_MAJOR;
+                int root;
+                StandardTonalityTriadQuality read;
+                if (standard_tonality_numeral_format(&numeral, text, sizeof(text)) && text_chord(chords, key, text, &root, &read) && root == wanted &&
+                    read == quality) {
+                    snprintf(out, PLAN_ROMAN_NUMERAL_MAX, "%s", text);
+                    return true;
+                }
+            }
+        }
+    }
+    for (int k = 1; mode != NULL && k <= 7; k++) {
+        int root;
+        StandardTonalityTriadQuality triad;
+        if (pitch_material_triad_on(mode, k, &root, NULL, &triad) && root == wanted && triad == quality) {
+            StandardTonalityNumeralText numeral;
+            memset(&numeral, 0, sizeof(numeral));
+            numeral.degree = k;
+            numeral.quality = STANDARD_TONALITY_NUMERAL_MAJOR;
+            int read_root;
+            StandardTonalityTriadQuality read;
+            size_t used;
+            if (standard_tonality_numeral_format(&numeral, text, sizeof(text)) && (used = strlen(text)) + strlen(mode->key_word) + 2 <= sizeof(text)) {
+                snprintf(text + used, sizeof(text) - used, ":%s", mode->key_word);
+                if (text_chord(chords, key, text, &read_root, &read) && read_root == wanted && read == quality) {
+                    snprintf(out, PLAN_ROMAN_NUMERAL_MAX, "%s", text);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
