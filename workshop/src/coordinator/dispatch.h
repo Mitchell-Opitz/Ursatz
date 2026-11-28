@@ -109,6 +109,12 @@ WORKSHOP_HANDLER(workshop_q_composer_random_motifs);
 WORKSHOP_HANDLER(workshop_q_composer_import_motif);
 WORKSHOP_HANDLER(workshop_q_composer_recognize);
 
+/* knowledge (api_knowledge.c) */
+WORKSHOP_HANDLER(workshop_q_knowledge_palette);
+WORKSHOP_HANDLER(workshop_q_knowledge_find);
+WORKSHOP_HANDLER(workshop_q_knowledge_show);
+WORKSHOP_HANDLER(workshop_q_knowledge_check);
+
 /* projects and items (api_items.c, api_item_files.c, api_motifs.c) */
 WORKSHOP_HANDLER(workshop_q_project_list);
 WORKSHOP_HANDLER(workshop_q_project_get);

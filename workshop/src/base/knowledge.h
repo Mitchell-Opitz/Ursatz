@@ -31,4 +31,8 @@ const KnowledgeSnapshot *workshop_knowledge_snapshot(void);
    the shutdown it holds no snapshot, so an entry refuses. */
 const ComposerContext *workshop_composer_context_global(void);
 
+/* Whether `document_text` (a knowledge document) loads beside the embedded entries and the data folder's knowledge files (NULL `data_dir`: none): a
+   snapshot is built and freed, the running one untouched. False with the loader's message, which names the document as "file". */
+bool workshop_knowledge_check(const char *data_dir, const char *document_text, char *message, size_t message_size);
+
 #endif

@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+struct cJSON; /* the entry JSON accessor returns the library's own parsed object; include <cJSON.h> to read it */
+
 #include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
 #include "theory/knowledge/form_entry.h"
@@ -75,6 +77,13 @@ size_t knowledge_snapshot_entry_count(const KnowledgeSnapshot *snapshot);
 
 /* The entry at `index` in id order, or NULL out of range. */
 const KnowledgeEntry *knowledge_snapshot_entry_at(const KnowledgeSnapshot *snapshot, size_t index);
+
+/* The entry as it was loaded (its JSON object), owned by the snapshot; NULL for an id that is absent. */
+const struct cJSON *knowledge_snapshot_entry_json(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The aliases of an entry, in file order: how many, and the text of one (NULL past the last or for an id that is absent). */
+size_t knowledge_snapshot_entry_alias_count(const KnowledgeSnapshot *snapshot, const char *id);
+const char *knowledge_snapshot_entry_alias(const KnowledgeSnapshot *snapshot, const char *id, size_t index);
 
 /* The entry with this id, or NULL. */
 const KnowledgeEntry *knowledge_snapshot_entry(const KnowledgeSnapshot *snapshot, const char *id);

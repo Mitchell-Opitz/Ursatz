@@ -65,6 +65,7 @@ typedef struct {
     char **owned;     /* texts copied for the loaders: key word, family, aliases and link targets */
     size_t owned_count;
     char *strings; /* the id, kind, subtype and name texts the entry and the loaders point into */
+    cJSON *json;   /* the entry as loaded (a copy of its object), for knowledge_snapshot_entry_json */
 } Slot;
 
 struct KnowledgeSnapshot {

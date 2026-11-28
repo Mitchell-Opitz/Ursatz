@@ -44,13 +44,3 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
-library/theory/tonality/modal_palette.c fill  # no application lists a palette until the workshop's knowledge.palette reaches composer_api_palette (P70 B8 commit 3); its tests call it
-library/theory/tonality/modal_palette.c has_triad  # no application lists a palette until the workshop's knowledge.palette reaches composer_api_palette (P70 B8 commit 3); its tests call it
-library/theory/tonality/modal_palette.c major_degree_of  # no application lists a palette until the workshop's knowledge.palette reaches composer_api_palette (P70 B8 commit 3); its tests call it
-library/theory/tonality/modal_palette.c modal_palette  # no application lists a palette until the workshop's knowledge.palette reaches composer_api_palette (P70 B8 commit 3); its tests call it
-composer/src/api/api_palette.c chord_name  # no application asks the Composer for a palette until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it
-composer/src/api/api_palette.c composer_api_palette  # no application asks the Composer for a palette until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it
-composer/src/api/api_palette.c material_degree  # no application asks the Composer for a palette until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it
-composer/src/api/api_palette.c material_json  # no application asks the Composer for a palette until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it
-composer/src/piece/request_chords.c composer_chord_text_of  # reached only through composer_api_palette, which no application calls until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it
-composer/src/piece/request_chords.c text_chord  # reached only through composer_api_palette, which no application calls until the workshop's knowledge.palette does (P70 B8 commit 3); its test calls it

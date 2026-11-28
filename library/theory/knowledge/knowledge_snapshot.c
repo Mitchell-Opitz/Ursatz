@@ -33,6 +33,7 @@ static void slot_release(Slot *slot) {
     free(slot->aliases);
     free(slot->ensemble_slots);
     free(slot->strings);
+    cJSON_Delete(slot->json);
 }
 
 void knowledge_snapshot_destroy(KnowledgeSnapshot *snapshot) {
@@ -1050,6 +1051,11 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
     slot.path = path;
     common_fnv1a64_hex(fnv(COMMON_FNV1A64_OFFSET, text), slot.entry.hash);
     cJSON_free(text);
+    slot.json = cJSON_Duplicate(entry, true);
+    if (slot.json == NULL) {
+        free(slot.strings);
+        return KNOWLEDGE_ERR_ALLOC;
+    }
 
     KnowledgeStatus loaded = read_details(&slot, entry, path, message, message_size);
     if (loaded == KNOWLEDGE_OK && snapshot->count == snapshot->capacity) {
@@ -1257,6 +1263,21 @@ size_t knowledge_snapshot_entry_count(const KnowledgeSnapshot *snapshot) {
 
 const KnowledgeEntry *knowledge_snapshot_entry_at(const KnowledgeSnapshot *snapshot, size_t index) {
     return snapshot != NULL && index < snapshot->count ? &snapshot->slots[index].entry : NULL;
+}
+
+const struct cJSON *knowledge_snapshot_entry_json(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *found = knowledge_find_slot(snapshot, id);
+    return found != NULL ? found->json : NULL;
+}
+
+size_t knowledge_snapshot_entry_alias_count(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *found = knowledge_find_slot(snapshot, id);
+    return found != NULL ? found->alias_count : 0;
+}
+
+const char *knowledge_snapshot_entry_alias(const KnowledgeSnapshot *snapshot, const char *id, size_t index) {
+    const Slot *found = knowledge_find_slot(snapshot, id);
+    return found != NULL && index < found->alias_count ? found->aliases[index] : NULL;
 }
 
 const Slot *knowledge_find_slot(const KnowledgeSnapshot *snapshot, const char *id) {
