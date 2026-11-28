@@ -669,6 +669,12 @@ ursatz_test_executable(test_blueprint_generator_sweep LIBS ursatz_composer_engin
 ursatz_test(test_blueprint_generator_sweep TARGET test_blueprint_generator_sweep LABELS slow)
 ursatz_test(test_blueprint_generator_sweep_smoke TARGET test_blueprint_generator_sweep ARGS fast)
 
+# Gate 2 of P70 (R-770): the harmony lab over seeds 1 to 10, each case pinned at its measured count; see test_harmony_lab_sweep.c. The smoke test runs seed 1 of every case.
+ursatz_test_executable(test_harmony_lab_sweep LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_harmony_lab_sweep TARGET test_harmony_lab_sweep LABELS slow)
+ursatz_test(test_harmony_lab_sweep_smoke TARGET test_harmony_lab_sweep ARGS fast)
+
 # The presets (P69c B5, R-754): each reads over the defaults, a request's settings layer over a preset's, a theme request names one, an unknown one is refused.
 ursatz_test(test_presets LIBS ursatz_composer_engine composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
