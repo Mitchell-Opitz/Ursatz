@@ -104,6 +104,10 @@ static void test_reference_patterns(void) {
     same_steps(wave->steps, wave->step_count, wave_steps, 8);
     assert(!wave->compound && meter_steps(wave, "3/4", &count) != NULL && count == 6);
 
+    /* Planed chords (R-763): the only figure that planes, a chord on every beat of each meter. */
+    const PatternAccompaniment *planed = accompaniment(snapshot, "michelle.pattern.planed-chords");
+    assert(planed->planing && planed->beat_grid && !planed->compound && planed->step_count == 4 && planed->meter_count == 2);
+    assert(!eight->planing && !wave->planing);
     const PatternAccompaniment *compound = accompaniment(snapshot, "michelle.pattern.compound-oom-pah");
     const PatternStep compound_steps[] = {REST, REST, CHORD, REST, REST, CHORD};
     assert(!compound->beat_grid && compound->compound);
