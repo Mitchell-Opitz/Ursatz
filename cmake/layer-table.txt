@@ -84,7 +84,7 @@ uses analysis-texture      model theory analysis-notes
 uses analysis-counterpoint model theory analysis-notes common
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
-uses analysis-dimension    model theory-vocabulary analysis-notes analysis-similarity
+uses analysis-dimension    model theory-vocabulary theory-harmony analysis-notes analysis-similarity
 # The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
 module realization     library/realization        prefix realization/
 group realization realization

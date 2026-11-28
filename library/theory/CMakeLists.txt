@@ -209,6 +209,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/tonal_key.h
         theory/tonality/triad_in_key_rules.h
         theory/tonality/triad_rules.h
+        theory/harmony/chord_value.h
         theory/harmony/harmonic_function.h
         theory/harmony/harmony_applied.h
         theory/harmony/harmony_cadence_kinds.h
