@@ -176,7 +176,7 @@ const ComposerContext *workshop_composer_context_global(void) {
   return &g_composer_context;
 }
 
-bool workshop_knowledge_check(const char *data_dir, const char *document_text, char *message, size_t message_size) {
+bool workshop_knowledge_check(const char *data_dir, const char *skip_file, const char *document_text, char *message, size_t message_size) {
   char *paths[USER_FILES_MAX];
   char *texts[USER_FILES_MAX];
   KnowledgeUserFile files[USER_FILES_MAX + 1];
@@ -188,14 +188,19 @@ bool workshop_knowledge_check(const char *data_dir, const char *document_text, c
     snprintf(message, message_size, "the knowledge folder cannot be read");
     return false;
   }
+  size_t used = 0;
   for (size_t i = 0; i < count; i++) {
-    files[i].path = paths[i];
-    files[i].text = texts[i];
+    const char *slash = strrchr(paths[i], '/');
+    if (skip_file != NULL && strcmp(slash ? slash + 1 : paths[i], skip_file) == 0) {
+      continue; /* the file the document replaces */
+    }
+    files[used].path = paths[i];
+    files[used++].text = texts[i];
   }
-  files[count].path = "file";
-  files[count].text = document_text;
+  files[used].path = skip_file != NULL ? skip_file : "file";
+  files[used].text = document_text;
   KnowledgeSnapshot *snapshot = NULL;
-  bool ok = knowledge_snapshot_build(files, count + 1, &snapshot, message, message_size) == KNOWLEDGE_OK;
+  bool ok = knowledge_snapshot_build(files, used + 1, &snapshot, message, message_size) == KNOWLEDGE_OK;
   knowledge_snapshot_destroy(snapshot);
   for (size_t i = 0; i < count; i++) {
     free(paths[i]);

@@ -59,6 +59,16 @@ Jobs: the long work the workshop runs for a command.
 |---|---|---|---|
 | `job.cancel` | `job:<id>` | none | Ask a job to stop |
 
+## Knowledge
+
+Knowledge: her own entries in the data folder's knowledge/user.json, and a harmony plan kept as her schema.
+
+| Command | Target | Params | Does |
+|---|---|---|---|
+| `knowledge.add` | none | `entry object [note string]` | Add an entry of her own to the knowledge |
+| `knowledge.update` | none | `id string entry object [note string]` | Replace an entry of hers |
+| `knowledge.delete` | none | `id string [note string]` | Delete an entry of hers |
+
 ## Library
 
 Library pieces: import, change, delete and analyze again the pieces a person uploaded.

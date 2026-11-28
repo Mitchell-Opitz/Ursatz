@@ -83,6 +83,7 @@ add_library(ursatz_workshop_engine STATIC
     src/coordinator/api_analysis.c
     src/coordinator/api_collections.c
     src/coordinator/api_commands_items.c
+    src/coordinator/api_commands_knowledge.c
     src/coordinator/api_commands_library.c
     src/coordinator/api_commands_sections.c
     src/coordinator/api_commands_settings.c

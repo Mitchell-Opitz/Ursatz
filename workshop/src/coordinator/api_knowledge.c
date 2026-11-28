@@ -182,7 +182,7 @@ WORKSHOP_HANDLER(workshop_q_knowledge_check) {
         return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     char message[512];
-    bool ok = workshop_knowledge_check(workshop_data_dir(call->workshop), text, message, sizeof(message));
+    bool ok = workshop_knowledge_check(workshop_data_dir(call->workshop), NULL, text, message, sizeof(message));
     cJSON_free(text);
     if (!ok) {
         return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/file", "%s", message);

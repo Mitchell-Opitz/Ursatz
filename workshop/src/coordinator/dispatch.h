@@ -179,6 +179,9 @@ WORKSHOP_HANDLER(workshop_c_ratings_keep);
 
 /* settings commands (api_commands_settings.c) */
 WORKSHOP_HANDLER(workshop_c_settings_set);
+WORKSHOP_HANDLER(workshop_c_knowledge_add);
+WORKSHOP_HANDLER(workshop_c_knowledge_update);
+WORKSHOP_HANDLER(workshop_c_knowledge_delete);
 WORKSHOP_HANDLER(workshop_c_settings_unset);
 WORKSHOP_HANDLER(workshop_c_settings_import);
 WORKSHOP_HANDLER(workshop_c_settings_override);

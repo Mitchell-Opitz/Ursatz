@@ -41,5 +41,3 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
-workshop/src/base/knowledge.c workshop_knowledge_rebuild  # no command calls it until P70 B11 commit 2 (the knowledge commands); its test calls it
-workshop/src/composition/composer_client.c workshop_composer_vocabulary_reset  # no command calls it until P70 B11 commit 2 (the knowledge commands); its test calls it

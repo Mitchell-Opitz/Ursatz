@@ -40,7 +40,8 @@ const KnowledgeSnapshot *workshop_knowledge_snapshot(void);
 const ComposerContext *workshop_composer_context_global(void);
 
 /* Whether `document_text` (a knowledge document) loads beside the embedded entries and the data folder's knowledge files (NULL `data_dir`: none): a
-   snapshot is built and freed, the running one untouched. False with the loader's message, which names the document as "file". */
-bool workshop_knowledge_check(const char *data_dir, const char *document_text, char *message, size_t message_size);
+   snapshot is built and freed, the running one untouched. A file of the folder named skip_file (NULL: none) is left out, as the document replaces it, and the document is then
+   named skip_file in messages. False with the loader's message, which names the document as "file" otherwise. */
+bool workshop_knowledge_check(const char *data_dir, const char *skip_file, const char *document_text, char *message, size_t message_size);
 
 #endif
