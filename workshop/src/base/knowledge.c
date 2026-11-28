@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <common/files.h>
+#include <pthread.h>
 
 #define USER_FILES_MAX 64
 
@@ -13,6 +14,11 @@ static char *g_user_paths[USER_FILES_MAX];
 static char *g_user_texts[USER_FILES_MAX];
 static size_t g_user_count = 0;
 static ComposerContext g_composer_context = {NULL};
+static char *g_data_dir = NULL;
+#define RETIRED_MAX 256
+static KnowledgeSnapshot *g_retired[RETIRED_MAX]; /* snapshots a rebuild replaced: a running job may hold one, so they are freed at the shutdown */
+static size_t g_retired_count = 0;
+static pthread_mutex_t g_rebuild_lock = PTHREAD_MUTEX_INITIALIZER;
 
 bool workshop_knowledge_init(void) {
   if (g_snapshot) {
@@ -40,6 +46,13 @@ void workshop_knowledge_shutdown(void) {
   g_composer_context.knowledge = NULL;
   knowledge_snapshot_destroy(g_snapshot);
   g_snapshot = NULL;
+  for (size_t i = 0; i < g_retired_count; i++) {
+    knowledge_snapshot_destroy(g_retired[i]);
+    g_retired[i] = NULL;
+  }
+  g_retired_count = 0;
+  free(g_data_dir);
+  g_data_dir = NULL;
   free_user_files();
 }
 
@@ -114,7 +127,45 @@ bool workshop_knowledge_init_folder(const char *data_dir) {
     return false;
   }
   g_composer_context.knowledge = g_snapshot;
+  g_data_dir = common_strdup(data_dir);
   return true;
+}
+
+UrsatzStatus workshop_knowledge_rebuild(void) {
+  char *paths[USER_FILES_MAX];
+  char *texts[USER_FILES_MAX];
+  KnowledgeUserFile files[USER_FILES_MAX];
+  size_t count = 0;
+  UrsatzStatus status = URSATZ_OK;
+  pthread_mutex_lock(&g_rebuild_lock);
+  if (g_data_dir == NULL || g_snapshot == NULL || g_retired_count >= RETIRED_MAX) {
+    pthread_mutex_unlock(&g_rebuild_lock);
+    return URSATZ_ERR_INTERNAL;
+  }
+  if (!read_folder(g_data_dir, paths, texts, USER_FILES_MAX, &count)) {
+    pthread_mutex_unlock(&g_rebuild_lock);
+    return URSATZ_ERR_IO;
+  }
+  for (size_t i = 0; i < count; i++) {
+    files[i].path = paths[i];
+    files[i].text = texts[i];
+  }
+  KnowledgeSnapshot *built = NULL;
+  char message[512];
+  if (knowledge_snapshot_build(files, count, &built, message, sizeof(message)) != KNOWLEDGE_OK) {
+    fprintf(stderr, "ursatz-workshop: cannot rebuild the knowledge: %s\n", message);
+    status = URSATZ_ERR_INTERNAL;
+  } else {
+    g_retired[g_retired_count++] = g_snapshot;
+    g_snapshot = built;
+    g_composer_context.knowledge = built;
+  }
+  for (size_t i = 0; i < count; i++) {
+    free(paths[i]);
+    free(texts[i]);
+  }
+  pthread_mutex_unlock(&g_rebuild_lock);
+  return status;
 }
 
 const KnowledgeSnapshot *workshop_knowledge_snapshot(void) {

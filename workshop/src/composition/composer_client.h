@@ -44,6 +44,10 @@ void workshop_composer_reply_destroy(WorkshopComposerReply *reply);
  * Composer could not give it. */
 const char *workshop_composer_vocabulary(void);
 
+/* Forgets the vocabulary so the next call builds it again from the knowledge snapshot as it is then (workshop_knowledge_rebuild calls it). Text and lists
+ * an earlier call returned stay valid. */
+void workshop_composer_vocabulary_reset(void);
+
 /* The Composer's forms (composer_api_forms), built on the first call and kept for the process. NULL when the Composer
  * could not give them. */
 const char *workshop_composer_forms(void);

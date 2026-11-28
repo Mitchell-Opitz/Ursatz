@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include <common/status.h>
+
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/composer_api.h>
 
@@ -20,6 +22,12 @@ bool workshop_knowledge_init(void);
    at all, adds nothing; the files are read, never written). False with a message on stderr when a file cannot be read or a user entry is
    broken: the message names the file, the entry and the field. NULL `data_dir` is workshop_knowledge_init. */
 bool workshop_knowledge_init_folder(const char *data_dir);
+
+/* Builds the snapshot again from the embedded entries and the files of the data folder's knowledge folder as they are now, and swaps it in (the Composer's
+   context follows). The snapshot it replaces is kept until the shutdown, since a running job may hold it. URSATZ_ERR_INTERNAL when the workshop has no data folder
+   or the files no longer load (the snapshot is then as it was); the commands that write her entries check the candidate first, so this does not happen after
+   a good commit. */
+UrsatzStatus workshop_knowledge_rebuild(void);
 
 /* Frees the snapshot. A no-op when there is none. */
 void workshop_knowledge_shutdown(void);

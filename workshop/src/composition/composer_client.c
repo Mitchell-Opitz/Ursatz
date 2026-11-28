@@ -43,9 +43,16 @@ void workshop_composer_reply_destroy(WorkshopComposerReply *reply) {
   memset(reply, 0, sizeof(*reply));
 }
 
-static pthread_once_t g_vocabulary_once = PTHREAD_ONCE_INIT;
+/* The vocabulary the Composer gives, built on first use and again after a reset (R-768: a kept entry is offered at once). A reset keeps the old text and
+   tree, which a caller may still hold, until the process ends. */
+#define VOCABULARY_RETIRED_MAX 256
+static pthread_mutex_t g_vocabulary_lock = PTHREAD_MUTEX_INITIALIZER;
+static bool g_vocabulary_built = false;
 static char *g_vocabulary = NULL;
 static cJSON *g_vocabulary_tree = NULL;
+static char *g_retired_text[VOCABULARY_RETIRED_MAX];
+static cJSON *g_retired_tree[VOCABULARY_RETIRED_MAX];
+static size_t g_retired_count = 0;
 
 static void vocabulary_build(void) {
   ComposerResponse response;
@@ -62,8 +69,29 @@ static void vocabulary_build(void) {
 }
 
 const char *workshop_composer_vocabulary(void) {
-  pthread_once(&g_vocabulary_once, vocabulary_build);
-  return g_vocabulary;
+  pthread_mutex_lock(&g_vocabulary_lock);
+  if (!g_vocabulary_built) {
+    vocabulary_build();
+    g_vocabulary_built = true;
+  }
+  const char *text = g_vocabulary;
+  pthread_mutex_unlock(&g_vocabulary_lock);
+  return text;
+}
+
+void workshop_composer_vocabulary_reset(void) {
+  pthread_mutex_lock(&g_vocabulary_lock);
+  if (g_vocabulary_built && g_retired_count < VOCABULARY_RETIRED_MAX) {
+    g_retired_text[g_retired_count] = g_vocabulary;
+    g_retired_tree[g_retired_count++] = g_vocabulary_tree;
+  } else if (g_vocabulary_built) {
+    free(g_vocabulary);
+    cJSON_Delete(g_vocabulary_tree);
+  }
+  g_vocabulary = NULL;
+  g_vocabulary_tree = NULL;
+  g_vocabulary_built = false;
+  pthread_mutex_unlock(&g_vocabulary_lock);
 }
 
 static pthread_once_t g_forms_once = PTHREAD_ONCE_INIT;
