@@ -40,7 +40,10 @@
             ],
             "properties": {
               "heard": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "chords": {
                 "type": "array",
@@ -78,6 +81,102 @@
               },
               "musicxml": {
                 "type": "string"
+              },
+              "measures": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "bar",
+                    "tension",
+                    "brightness"
+                  ],
+                  "properties": {
+                    "bar": {
+                      "type": "integer"
+                    },
+                    "tension": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "brightness": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "harmony": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "key",
+                  "material",
+                  "meter",
+                  "bars",
+                  "chords",
+                  "stages"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "material": {
+                    "type": "string"
+                  },
+                  "with": {
+                    "type": "string"
+                  },
+                  "meter": {
+                    "type": "string"
+                  },
+                  "bars": {
+                    "type": "integer"
+                  },
+                  "chords": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "bar",
+                        "text"
+                      ],
+                      "properties": {
+                        "bar": {
+                          "type": "integer"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "stages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "chord",
+                        "units"
+                      ],
+                      "properties": {
+                        "chord": {
+                          "type": "string"
+                        },
+                        "units": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
               }
             },
             "additionalProperties": false
@@ -90,7 +189,10 @@
           }
         },
         "heard": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "chords": {
           "type": "array",
@@ -136,6 +238,102 @@
         "reading": {
           "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/reading/schema/reading.v1.schema.json",
           "description": "The Composer's hearing of the first progression over that realization, with layers: true."
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bar",
+              "tension",
+              "brightness"
+            ],
+            "properties": {
+              "bar": {
+                "type": "integer"
+              },
+              "tension": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "brightness": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "harmony": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "material",
+            "meter",
+            "bars",
+            "chords",
+            "stages"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "material": {
+              "type": "string"
+            },
+            "with": {
+              "type": "string"
+            },
+            "meter": {
+              "type": "string"
+            },
+            "bars": {
+              "type": "integer"
+            },
+            "chords": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "bar",
+                  "text"
+                ],
+                "properties": {
+                  "bar": {
+                    "type": "integer"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "stages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "chord",
+                  "units"
+                ],
+                "properties": {
+                  "chord": {
+                    "type": "string"
+                  },
+                  "units": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "additionalProperties": false,
@@ -193,6 +391,36 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "progression_schemas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "loop",
+              "materials"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "loop": {
+                "type": "boolean"
+              },
+              "materials": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },

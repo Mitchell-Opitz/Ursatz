@@ -681,7 +681,7 @@ static UrsatzStatus build_document(const KnowledgeSnapshot *knowledge, const Opt
 /* --- the lists of names --------------------------------------------------------------------------------- */
 
 /* `list_schemas`: {"schemas": [{"name", "function", "materials"}], "sequences": [name]}. */
-static UrsatzStatus list_names(const CommonPracticeMaterials *materials, ComposerResponse *out) {
+static UrsatzStatus list_names(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *schemas = document ? cJSON_AddArrayToObject(document, "schemas") : NULL;
     cJSON *sequences = schemas ? cJSON_AddArrayToObject(document, "sequences") : NULL;
@@ -707,6 +707,27 @@ static UrsatzStatus list_names(const CommonPracticeMaterials *materials, Compose
     }
     for (int id = 0; ok && id < SCALE_PATTERN_COUNT; id++) {
         ok = cJSON_AddItemToArray(sequences, cJSON_CreateString(scale_pattern_name((ScalePatternId)id)));
+    }
+    /* The K5 progression schemas a palette places (R-766): {"id", "name", "loop", "materials"}. */
+    cJSON *progression_schemas = ok ? cJSON_AddArrayToObject(document, "progression_schemas") : NULL;
+    ok = ok && progression_schemas != NULL;
+    for (size_t i = 0; ok && i < knowledge_snapshot_schema_count(knowledge); i++) {
+        const SchemaEntry *schema = knowledge_snapshot_schema_at(knowledge, i);
+        if (schema->subtype != SCHEMA_PROGRESSION) {
+            continue;
+        }
+        cJSON *entry = cJSON_CreateObject();
+        cJSON *schema_materials = entry ? cJSON_CreateArray() : NULL;
+        ok = entry && schema_materials && cJSON_AddStringToObject(entry, "id", schema->id) && cJSON_AddStringToObject(entry, "name", schema->name) &&
+             cJSON_AddBoolToObject(entry, "loop", schema->loop);
+        for (size_t m = 0; ok && m < schema->material_count; m++) {
+            ok = cJSON_AddItemToArray(schema_materials, cJSON_CreateString(schema->materials[m]));
+        }
+        ok = ok && cJSON_AddItemToObject(entry, "materials", schema_materials) && cJSON_AddItemToArray(progression_schemas, entry);
+        if (!ok) {
+            cJSON_Delete(schema_materials);
+            cJSON_Delete(entry);
+        }
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -755,7 +776,7 @@ UrsatzStatus composer_api_progression(const ComposerContext *context, const char
         if (!api_member_bool(request, "list_schemas", &list, &found, &out->error)) {
             status = URSATZ_ERR_REQUEST;
         } else if (list) {
-            status = list_names(&materials, out);
+            status = list_names(context->knowledge, &materials, out);
             cJSON_Delete(request);
             if (status != URSATZ_OK) {
                 UrsatzError error = out->error;
