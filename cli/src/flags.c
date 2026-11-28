@@ -66,6 +66,7 @@ const CliFlag CLI_FLAGS[] = {
     {"--keep-contour", NULL, CLI_FLAG_SWITCH, NULL, "interval: keep the contour of the motive"},
     {"--keep-rhythm", NULL, CLI_FLAG_SWITCH, NULL, "liquidate: keep the rhythm of the motive"},
     {"--key", NULL, CLI_FLAG_VALUE, "<key>", "the key, for example 'D minor'"},
+    {"--kind", NULL, CLI_FLAG_VALUE, "<kind>", "knowledge find: only the entries of this kind (material, vocabulary, schema, pattern, ...)"},
     {"--lane", NULL, CLI_FLAG_VALUE, "<lane>", "harmony, bass, melody or inner (and all, where it is the default)"},
     {"--layers", NULL, CLI_FLAG_VALUE, "<dir>", "write the layers of the result into this folder: the realization, the reading and, for a composed piece, the plan"},
     {"--length", NULL, CLI_FLAG_VALUE, "<n>", "fragment: how many notes the fragment has"},

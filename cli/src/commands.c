@@ -12,6 +12,7 @@
 #include "corpus.h"
 #include "counterpoint.h"
 #include "critique.h"
+#include "knowledge.h"
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
@@ -59,6 +60,7 @@ static const char *const FLAGS_MIGRATE[] = {"--backup", "--dry-run", NULL};
 static const char *const FLAGS_COMPOSE[] = {"--base", "--no-wait", "--seed", "--update-uses", NULL};
 static const char *const FLAGS_RESTORE[] = {"--base", "--note", NULL};
 static const char *const FLAGS_EXPLORE[] = {"--base", "--distance", "--no-wait", "--seed", "--taste", NULL};
+static const char *const FLAGS_KNOWLEDGE[] = {"--format", "--kind", NULL};
 static const char *const FLAGS_CRITIQUE[] = {"--format", "--note", "--rated", "--settings", "--verdict", NULL};
 static const char *const FLAGS_RATE[] = {"--better", "--note", "--rating", "--round", "--seed", NULL};
 static const char *const FLAGS_VARIATIONS[] = {"--count", "--format", "--lane", "--node", "--out-dir", "--plain-midi", "--section", "--seed", "--tempo", "--write-midi", "--write-musicxml", NULL};
@@ -525,6 +527,23 @@ const CliCommand CLI_COMMANDS[] = {
     "  ursatz render piece.json --midi piece.mid --musicxml piece.xml --tempo 96\n"
     "  ursatz --data ~/ursatz-data render item:itm-3f2a@v2 --midi piece.mid",
      FLAGS_RENDER, 1, 1, run_render},
+    {"knowledge",
+    "knowledge find <words> [--kind <kind>] | show <id> [--format <text|json>] | check <file>",
+     "Find, show or check knowledge entries",
+    "Finds, shows or checks the entries of the knowledge (R-765): the materials, chord types, vocabulary, schemas, patterns and the rest that the Composer and the Analyzer read, built into the program and, with a data folder, the files of its knowledge folder (user.* entries). Name the data folder before the subcommand (ursatz --data <dir> knowledge find ...) or with URSATZ_DATA; without one only the built-in entries are read.\n"
+    "\n"
+    "  find <words>   the entries whose id, name or an alias holds every word (case ignored), one line each: <id>  <kind>/<subtype>  <name>; at most 50. Quote several words. --kind limits the kind.\n"
+    "  show <id>      the entry as Ursatz Text (the default) or, with --format json, as loaded.\n"
+    "  check <file>   whether the knowledge document in <file> loads beside the built-in entries and the data folder's files: prints ok: <n> entries, or the loader's refusal (the file, the entry id and the field).\n"
+    "\n"
+    "Exit status: 0 success; 1 usage, or an id or kind no entry has; 2 a document the loader refuses, or any other failure. See cli/docs/cli-knowledge.md.\n"
+    "\n"
+    "Example:\n"
+    "  ursatz knowledge find mario\n"
+    "  ursatz knowledge find shuttle --kind schema\n"
+    "  ursatz knowledge show omt.schema.aeolian-cadence --format json\n"
+    "  ursatz knowledge check my-voicings.json",
+     FLAGS_KNOWLEDGE, 2, 2, run_knowledge},
     {"critique",
     "critique <file>... [--settings <file>] [--format text|json]\n"
     "critique --rated <file> [--settings <file>] [--format text|json]\n"
