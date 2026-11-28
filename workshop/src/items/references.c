@@ -54,7 +54,7 @@ static UrsatzStatus fill_uses_locked(const char *self_id, const cJSON *body, cJS
 
 #define BODY_REFERENCES_MAX 40
 
-typedef enum { REF_MELODIC_MOTIF, REF_ACCOMPANIMENT_MOTIF, REF_THEME } ReferenceKind;
+typedef enum { REF_MELODIC_MOTIF, REF_ACCOMPANIMENT_MOTIF, REF_THEME, REF_HARMONY } ReferenceKind;
 
 /*
  * The references a body makes to versions of other items (R-650): the `$item` references of its request in order, a theme's
@@ -84,8 +84,10 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
     add_reference(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(request, "accompaniment"), "motive"), REF_ACCOMPANIMENT_MOTIF,
                   refs, kinds, &count);
     add_reference(cJSON_GetObjectItemCaseSensitive(request, "motive"), REF_MELODIC_MOTIF, refs, kinds, &count);
+    add_reference(cJSON_GetObjectItemCaseSensitive(request, "chords"), REF_HARMONY, refs, kinds, &count);
     const cJSON *section = NULL;
     cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(request, "sections")) {
+        add_reference(cJSON_GetObjectItemCaseSensitive(section, "harmony"), REF_HARMONY, refs, kinds, &count);
         const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
         add_reference(cJSON_GetObjectItemCaseSensitive(fill, "motive"), REF_MELODIC_MOTIF, refs, kinds, &count);
         add_reference(cJSON_GetObjectItemCaseSensitive(fill, "plan"), REF_THEME, refs, kinds, &count);
@@ -101,15 +103,21 @@ static UrsatzStatus check_reference_locked(const cJSON *reference, ReferenceKind
     const char *source_id = common_json_string(reference, "item_id");
     int number = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
     bool theme = kind == REF_THEME;
+    bool harmony = kind == REF_HARMONY;
     cJSON *source = NULL;
     cJSON *version = NULL;
     UrsatzStatus result = store_load_item_locked(source_id, &source);
     if (result == URSATZ_OK) {
-        result = strcmp(common_json_string(source, "type"), theme ? "theme" : "motif") == 0 && number <= store_current_version_of(source)
+        result = strcmp(common_json_string(source, "type"), theme ? "theme" : harmony ? "harmony" : "motif") == 0 && number <= store_current_version_of(source)
                      ? store_read_version_locked(source_id, number, &version)
                      : workshop_fail(URSATZ_ERR_REQUEST, "invalid body");
     }
-    if (result == URSATZ_OK && theme) {
+    if (result == URSATZ_OK && harmony) {
+        /* a harmony version that was composed: a result with its chords */
+        if (!cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(version, "result"), "harmony"))) {
+            result = workshop_fail(URSATZ_ERR_REQUEST, "the harmony version is not composed");
+        }
+    } else if (result == URSATZ_OK && theme) {
         char plan[PATH_BYTES];
         const cJSON *composed = cJSON_GetObjectItemCaseSensitive(version, "result");
         if (!cJSON_IsObject(composed) ||

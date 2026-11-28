@@ -15,6 +15,9 @@
  *   {"$item": {"item_id", "version", "file": "plan.json"}}   the stored plan of a theme fill (`plan`)
  *   {"$pool": {"item_id", "pool"}}      the saved forms of a motif (a motif fill's `forms`), for the pool word
  *
+ * A harmony version (R-767) is also a reference: {"$item": {"item_id", "version"}} as a theme's `chords` (the version's chords, bars from 0) or a
+ * piece section's `harmony` ({"chords": [...]}, bars from 1); the version must be composed.
+ *
  * workshop_request_resolve answers the request the Composer reads: kind is "theme" or "piece", body the stored body with its
  * `uses` (the copy of each used version) and its `request`. dir is the folder the plans of theme fills are copied into
  * (NULL copies nothing: the request names the source plans, as a validate does); style_path is the brief's style file (NULL
