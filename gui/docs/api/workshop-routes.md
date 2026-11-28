@@ -10,7 +10,7 @@ The generic routes of the backend: any query or command of the workshop by its n
 | `POST /api/workshop/command` | the command object, or a file (below) | `{"ok": true, "journal_seq", ...members}` |
 | `GET /api/workshop/status` | none | `{"ok": true, ...}` |
 
-`<name>` is a query of the workshop ([commands](../../../workshop/docs/commands.md)): `project.list`, `item.get`, `job.get`. A query that answers a file is sent as the file with its content type and, for a download, its file name.
+`<name>` is a query of the workshop ([commands](../../../workshop/docs/commands.md)): `project.list`, `item.get`, `job.get`. The Harmony Lab uses `composer.progression` (a progression request written with its MusicXML and playback, nothing saved; with `list_schemas` the names of the progression schemas) and the knowledge queries `knowledge.palette`, `knowledge.find`, `knowledge.show` and `knowledge.check` ([knowledge](../../../workshop/docs/knowledge.md)). A query that answers a file is sent as the file with its content type and, for a download, its file name.
 
 ## Commands
 
