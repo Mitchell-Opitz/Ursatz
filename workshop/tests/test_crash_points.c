@@ -295,6 +295,24 @@ static bool is_new_item_rename(void) {
     return renamed;
 }
 
+/* Her knowledge file written as the knowledge commands write it (R-768): one staged file, in one transaction. */
+static const char kKnowledgeFile[] = "{\"schema\": \"ursatz-knowledge\", \"schema_version\": 1, \"source\": \"user\", \"entries\": []}";
+
+static void run_knowledge_add(void) {
+    UrsatzError error = {{0}, {0}};
+    common_dir_make("knowledge", NULL);
+    WorkshopTxn *txn = workshop_txn_begin(NULL, "knowledge.add", "", 0);
+    if (txn && workshop_txn_stage_file(txn, "knowledge/user.json", kKnowledgeFile, strlen(kKnowledgeFile)) == URSATZ_OK) {
+        workshop_txn_commit(txn, &error);
+    } else {
+        workshop_txn_abort(txn);
+    }
+}
+
+static bool is_new_knowledge_add(void) {
+    return common_path_exists("knowledge/user.json");
+}
+
 static void run_item_move(void) {
     cJSON *item = NULL;
     workshop_material_item_move(g_base.move, g_base.other, &item);
@@ -537,13 +555,14 @@ int main(int argc, char **argv) {
         {"item save", run_item_save, is_new_item_save},
         {"item rename", run_item_rename, is_new_item_rename},
         {"item move", run_item_move, is_new_item_move},
+        {"knowledge file", run_knowledge_add, is_new_knowledge_add},
         {"item delete with subject links", run_item_delete, is_new_item_delete},
         {"library import", run_library_import, is_new_library_import},
         {"library delete with collection and subject links", run_library_delete, is_new_library_delete},
         {"theme compose", run_theme_compose, is_new_theme_compose},
     };
     for (size_t i = 0; i < sizeof(kCommands) / sizeof(kCommands[0]); i++) {
-        if (smoke && i >= 5) {
+        if (smoke && i >= 6) {
             break; /* the Library and the theme are in the whole test */
         }
         printf("-- %s\n", kCommands[i].name);

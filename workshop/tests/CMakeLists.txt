@@ -140,6 +140,10 @@ ursatz_test(workshop_knowledge_queries SOURCES test_knowledge_queries.c LIBS urs
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_harmony_items)
 ursatz_test(workshop_harmony_items SOURCES test_harmony_items.c LIBS ursatz_workshop_internal ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_harmony_items TIMEOUT 300)
+# The knowledge commands (R-768): her entries, the vocabulary following, the refusals and keep as my schema.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_commands)
+ursatz_test(workshop_knowledge_commands SOURCES test_knowledge_commands.c LIBS ursatz_workshop_internal ursatz_test_support
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_knowledge_commands TIMEOUT 300)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
 ursatz_test(workshop_base_version SOURCES test_base_version.c LIBS ursatz_workshop_internal ursatz_test_support
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_base_version)
