@@ -47,6 +47,7 @@ add_library(ursatz_theory
     tonality/tonal_key.c
     tonality/triad_in_key_rules.c
     tonality/triad_rules.c
+    harmony/chord_value.c
     harmony/harmonic_function.c
     harmony/harmony_applied.c
     harmony/harmony_cadence_kinds.c

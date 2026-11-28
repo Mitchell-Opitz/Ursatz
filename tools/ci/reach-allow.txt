@@ -44,3 +44,6 @@ composer/src/harmony/harmony_request.c harmony_find_mode  # the mode form of har
 composer/src/material/given.c plan_give_chords  # the plain form of plan_give_chords_in (P69 B6): every application passes the run's ComposerChords; its tests call it
 composer/src/piece/section_harmony.c piece_give_harmony  # the plain form of piece_give_harmony_in (P69 B6); its tests call it
 composer/src/piece/section_harmony.c piece_check_harmony  # the plain form of piece_check_harmony_in (P69 B6); its tests call it
+library/theory/harmony/chord_value.c chord_value_classify  # no application measures tension until P70 B9 reads it through DIMENSION_TENSION; its tests call it
+library/theory/harmony/chord_value.c is_transposition  # no application measures tension until P70 B9 reads it through DIMENSION_TENSION; its tests call it
+library/theory/harmony/chord_value.c series_rank_of  # no application measures tension until P70 B9 reads it through DIMENSION_TENSION; its tests call it
