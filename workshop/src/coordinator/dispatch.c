@@ -36,6 +36,7 @@ static const QueryEntry kQueries[] = {
     {"composer.random-motifs", workshop_q_composer_random_motifs},
     {"composer.import-motif", workshop_q_composer_import_motif},
     {"composer.recognize", workshop_q_composer_recognize},
+    {"composer.progression", workshop_q_composer_progression},
     {"knowledge.palette", workshop_q_knowledge_palette},
     {"knowledge.find", workshop_q_knowledge_find},
     {"knowledge.show", workshop_q_knowledge_show},

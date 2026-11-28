@@ -108,6 +108,7 @@ WORKSHOP_HANDLER(workshop_q_composer_render);
 WORKSHOP_HANDLER(workshop_q_composer_random_motifs);
 WORKSHOP_HANDLER(workshop_q_composer_import_motif);
 WORKSHOP_HANDLER(workshop_q_composer_recognize);
+WORKSHOP_HANDLER(workshop_q_composer_progression);
 
 /* knowledge (api_knowledge.c) */
 WORKSHOP_HANDLER(workshop_q_knowledge_palette);

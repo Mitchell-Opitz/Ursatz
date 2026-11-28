@@ -20,6 +20,10 @@
  * The answer {"ok": true, "musicxml", "playback"} in *answer. */
 UrsatzStatus workshop_motif_render(const cJSON *body, cJSON **answer, int *http_status, UrsatzError *error);
 
+/* The harmony lab's Hear (R-769): `request` is a progression request (R-766); it is written with its MIDI and MusicXML and nothing is saved. The answer is the
+ * Composer's document with "ok", "musicxml" and the "playback" built from the MIDI, in *answer. A Composer refusal keeps its path. */
+UrsatzStatus workshop_progression_preview(const cJSON *request, cJSON **answer, int *http_status, UrsatzError *error);
+
 /* The score or the playback of version number of item id, rendered with render_key (NULL: the motif's own key). With playback_only
  * the playback is built and *playback set; else the MusicXML text is in *musicxml (caller frees). file (not NULL, with playback_only)
  * asks for the playback of a theme or piece version's own MIDI file ("theme" or a version name) instead. */

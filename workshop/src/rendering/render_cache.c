@@ -8,6 +8,7 @@
 #include <common/json.h>
 
 #include "base/http_status.h"
+#include "base/knowledge.h"
 #include "base/last_error.h"
 #include "composition/composer_client.h"
 #include "composition/motifs.h"
@@ -179,6 +180,50 @@ UrsatzStatus workshop_motif_render(const cJSON *body, cJSON **answer_out, int *h
   free(xml);
   cJSON_AddItemToObject(answer, "playback", playback);
   *answer_out = answer;
+  return URSATZ_OK;
+}
+
+UrsatzStatus workshop_progression_preview(const cJSON *request, cJSON **answer_out, int *http_status, UrsatzError *error) {
+  *answer_out = NULL;
+  cJSON *copy = cJSON_IsObject(request) ? cJSON_Duplicate(request, 1) : NULL;
+  if (!copy) {
+    return refuse(http_status, 400, URSATZ_ERR_REQUEST, error, "", "params is a progression request");
+  }
+  cJSON_DeleteItemFromObjectCaseSensitive(copy, "midi");
+  cJSON_DeleteItemFromObjectCaseSensitive(copy, "musicxml");
+  char *text = cJSON_AddTrueToObject(copy, "midi") && cJSON_AddTrueToObject(copy, "musicxml") ? cJSON_PrintUnformatted(copy) : NULL;
+  cJSON_Delete(copy);
+  if (!text) {
+    return refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
+  }
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  UrsatzStatus composed = composer_api_progression(workshop_composer_context_global(), text, NULL, &response);
+  free(text);
+  WorkshopComposerReply reply;
+  workshop_composer_reply_take(composed, &response, &reply);
+  UrsatzStatus status = URSATZ_OK;
+  cJSON *document = NULL;
+  cJSON *playback = NULL;
+  if (workshop_composer_reply_refused(&reply)) {
+    status = refuse(http_status, workshop_composer_reply_failure_status(&reply), reply.status, error, reply.path,
+                    reply.message[0] ? reply.message : "composer could not write the progression");
+  } else if (reply.status != URSATZ_OK || !reply.json || !reply.midi || !reply.musicxml || !(document = cJSON_Parse(reply.json))) {
+    status = refuse(http_status, 500, URSATZ_ERR_INTERNAL, error, "", "composer could not write the progression");
+  } else {
+    status = playback_of_bytes(reply.midi, reply.midi_size, &playback, http_status, error);
+  }
+  if (status == URSATZ_OK && (!cJSON_AddBoolToObject(document, "ok", 1) || !cJSON_AddStringToObject(document, "musicxml", reply.musicxml) ||
+                              !cJSON_AddItemToObject(document, "playback", playback))) {
+    cJSON_Delete(playback);
+    status = refuse(http_status, 500, URSATZ_ERR_ALLOC, error, "", "out of memory");
+  }
+  workshop_composer_reply_destroy(&reply);
+  if (status != URSATZ_OK) {
+    cJSON_Delete(document);
+    return status;
+  }
+  *answer_out = document;
   return URSATZ_OK;
 }
 

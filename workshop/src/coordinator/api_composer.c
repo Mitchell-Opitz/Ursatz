@@ -81,6 +81,14 @@ WORKSHOP_HANDLER(workshop_q_composer_render) {
     return composer_answer(reply, answer, result, status, error);
 }
 
+/* A progression request written with its MIDI and MusicXML (R-769): the document, its MusicXML and the playback; nothing is saved. */
+WORKSHOP_HANDLER(workshop_q_composer_progression) {
+    cJSON *answer = NULL;
+    int status = 200;
+    UrsatzStatus result = workshop_progression_preview(call->params, &answer, &status, error);
+    return composer_answer(reply, answer, result, status, error);
+}
+
 /* Random motives from the Composer (material, meter, key?, form?, style_id?, count?, seed?); nothing is saved. */
 WORKSHOP_HANDLER(workshop_q_composer_random_motifs) {
     cJSON *document = NULL;
