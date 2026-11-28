@@ -262,3 +262,104 @@ WORKSHOP_HANDLER(workshop_c_knowledge_delete) {
     cJSON *answer = workshop_reply_object(reply);
     return answer && cJSON_AddStringToObject(answer, "id", id) ? URSATZ_OK : workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
+
+static bool slug_ok(const char *slug) {
+    size_t length = strlen(slug);
+    if (length == 0 || length > 60 || slug[0] == '-' || slug[length - 1] == '-') {
+        return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+        bool word = (slug[i] >= 'a' && slug[i] <= 'z') || (slug[i] >= '0' && slug[i] <= '9');
+        if (!word && (slug[i] != '-' || slug[i + 1] == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * knowledge.keep-schema: item (an hrm- id), version, name, slug, loop (default true), note. The composed version's stages become `user.schema.<slug>`, a
+ * progression schema of hers (R-768): the Composer's stages, no music computed here. Refused when the version is not composed.
+ */
+WORKSHOP_HANDLER(workshop_c_knowledge_keep_schema) {
+    const char *item_id = NULL;
+    const char *name = NULL;
+    const char *slug = NULL;
+    bool bad = false;
+    const char *note = workshop_param_string(call->params, "note", &bad);
+    const cJSON *version_member = cJSON_GetObjectItemCaseSensitive(call->params, "version");
+    const cJSON *loop_member = cJSON_GetObjectItemCaseSensitive(call->params, "loop");
+    if (!workshop_param_require_string(call->params, "item", &item_id, error) || !workshop_param_require_string(call->params, "name", &name, error) ||
+        !workshop_param_require_string(call->params, "slug", &slug, error) || !read_note(call, error)) {
+        return URSATZ_ERR_REQUEST;
+    }
+    if (!cJSON_IsNumber(version_member) || version_member->valuedouble < 1 || version_member->valuedouble != (double)(int)version_member->valuedouble) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/version", "version is a whole number from 1");
+    }
+    if (loop_member && !cJSON_IsNull(loop_member) && !cJSON_IsBool(loop_member)) {
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/loop", "loop is true or false");
+    }
+    if (strlen(name) == 0 || strlen(name) > 80 || !slug_ok(slug)) {
+        return workshop_call_fail(error, strlen(name) == 0 || strlen(name) > 80 ? URSATZ_ERR_REQUEST : URSATZ_ERR_REQUEST, strlen(name) == 0 || strlen(name) > 80 ? "/params/name" : "/params/slug",
+                                  "%s", strlen(name) == 0 || strlen(name) > 80 ? "name is 1 to 80 characters" : "slug is lower-case words joined by hyphens, as sad-lift");
+    }
+    bool loop = !cJSON_IsBool(loop_member) || cJSON_IsTrue(loop_member);
+    cJSON *meta = NULL;
+    cJSON *current = NULL;
+    UrsatzStatus status = workshop_material_item_get(item_id, &meta, &current);
+    bool is_harmony = status == URSATZ_OK && strcmp(common_json_string(meta, "type"), "harmony") == 0;
+    cJSON_Delete(meta);
+    cJSON_Delete(current);
+    if (status != URSATZ_OK || !is_harmony) {
+        return workshop_call_fail(error, status == URSATZ_ERR_NOT_FOUND ? URSATZ_ERR_NOT_FOUND : URSATZ_ERR_REQUEST, "/params/item", "%s is not a harmony item", item_id);
+    }
+    cJSON *body = NULL;
+    status = workshop_material_item_get_version(item_id, version_member->valueint, &body);
+    if (status != URSATZ_OK) {
+        return workshop_call_fail(error, URSATZ_ERR_NOT_FOUND, "/params/version", "no version %d of %s", version_member->valueint, item_id);
+    }
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "result"), "harmony");
+    const cJSON *stages = cJSON_GetObjectItemCaseSensitive(harmony, "stages");
+    if (!cJSON_IsObject(harmony) || !cJSON_IsArray(stages) || cJSON_GetArraySize(stages) == 0) {
+        cJSON_Delete(body);
+        return workshop_call_fail(error, URSATZ_ERR_REQUEST, "/params/version", "the harmony version is not composed");
+    }
+    char id[128];
+    snprintf(id, sizeof(id), "user.schema.%s", slug);
+    char citation[700];
+    snprintf(citation, sizeof(citation), "kept from %s version %d%s%s", item_id, version_member->valueint, note && note[0] ? ": " : "", note && note[0] ? note : "");
+    cJSON *entry = cJSON_CreateObject();
+    cJSON *content = entry ? cJSON_AddObjectToObject(entry, "content") : NULL;
+    cJSON *materials = content ? cJSON_AddArrayToObject(content, "materials") : NULL;
+    cJSON *citations = materials ? cJSON_AddArrayToObject(entry, "citations") : NULL;
+    cJSON *cite = citations ? cJSON_CreateObject() : NULL;
+    cJSON *examples = cite ? cJSON_AddArrayToObject(entry, "examples") : NULL;
+    cJSON *example = examples ? cJSON_CreateObject() : NULL;
+    cJSON *texts = example ? cJSON_CreateArray() : NULL;
+    bool ok = texts && cJSON_AddStringToObject(entry, "kind", "schema") && cJSON_AddStringToObject(entry, "subtype", "progression") && cJSON_AddStringToObject(entry, "name", name) &&
+              cJSON_AddItemToObject(content, "stages", cJSON_Duplicate(stages, true)) && cJSON_AddBoolToObject(content, "loop", loop) &&
+              cJSON_AddStringToObject(content, "role", loop ? "loop" : "cadence") &&
+              cJSON_AddStringToObject(content, "realizes", loop ? "omt.vocabulary.prolongational" : "omt.vocabulary.cadential") &&
+              cJSON_AddItemToArray(materials, cJSON_CreateString(common_json_string(harmony, "material"))) &&
+              (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(harmony, "with")) || cJSON_AddItemToArray(materials, cJSON_CreateString(common_json_string(harmony, "with")))) &&
+              cJSON_AddStringToObject(cite, "source", "michelle") && cJSON_AddStringToObject(cite, "chapter", "harmony plan") && cJSON_AddStringToObject(cite, "note", citation) &&
+              cJSON_AddItemToArray(citations, cite) && cJSON_AddStringToObject(entry, "status", "active") && cJSON_AddNumberToObject(entry, "version", 1) &&
+              cJSON_AddStringToObject(example, "key", common_json_string(harmony, "key"));
+    const cJSON *chord = NULL;
+    cJSON_ArrayForEach(chord, cJSON_GetObjectItemCaseSensitive(harmony, "chords")) {
+        ok = ok && cJSON_AddItemToArray(texts, cJSON_CreateString(common_json_string(chord, "text")));
+    }
+    ok = ok && cJSON_AddItemToObject(example, "chords", texts);
+    ok = ok && cJSON_AddItemToArray(examples, example);
+    cJSON_Delete(body);
+    if (!ok) {
+        cJSON_Delete(entry);
+        if (!cite || cJSON_GetArraySize(citations) == 0) {
+            cJSON_Delete(cite);
+        }
+        return workshop_call_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
+    }
+    status = store_entry(call, reply, error, id, entry, false);
+    cJSON_Delete(entry);
+    return status;
+}

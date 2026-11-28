@@ -140,6 +140,7 @@ static const CommandEntry kCommands[] = {
     {"knowledge.add", workshop_c_knowledge_add},
     {"knowledge.update", workshop_c_knowledge_update},
     {"knowledge.delete", workshop_c_knowledge_delete},
+    {"knowledge.keep-schema", workshop_c_knowledge_keep_schema},
     {"settings.unset", workshop_c_settings_unset},
     {"settings.import", workshop_c_settings_import},
     {"settings.override", workshop_c_settings_override},

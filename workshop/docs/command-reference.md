@@ -68,6 +68,7 @@ Knowledge: her own entries in the data folder's knowledge/user.json, and a harmo
 | `knowledge.add` | none | `entry object [note string]` | Add an entry of her own to the knowledge |
 | `knowledge.update` | none | `id string entry object [note string]` | Replace an entry of hers |
 | `knowledge.delete` | none | `id string [note string]` | Delete an entry of hers |
+| `knowledge.keep-schema` | none | `item string version int name string slug string [loop bool] [note string]` | Keep a harmony plan as her progression schema |
 
 ## Library
 
