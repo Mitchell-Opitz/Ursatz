@@ -273,7 +273,29 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
 
 /* ---------------------------------------------------------------- the text of a chord (the palette) */
 
-/* The root and quality of the triad a chord numeral reads as in the key, as request_read_chords resolves it: false when the text is not read. */
+/* The root and quality of the triad a chord numeral (the plan's text) names in the key, by the one owner of a chord's pitch classes: the harmony tables' V of a
+   minor key is the major triad. */
+bool composer_given_chord_triad(const ComposerChords *tones, const SpelledKey *key, const char *numeral, int *root, StandardTonalityTriadQuality *quality) {
+    HarmonyKind kind = harmony_kind(tones, key);
+    HarmonyChord chord;
+    if (!harmony_roman_parse_in(&kind, numeral, &chord) || chord.seventh || chord.color != NULL) {
+        return false;
+    }
+    int intervals[4];
+    size_t size = 3;
+    if (!composer_chord_intervals(kind.chords, kind.mode, kind.modal, &chord, root, intervals, &size) || size != 3) {
+        return false;
+    }
+    bool found = false;
+    for (int q = 0; !found && q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
+        int triad[3];
+        found = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, triad) && triad[1] == intervals[1] && triad[2] == intervals[2];
+        *quality = found ? (StandardTonalityTriadQuality)q : *quality;
+    }
+    return found;
+}
+
+/* The root and quality of the triad a chord text reads as in the key, as request_read_chords resolves it: false when the text is not read. */
 static bool text_chord(const ComposerChords *tones, const SpelledKey *key, const char *text, int *root, StandardTonalityTriadQuality *quality) {
     PlanMeter meter = {4, 4, 0};
     cJSON *list = cJSON_CreateArray();
@@ -291,27 +313,7 @@ static bool text_chord(const ComposerChords *tones, const SpelledKey *key, const
     }
     cJSON_Delete(entry);
     cJSON_Delete(list);
-    if (!read) {
-        return false;
-    }
-    HarmonyKind kind = harmony_kind(tones, key);
-    HarmonyChord chord;
-    if (!harmony_roman_parse_in(&kind, numerals[0], &chord) || chord.seventh || chord.color != NULL) {
-        return false;
-    }
-    /* What sounds, by the one owner of a chord's pitch classes: the harmony tables' V of a minor key is the major triad. */
-    int intervals[4];
-    size_t size = 3;
-    if (!composer_chord_intervals(kind.chords, kind.mode, kind.modal, &chord, root, intervals, &size) || size != 3) {
-        return false;
-    }
-    bool found = false;
-    for (int q = 0; !found && q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
-        int triad[3];
-        found = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)q, triad) && triad[1] == intervals[1] && triad[2] == intervals[2];
-        *quality = found ? (StandardTonalityTriadQuality)q : *quality;
-    }
-    return found;
+    return read && composer_given_chord_triad(tones, key, numerals[0], root, quality);
 }
 
 bool composer_chord_text_of(const ComposerChords *chords, const SpelledKey *key, int degree, int alteration, StandardTonalityTriadQuality quality,

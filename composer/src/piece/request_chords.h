@@ -37,4 +37,10 @@ UrsatzStatus request_read_chords(const ComposerChords *tones, const cJSON *list,
 bool composer_chord_text_of(const ComposerChords *chords, const SpelledKey *key, int degree, int alteration, StandardTonalityTriadQuality quality,
                             const PitchMaterial *mode, char out[PLAN_ROMAN_NUMERAL_MAX]);
 
+/*
+ * The root (semitones above the tonic) and the quality of the triad a chord numeral of a plan (the text request_read_chords gives) names in the key.
+ * False for a numeral the harmony reader does not read, or a seventh, color or applied chord.
+ */
+bool composer_given_chord_triad(const ComposerChords *chords, const SpelledKey *key, const char *numeral, int *root, StandardTonalityTriadQuality *quality);
+
 #endif

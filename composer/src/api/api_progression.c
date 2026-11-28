@@ -17,6 +17,7 @@
 #include <ursatz_composer/render.h>
 
 #include "api_piece.h"
+#include "api_progression_lab.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
 #include "structure/plan_util.h"
@@ -737,6 +738,17 @@ UrsatzStatus composer_api_progression(const ComposerContext *context, const char
     memset(&options, 0, sizeof(options));
     memset(&outputs, 0, sizeof(outputs));
     UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status == URSATZ_OK && cJSON_GetObjectItemCaseSensitive(request, "palette") != NULL) {
+        /* A palette writes its own chords (R-766). */
+        status = api_progression_lab(context, request, job, out);
+        cJSON_Delete(request);
+        if (status != URSATZ_OK) {
+            UrsatzError error = out->error;
+            composer_response_destroy(out);
+            out->error = error;
+        }
+        return status;
+    }
     if (status == URSATZ_OK) {
         bool list = false;
         bool found;

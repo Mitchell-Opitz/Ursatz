@@ -8,7 +8,7 @@
 #define STEPS 7
 
 /* The degree and alteration against the major scale of the center of a root `semitones` above it: b2, b3, #4, b6 and b7 for the five that are not steps. */
-static void major_degree_of(int semitones, int *degree, int *alteration) {
+void modal_palette_major_degree(int semitones, int *degree, int *alteration) {
     static const int DEGREE[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
     static const int ALTERATION[12] = {0, -1, 0, -1, 0, 0, 1, 0, -1, 0, -1, 0};
     *degree = DEGREE[semitones];
@@ -39,7 +39,7 @@ static size_t fill(const PitchMaterial *material, const PitchMaterial *other, Pa
         memset(chord, 0, sizeof(*chord));
         chord->quality = quality;
         chord->root_semitones = root;
-        major_degree_of(root, &chord->degree, &chord->alteration);
+        modal_palette_major_degree(root, &chord->degree, &chord->alteration);
         StandardTonalityNumeralText text = {chord->alteration, chord->degree, (StandardTonalityNumeralQuality)quality, 0, false, 0, 0, false, NULL};
         if (!standard_tonality_numeral_format(&text, chord->numeral, sizeof(chord->numeral))) {
             chord->numeral[0] = '\0';

@@ -34,4 +34,7 @@ typedef struct {
  */
 bool modal_palette(const PitchMaterial *first, const PitchMaterial *second, PaletteChord out[2][PALETTE_DEGREES], size_t counts[2]);
 
+/* The degree (1 to 7) and alteration (-1, 0, +1) against the center's major scale of a root `semitones` above the center (0 to 11): b2, b3, #4, b6 and b7 for the five that are no step. */
+void modal_palette_major_degree(int semitones, int *degree, int *alteration);
+
 #endif
