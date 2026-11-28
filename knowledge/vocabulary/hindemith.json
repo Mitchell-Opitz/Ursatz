@@ -1,0 +1,953 @@
+{
+ "schema": "ursatz-knowledge",
+ "schema_version": 1,
+ "source": "hindemith",
+ "entries": [
+  {
+   "id": "hindemith.vocabulary.octave",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "octave",
+   "content": {
+    "code": "octave",
+    "semitones": 12,
+    "rank": 1,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the octave is number 1"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 72
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.fifth",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "fifth",
+   "content": {
+    "code": "fifth",
+    "semitones": 7,
+    "rank": 2,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the fifth is number 2"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 67
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.fourth",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "fourth",
+   "content": {
+    "code": "fourth",
+    "semitones": 5,
+    "rank": 3,
+    "root": "upper"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the fourth is number 3"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the upper tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 65
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.major-third",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "major third",
+   "content": {
+    "code": "major-third",
+    "semitones": 4,
+    "rank": 4,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the major third is number 4"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 64
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.minor-sixth",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "minor sixth",
+   "content": {
+    "code": "minor-sixth",
+    "semitones": 8,
+    "rank": 5,
+    "root": "upper"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the minor sixth is number 5"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the upper tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 68
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.minor-third",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "minor third",
+   "content": {
+    "code": "minor-third",
+    "semitones": 3,
+    "rank": 6,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the minor third is number 6"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 63
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.major-sixth",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "major sixth",
+   "content": {
+    "code": "major-sixth",
+    "semitones": 9,
+    "rank": 7,
+    "root": "upper"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the major sixth is number 7"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the upper tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 69
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.major-second",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "major second",
+   "content": {
+    "code": "major-second",
+    "semitones": 2,
+    "rank": 8,
+    "root": "upper"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the major second is number 8"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the upper tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 62
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.minor-seventh",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "minor seventh",
+   "content": {
+    "code": "minor-seventh",
+    "semitones": 10,
+    "rank": 9,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the minor seventh is number 9"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 70
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.minor-second",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "minor second",
+   "content": {
+    "code": "minor-second",
+    "semitones": 1,
+    "rank": 10,
+    "root": "upper"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the minor second is number 10"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the upper tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 61
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.major-seventh",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "major seventh",
+   "content": {
+    "code": "major-seventh",
+    "semitones": 11,
+    "rank": 11,
+    "root": "lower"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the major seventh is number 11"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: the lower tone is the root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 71
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.tritone",
+   "kind": "vocabulary",
+   "subtype": "interval-class",
+   "name": "tritone",
+   "content": {
+    "code": "tritone",
+    "semitones": 6,
+    "rank": 12,
+    "root": "none"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "2 to 8",
+     "note": "Series 2 orders the intervals from the octave to the tritone; the tritone is number 12"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "4",
+     "note": "the root of the interval: it has no root"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "low": 60,
+     "high": 66
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-ia",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IA",
+   "content": {
+    "code": "ia",
+    "group": 1,
+    "rank": 1,
+    "tritones": "none",
+    "sharp": "none",
+    "root": "bass"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "C E G: a major or minor triad with its root in the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      60,
+      64,
+      67
+     ],
+     "group": "ia"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-ib",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IB",
+   "content": {
+    "code": "ib",
+    "group": 1,
+    "rank": 2,
+    "tritones": "none",
+    "sharp": "none",
+    "root": "above"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "E G C: a major or minor triad with its root above the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      64,
+      67,
+      72
+     ],
+     "group": "ib"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iia",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIA",
+   "content": {
+    "code": "iia",
+    "group": 2,
+    "rank": 3,
+    "tritones": "one",
+    "sharp": "mild",
+    "root": "bass"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "G B D F: one tritone, the only mild intervals minor sevenths, root in the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      55,
+      59,
+      62,
+      65
+     ],
+     "group": "iia"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iib1",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIB1",
+   "content": {
+    "code": "iib1",
+    "group": 2,
+    "rank": 4,
+    "tritones": "one",
+    "sharp": "mild",
+    "root": "bass"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "G B D F A: one tritone and major seconds, root in the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      55,
+      59,
+      62,
+      65,
+      69
+     ],
+     "group": "iib1"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iib2",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIB2",
+   "content": {
+    "code": "iib2",
+    "group": 2,
+    "rank": 5,
+    "tritones": "one",
+    "sharp": "mild",
+    "root": "above"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "B D F G: one tritone, root above the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      59,
+      62,
+      65,
+      67
+     ],
+     "group": "iib2"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iib3",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIB3",
+   "content": {
+    "code": "iib3",
+    "group": 2,
+    "rank": 6,
+    "tritones": "several",
+    "sharp": "mild",
+    "root": "any"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "C E Gb Bb: several tritones and no minor second or major seventh"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      60,
+      64,
+      66,
+      70
+     ],
+     "group": "iib3"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iiia",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIIA",
+   "content": {
+    "code": "iiia",
+    "group": 3,
+    "rank": 7,
+    "tritones": "none",
+    "sharp": "any",
+    "root": "bass"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "C D G: no tritone, a mild or sharp interval, root in the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      60,
+      62,
+      67
+     ],
+     "group": "iiia"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iiib",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IIIB",
+   "content": {
+    "code": "iiib",
+    "group": 3,
+    "rank": 8,
+    "tritones": "none",
+    "sharp": "any",
+    "root": "above"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "G B C E: no tritone, a mild or sharp interval, root above the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      67,
+      71,
+      72,
+      76
+     ],
+     "group": "iiib"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-iva",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IVA",
+   "content": {
+    "code": "iva",
+    "group": 4,
+    "rank": 9,
+    "tritones": "any",
+    "sharp": "sharp",
+    "root": "bass"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "C E G Bb Db: tritones and a minor second or major seventh, root in the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      60,
+      64,
+      67,
+      70,
+      73
+     ],
+     "group": "iva"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-ivb",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group IVB",
+   "content": {
+    "code": "ivb",
+    "group": 4,
+    "rank": 10,
+    "tritones": "any",
+    "sharp": "sharp",
+    "root": "above"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "Db E G Bb C: tritones and a minor second or major seventh, root above the bass"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      61,
+      64,
+      67,
+      70,
+      72
+     ],
+     "group": "ivb"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-v",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group V",
+   "content": {
+    "code": "v",
+    "group": 5,
+    "rank": 11,
+    "tritones": "none",
+    "sharp": "any",
+    "root": "none"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "C E G#: the augmented triad and two stacked fourths, no root"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      60,
+      64,
+      68
+     ],
+     "group": "v"
+    }
+   ],
+   "version": 1
+  },
+  {
+   "id": "hindemith.vocabulary.chord-vi",
+   "kind": "vocabulary",
+   "subtype": "chord-group",
+   "name": "chord group VI",
+   "content": {
+    "code": "vi",
+    "group": 6,
+    "rank": 12,
+    "tritones": "any",
+    "sharp": "none",
+    "root": "none"
+   },
+   "citations": [
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 3,
+     "section": "10 to 12",
+     "note": "B D F: the diminished triad and seventh, a tritone, no root"
+    },
+    {
+     "source": "hindemith",
+     "part": "Book I",
+     "chapter": 4,
+     "section": "3",
+     "note": "harmonic fluctuation: the value of a chord falls from group I to group VI"
+    }
+   ],
+   "status": "active",
+   "examples": [
+    {
+     "pitches": [
+      59,
+      62,
+      65
+     ],
+     "group": "vi"
+    }
+   ],
+   "version": 1
+  }
+ ]
+}

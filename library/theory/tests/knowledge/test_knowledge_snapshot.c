@@ -49,11 +49,11 @@ static bool lower_hex16(const char *text) {
 
 static void test_embedded_modes(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    assert(knowledge_snapshot_entry_count(snapshot) == 217);
+    assert(knowledge_snapshot_entry_count(snapshot) == 241);
     /* in id order */
     assert(strcmp(knowledge_snapshot_entry_at(snapshot, 0)->id, "fux.rule.dissonance-against-bass") == 0);
-    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 216)->id, "schoenberg.pattern.oom-pah") == 0);
-    assert(knowledge_snapshot_entry_at(snapshot, 217) == NULL);
+    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 240)->id, "schoenberg.pattern.oom-pah") == 0);
+    assert(knowledge_snapshot_entry_at(snapshot, 241) == NULL);
 
     for (int mode = 0; mode < 4; mode++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry(snapshot, MODE_IDS[mode]);
@@ -127,7 +127,7 @@ static void test_embedded_counts(void) {
             others++;
         }
     }
-    assert(materials == 21 && relations == 18 && chord_types == 21 && instruments == 1 && ensembles == 1 && vocabulary == 37 &&
+    assert(materials == 21 && relations == 18 && chord_types == 21 && instruments == 1 && ensembles == 1 && vocabulary == 61 &&
            functions == 10 && theme_types == 9 && rules == 21 && voicings == 4 && patterns == 33 && schemas == 41 && others == 0);
     /* the seven diatonic modes, darkest to brightest: each a rotation of the major scale with its own steps */
     for (int mode = 0; mode < 7; mode++) {
@@ -540,7 +540,7 @@ static void test_hash(void) {
     /* two snapshots in one process are independent: their entries are not shared */
     assert(knowledge_snapshot_entry(first, "omt.material.major") != knowledge_snapshot_entry(second, "omt.material.major"));
     knowledge_snapshot_destroy(first);
-    assert(knowledge_snapshot_entry_count(second) == 217);
+    assert(knowledge_snapshot_entry_count(second) == 241);
     knowledge_snapshot_destroy(second);
 }
 
@@ -548,7 +548,7 @@ static void test_user_file(void) {
     KnowledgeSnapshot *plain = build(NULL, 0);
     KnowledgeUserFile file = {"mine.json", USER_FILE};
     KnowledgeSnapshot *with_user = build(&file, 1);
-    assert(knowledge_snapshot_entry_count(with_user) == 219);
+    assert(knowledge_snapshot_entry_count(with_user) == 243);
     assert(strcmp(knowledge_snapshot_hash(plain), knowledge_snapshot_hash(with_user)) != 0);
     const PitchMaterial *test = knowledge_snapshot_material(with_user, "user.material.test");
     assert(test != NULL && test->step_count == 3 && test->steps[2] == 7 && test->descending_step_count == 0);
